@@ -1,0 +1,6 @@
+{
+  "name": "Remix: Hejleh App",
+  "description": "An intelligent shift management platform for healthcare environments, enabling head nurses to generate, manage, and optimize monthly staff schedules with AI assistance.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

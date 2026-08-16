@@ -1,0 +1,11 @@
+{
+  "timestamp": "2026-07-26T21:31:33.895Z",
+  "projectRoot": "/home/saeed/Desktop/hejle",
+  "structure": {
+    "hasPackageJson": true,
+    "hasTsConfig": true,
+    "hasClaudeConfig": true,
+    "hasClaudeFlow": true
+  },
+  "scannedAt": 1785101493895
+}

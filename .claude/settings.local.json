@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(command -v uv)",
+      "Bash(command -v pipx)",
+      "Bash(command -v python)",
+      "Bash(command -v python3)",
+      "Bash(command -v graphify)"
+    ]
+  },
+  "enabledMcpjsonServers": [
+    "claude-flow"
+  ],
+  "enableAllProjectMcpServers": true
+}

@@ -1,0 +1,208 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "User account information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "displayName": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email"]
+    },
+    "Department": {
+      "title": "Department",
+      "description": "Department details",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "themeColor": { "type": "string" }
+      },
+      "required": ["id", "name", "themeColor"]
+    },
+    "Personnel": {
+      "title": "Personnel",
+      "description": "Personnel of the healthcare environment",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "personnelCode": { "type": "string" },
+        "role": { "type": "string" },
+        "departmentId": { "type": "string" },
+        "seniorityLevel": { "type": "number" },
+        "nationalCode": { "type": "string" },
+        "contactNumber": { "type": "string" },
+        "address": { "type": "string" },
+        "employmentStatus": { "type": "string" },
+        "baseDutyHours": { "type": "number" },
+        "employmentDate": { "type": "string" },
+        "profileImage": { "type": "string" }
+      },
+      "required": ["id", "name", "personnelCode", "role", "departmentId"]
+    },
+    "ShiftType": {
+      "title": "ShiftType",
+      "description": "Predefined shift categories",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "symbol": { "type": "string" },
+        "displayColor": { "type": "string" },
+        "realDuration": { "type": "number" },
+        "calculatedValue": { "type": "number" },
+        "fridayCalculatedValue": { "type": "number" },
+        "holidayCalculatedValue": { "type": "number" },
+        "departmentIds": { "type": "array" }
+      },
+      "required": ["id", "name", "symbol", "displayColor"]
+    },
+    "ScheduleEntry": {
+      "title": "ScheduleEntry",
+      "description": "A single shifts assignment",
+      "type": "object",
+      "properties": {
+        "personnelId": { "type": "string" },
+        "shiftTypeId": { "type": "string" },
+        "date": { "type": "string" },
+        "isManualEntry": { "type": "boolean" }
+      },
+      "required": ["personnelId", "shiftTypeId", "date"]
+    },
+    "StaffRequest": {
+      "title": "StaffRequest",
+      "description": "Day-off or preferred shift request",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "personnelId": { "type": "string" },
+        "date": { "type": "string" },
+        "requestType": { "type": "string" },
+        "preferredShiftId": { "type": "string" },
+        "isSuggestion": { "type": "boolean" }
+      },
+      "required": ["id", "personnelId", "date", "requestType"]
+    },
+    "CustomRule": {
+      "title": "CustomRule",
+      "description": "Custom scheduling business rules",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "description": { "type": "string" },
+        "isEnabled": { "type": "boolean" },
+        "type": { "type": "string" },
+        "value": { "type": "number" },
+        "priority": { "type": "string" },
+        "category": { "type": "string" }
+      },
+      "required": ["id", "description", "isEnabled", "type"]
+    },
+    "ArchivedSchedule": {
+      "title": "ArchivedSchedule",
+      "description": "History archive of schedules",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "departmentId": { "type": "string" },
+        "year": { "type": "number" },
+        "month": { "type": "number" },
+        "entries": { "type": "array" },
+        "personnelSnapshot": { "type": "array" },
+        "notes": { "type": "string" },
+        "archivedAt": { "type": "string" }
+      },
+      "required": ["id", "departmentId", "year", "month", "entries"]
+    },
+    "CalendarEvent": {
+      "title": "CalendarEvent",
+      "description": "Calendar reminders and events",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "year": { "type": "number" },
+        "month": { "type": "number" },
+        "day": { "type": "number" },
+        "time": { "type": "string" },
+        "reminderLeadMinutes": { "type": "number" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "type": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "year", "month", "day", "title", "type"]
+    },
+    "GlobalSettingsDoc": {
+      "title": "GlobalSettingsDoc",
+      "description": "System configuration values",
+      "type": "object",
+      "properties": {
+        "employmentStatuses": { "type": "array" },
+        "roleDeductions": { "type": "array" },
+        "seniorityDeductions": { "type": "array" },
+        "reminderLeadDays": { "type": "number" },
+        "defaultReminderMinutes": { "type": "number" }
+      },
+      "required": ["reminderLeadDays", "defaultReminderMinutes"]
+    },
+    "ManualBalancesDoc": {
+      "title": "ManualBalancesDoc",
+      "description": "Manual balances of duty/holiday values",
+      "type": "object",
+      "properties": {
+        "balances": { "type": "object" }
+      },
+      "required": ["balances"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Registered user accounts"
+    },
+    "/users/{userId}/departments/{departmentId}": {
+      "schema": "Department",
+      "description": "Hospitals departments managed by user"
+    },
+    "/users/{userId}/personnel/{personnelId}": {
+      "schema": "Personnel",
+      "description": "Personnel of user's departments"
+    },
+    "/users/{userId}/shiftTypes/{shiftTypeId}": {
+      "schema": "ShiftType",
+      "description": "Shift definitions created by user"
+    },
+    "/users/{userId}/schedule/{scheduleId}": {
+      "schema": "ScheduleEntry",
+      "description": "Assigned schedule entries"
+    },
+    "/users/{userId}/requests/{requestId}": {
+      "schema": "StaffRequest",
+      "description": "Scheduling requests"
+    },
+    "/users/{userId}/rules/{ruleId}": {
+      "schema": "CustomRule",
+      "description": "Rules specified by user"
+    },
+    "/users/{userId}/archives/{archiveId}": {
+      "schema": "ArchivedSchedule",
+      "description": "Historic saved schedules"
+    },
+    "/users/{userId}/calendarEvents/{eventId}": {
+      "schema": "CalendarEvent",
+      "description": "Events and alerts"
+    },
+    "/users/{userId}/globalSettings/{settingId}": {
+      "schema": "GlobalSettingsDoc",
+      "description": "Global settings parameters"
+    },
+    "/users/{userId}/manualBalances/{balanceId}": {
+      "schema": "ManualBalancesDoc",
+      "description": "Personnel manually overridden balances"
+    }
+  }
+}

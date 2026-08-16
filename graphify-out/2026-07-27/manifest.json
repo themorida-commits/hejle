@@ -1,0 +1,172 @@
+{
+  ".claude/settings.local.json": {
+    "mtime": 1782345530.5885768,
+    "ast_hash": "d1684fcac544cdfb2b4d6eb197a505c5",
+    "semantic_hash": "d1684fcac544cdfb2b4d6eb197a505c5"
+  },
+  "App.tsx": {
+    "mtime": 1781049418.0,
+    "ast_hash": "e11f9a990c5a9d6b9579e91b3379fec6",
+    "semantic_hash": "e11f9a990c5a9d6b9579e91b3379fec6"
+  },
+  "components/AiAssistant.tsx": {
+    "mtime": 1781049418.0,
+    "ast_hash": "f691b9a9c245c5ae98bb99441d43c724",
+    "semantic_hash": "f691b9a9c245c5ae98bb99441d43c724"
+  },
+  "components/AiLoadingModal.tsx": {
+    "mtime": 1781049418.0,
+    "ast_hash": "9e3b2c8a051084b4996b795b218c8543",
+    "semantic_hash": "9e3b2c8a051084b4996b795b218c8543"
+  },
+  "components/ArchiveViewer.tsx": {
+    "mtime": 1781049418.0,
+    "ast_hash": "deee9c036db510d4bda455646268168e",
+    "semantic_hash": "deee9c036db510d4bda455646268168e"
+  },
+  "components/CalendarManager.tsx": {
+    "mtime": 1781049418.0,
+    "ast_hash": "87fdc3d6c6b48e837a02d3ac6b8fa11b",
+    "semantic_hash": "87fdc3d6c6b48e837a02d3ac6b8fa11b"
+  },
+  "components/DepartmentManager.tsx": {
+    "mtime": 1781049418.0,
+    "ast_hash": "535b5717169a08f9bd390c604a97c329",
+    "semantic_hash": "535b5717169a08f9bd390c604a97c329"
+  },
+  "components/LiveVoiceAssistant.tsx": {
+    "mtime": 1781049418.0,
+    "ast_hash": "6e0fd5e62f847fe06ee3ce853e283dac",
+    "semantic_hash": "6e0fd5e62f847fe06ee3ce853e283dac"
+  },
+  "components/MarkdownRenderer.tsx": {
+    "mtime": 1781049418.0,
+    "ast_hash": "aa024419defb084239add8e177a194b9",
+    "semantic_hash": "aa024419defb084239add8e177a194b9"
+  },
+  "components/PersonnelManager.tsx": {
+    "mtime": 1781049418.0,
+    "ast_hash": "4067ee0d475aa75eda33145c8db7705c",
+    "semantic_hash": "4067ee0d475aa75eda33145c8db7705c"
+  },
+  "components/RulesManager.tsx": {
+    "mtime": 1781049418.0,
+    "ast_hash": "862c9dbf161f76d0efd14d16ef5e47d2",
+    "semantic_hash": "862c9dbf161f76d0efd14d16ef5e47d2"
+  },
+  "components/Scheduler.tsx": {
+    "mtime": 1781049418.0,
+    "ast_hash": "5d927a2e00ef44d747b566b37f08509a",
+    "semantic_hash": "5d927a2e00ef44d747b566b37f08509a"
+  },
+  "components/SettingsManager.tsx": {
+    "mtime": 1781049418.0,
+    "ast_hash": "d359aa388f1dbbc5ff9c1e7d45f3c40e",
+    "semantic_hash": "d359aa388f1dbbc5ff9c1e7d45f3c40e"
+  },
+  "components/ShiftTypeManager.tsx": {
+    "mtime": 1781049418.0,
+    "ast_hash": "8f2868a42044be46d6c188db10775225",
+    "semantic_hash": "8f2868a42044be46d6c188db10775225"
+  },
+  "components/StaffRequestManager.tsx": {
+    "mtime": 1781049418.0,
+    "ast_hash": "00184b077f5e524385c85c353fe191c2",
+    "semantic_hash": "00184b077f5e524385c85c353fe191c2"
+  },
+  "constants.ts": {
+    "mtime": 1781049418.0,
+    "ast_hash": "8bf6f27b7487adb79b3b178d3977d913",
+    "semantic_hash": "8bf6f27b7487adb79b3b178d3977d913"
+  },
+  "firebase-applet-config.json": {
+    "mtime": 1781049418.0,
+    "ast_hash": "63b138a7789987a0f4e31149dbae11e6",
+    "semantic_hash": "63b138a7789987a0f4e31149dbae11e6"
+  },
+  "firebase-blueprint.json": {
+    "mtime": 1781049418.0,
+    "ast_hash": "b114a51934e22400a63679963651c8f8",
+    "semantic_hash": "b114a51934e22400a63679963651c8f8"
+  },
+  "index.tsx": {
+    "mtime": 1781049418.0,
+    "ast_hash": "2c2e60801caf8a404a7428b00db14568",
+    "semantic_hash": "2c2e60801caf8a404a7428b00db14568"
+  },
+  "metadata.json": {
+    "mtime": 1781049418.0,
+    "ast_hash": "1a70aba5e3b9a21acc14465679ac0aec",
+    "semantic_hash": "1a70aba5e3b9a21acc14465679ac0aec"
+  },
+  "package.json": {
+    "mtime": 1781049418.0,
+    "ast_hash": "b9be51153d666eaf3c4298319cd97dc3",
+    "semantic_hash": "b9be51153d666eaf3c4298319cd97dc3"
+  },
+  "server.ts": {
+    "mtime": 1781721055.4043393,
+    "ast_hash": "428b6c5a697237738e984de727787e4a",
+    "semantic_hash": "428b6c5a697237738e984de727787e4a"
+  },
+  "services/conflictDetector.ts": {
+    "mtime": 1781049418.0,
+    "ast_hash": "ba93863e05998f63a477508fdf49a919",
+    "semantic_hash": "ba93863e05998f63a477508fdf49a919"
+  },
+  "services/docExporter.ts": {
+    "mtime": 1781049418.0,
+    "ast_hash": "9e125977fc92648cd261cd3ad9af8492",
+    "semantic_hash": "9e125977fc92648cd261cd3ad9af8492"
+  },
+  "services/firebase.ts": {
+    "mtime": 1781049418.0,
+    "ast_hash": "1c53c956b48d79f28cac792e1d433e3a",
+    "semantic_hash": "1c53c956b48d79f28cac792e1d433e3a"
+  },
+  "services/geminiService.ts": {
+    "mtime": 1781049418.0,
+    "ast_hash": "b91a27348fdc1d658d0d48482206c3b4",
+    "semantic_hash": "b91a27348fdc1d658d0d48482206c3b4"
+  },
+  "services/schedulerSolver.ts": {
+    "mtime": 1781720992.6023643,
+    "ast_hash": "56742b433aee36ed9a7567478431b264",
+    "semantic_hash": "56742b433aee36ed9a7567478431b264"
+  },
+  "tsconfig.json": {
+    "mtime": 1781049418.0,
+    "ast_hash": "58ee5bb8af5d5a5994d9d6a9b18750dd",
+    "semantic_hash": "58ee5bb8af5d5a5994d9d6a9b18750dd"
+  },
+  "types.ts": {
+    "mtime": 1781049418.0,
+    "ast_hash": "6702e06a747dcba3c45ff9112e1a2ec7",
+    "semantic_hash": "6702e06a747dcba3c45ff9112e1a2ec7"
+  },
+  "utils.ts": {
+    "mtime": 1781049418.0,
+    "ast_hash": "75e4bfa27d40638cdc91f0d781f2f5ed",
+    "semantic_hash": "75e4bfa27d40638cdc91f0d781f2f5ed"
+  },
+  "vite.config.ts": {
+    "mtime": 1781049418.0,
+    "ast_hash": "b02247fc15de1a3ff3a9cb4c1bbe3fa1",
+    "semantic_hash": "b02247fc15de1a3ff3a9cb4c1bbe3fa1"
+  },
+  "README.md": {
+    "mtime": 1781049418.0,
+    "ast_hash": "60dc6ea487c275e86a1ee179d6dc369a",
+    "semantic_hash": "60dc6ea487c275e86a1ee179d6dc369a"
+  },
+  "index.html": {
+    "mtime": 1781049418.0,
+    "ast_hash": "fb56745f87f74b466e9217c2cfdc7d38",
+    "semantic_hash": "fb56745f87f74b466e9217c2cfdc7d38"
+  },
+  "reviwe.md": {
+    "mtime": 1781112285.110227,
+    "ast_hash": "167cf6d3995223c70f81ef59798d1536",
+    "semantic_hash": "167cf6d3995223c70f81ef59798d1536"
+  }
+}
