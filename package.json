@@ -8,7 +8,8 @@
     "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
     "start": "node dist/server.cjs",
     "lint": "tsc --noEmit",
-    "check:supabase": "tsx scripts/check-supabase.ts"
+    "check:supabase": "tsx scripts/check-supabase.ts",
+    "tunnel": "bash scripts/tunnel.sh"
   },
   "dependencies": {
     "@google/genai": "^1.28.0",
