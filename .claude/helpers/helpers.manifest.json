@@ -1,13 +1,13 @@
 {
   "manifest": {
-    "version": "3.32.9",
+    "version": "3.42.5",
     "files": {
-      "auto-memory-hook.mjs": "e3e1033b24704992ddef6b31c7fa9dd7fcd9e1af7935dd77ef73402b916b31e6",
-      "hook-handler.cjs": "f87ec28684bfc5fd0a54c46bd2a53a3fb037defe71d0ea4b8a5cb88a2cd87a3f",
-      "intelligence.cjs": "5a55d979cb7ba5c8c4f27f3b2e6d686fbb1045d180023b803da672a37e05b915",
-      "statusline.cjs": "10f74a1aa9af217d0623c0a9839d82825b0eed31a4707a7531a85c6116869a6c"
+      "auto-memory-hook.mjs": "85fe05c757421c52137c0bc8545a0896bab6b4714538c2a11d1d0835bfcc8c1c",
+      "hook-handler.cjs": "209d9fafe10e17d1be0866727f6f9cf9ac66f9a0793f1c793a4f58319e8e4583",
+      "intelligence.cjs": "30e42ed7ec4ca5a94ac54fdb1330d2d47ac5f3fdeeef207753574723a9e77b5c",
+      "statusline.cjs": "4a48353b4f1566fa4379b00fd0321b6676a22b6cc91fbbd8380ac5183d619468"
     }
   },
-  "signature": "E590NNJFlbDXn0+xPDQqtCOX2KXTXY/DeEBidDqT7oRttLqpS0EBEBU5+WnU0tWutho7uVcUDW2548Job9pRAw==",
+  "signature": "vKGy5o0MCknsugr2YSBRJojeNK1T+3et2Aqtj8MMFdgX6XeKHZglXkBjfNC6Jh74afqiXGBQlUs7VQgMf7daDQ==",
   "algorithm": "ed25519"
 }
