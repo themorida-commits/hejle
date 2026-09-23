@@ -2,7 +2,7 @@ import express from "express";
 import path from "path";
 import fs from "fs";
 import { GoogleGenAI, Type } from "@google/genai";
-import { generateScheduleDeterministic } from "../src/services/schedulerSolver";
+import { generateScheduleDeterministic } from "../services/schedulerSolver";
 
 const app = express();
 app.use(express.json({ limit: "30mb" }));
