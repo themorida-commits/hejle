@@ -1,0 +1,19 @@
+@import url('https://fonts.googleapis.com/css2?family=Vazirmatn:wght@400;500;700&display=swap');
+
+body {
+  font-family: 'Vazirmatn', sans-serif;
+}
+
+@keyframes highlight-change {
+  0% { background-color: rgba(74, 222, 128, 0.4); }
+  100% { background-color: transparent; }
+}
+
+.animate-highlight-change {
+  animation: highlight-change 3s ease-out;
+}
+
+/* Tailwind directives */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
