@@ -11,6 +11,9 @@ export default defineConfig(({ mode }) => {
         allowedHosts: ['localhost', '.lhr.life', 'localhost.run', '.loca.lt'],
       },
       plugins: [react()],
+      css: {
+        postcss: {}
+      },
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
         'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
