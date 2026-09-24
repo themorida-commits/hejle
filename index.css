@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Vazirmatn", sans-serif;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  font-family: "Vazirmatn", sans-serif;
+}
+
+@keyframes highlight-change {
+  0% { background-color: rgba(74, 222, 128, 0.4); }
+  100% { background-color: transparent; }
+}
+
+.animate-highlight-change {
+  animation: highlight-change 3s ease-out;
+}

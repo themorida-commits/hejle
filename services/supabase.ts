@@ -1,15 +1,21 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js';
+import { createBrowserClient } from '@supabase/ssr';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabasePublishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn('Supabase environment variables are not configured yet.');
+if (!supabaseUrl || !supabasePublishableKey) {
+  throw new Error(
+    'Supabase is not configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY in .env.local.',
+  );
 }
 
-export const supabase: SupabaseClient = createClient(supabaseUrl || '', supabaseAnonKey || '');
+export const supabase: SupabaseClient = createBrowserClient(
+  supabaseUrl,
+  supabasePublishableKey,
+);
 
 export const supabaseConfig = {
-  url: supabaseUrl || '',
-  anonKey: supabaseAnonKey || '',
+  url: supabaseUrl,
+  publishableKey: supabasePublishableKey,
 };

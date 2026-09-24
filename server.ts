@@ -40,7 +40,7 @@ if (!process.env.GEMINI_API_KEY) {
 
 async function startServer() {
     const app = express();
-    const PORT = process.env.PORT || 3000;
+    const PORT = Number(process.env.PORT ?? 3000);
 
     app.use(express.json({ limit: "30mb" }));
 
