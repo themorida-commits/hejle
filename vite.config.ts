@@ -8,7 +8,7 @@ export default defineConfig(({ mode }) => {
       server: {
         port: 3000,
         host: '0.0.0.0',
-        allowedHosts: ['localhost', '.lhr.life', 'localhost.run', '.loca.lt'],
+        allowedHosts: true,
       },
       plugins: [react()],
       define: {

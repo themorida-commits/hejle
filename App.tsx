@@ -15,7 +15,7 @@ import { SettingsManager } from './components/SettingsManager';
 
 import { auth, db, handleFirestoreError, OperationType } from './services/firebase';
 import { collection, getDocs, doc, setDoc, deleteDoc } from 'firebase/firestore';
-import { supabase } from './services/supabase';
+import { supabase, isSupabaseConfigured } from './services/supabase';
 import { loadUserDataFromSupabase, saveUserDataToSupabase } from './services/supabaseData';
 
 type SupabaseUser = {
@@ -475,6 +475,10 @@ function App() {
 
     const handleGoogleSignIn = async () => {
         setAuthError(null);
+        if (!isSupabaseConfigured) {
+            alert('سرویس ابری Supabase هنوز با کلیدهای اختصاصی شما در متغیرهای محیطی (.env) پیکربندی نشده است. کلیه اطلاعات و تغییرات شما در حافظه محلی ذخیره و بارگذاری می‌شود.');
+            return;
+        }
         try {
             const { error } = await supabase.auth.signInWithOAuth({
                 provider: 'google',

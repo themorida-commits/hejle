@@ -9,7 +9,7 @@ import type {
   ShiftType,
   StaffRequest,
 } from '../types';
-import { supabase } from './supabase';
+import { supabase, isSupabaseConfigured } from './supabase';
 
 export interface UserDataPayload {
   departments: Department[];
@@ -121,6 +121,9 @@ async function fetchSingletonItem<T>(userId: string, collectionName: string, doc
 }
 
 export async function saveUserDataToSupabase(userId: string, payload: UserDataPayload) {
+  if (!isSupabaseConfigured) {
+    return;
+  }
   await upsertCollectionItems(userId, 'departments', payload.departments, (item) => item.id);
   await upsertCollectionItems(userId, 'personnel', payload.personnel, (item) => item.id);
   await upsertCollectionItems(userId, 'shiftTypes', payload.shiftTypes, (item) => item.id);
@@ -135,6 +138,20 @@ export async function saveUserDataToSupabase(userId: string, payload: UserDataPa
 }
 
 export async function loadUserDataFromSupabase(userId: string): Promise<UserDataPayload> {
+  if (!isSupabaseConfigured) {
+    return {
+      departments: [],
+      personnel: [],
+      shiftTypes: [],
+      schedule: [],
+      requests: [],
+      rules: [],
+      archives: [],
+      calendarEvents: [],
+      globalSettings: null,
+      manualBalances: {},
+    };
+  }
   const [departments, personnel, shiftTypes, schedule, requests, rules, archives, calendarEvents, globalSettings, manualBalances] = await Promise.all([
     fetchCollectionItems<Department>(userId, 'departments'),
     fetchCollectionItems<Personnel>(userId, 'personnel'),
