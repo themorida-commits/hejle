@@ -210,7 +210,7 @@ function Sidebar({
                 )}
             </div>
             <div className="p-4 z-10 border-t border-slate-800/50">
-                <p className={`text-xs text-slate-500 text-center transition-opacity duration-300 ${isCollapsed ? 'opacity-0 hidden' : 'opacity-100'}`}>نسخه ۱.۲.۹۹-TEST-DEPLOY</p>
+                <p className={`text-xs text-slate-500 text-center transition-opacity duration-300 ${isCollapsed ? 'opacity-0 hidden' : 'opacity-100'}`}>نسخه ۱.۲.۰</p>
             </div>
         </div>
     );
