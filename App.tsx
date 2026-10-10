@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import type { Department, Personnel, ShiftType, ScheduleEntry, StaffRequest, CustomRule, ChatMessage, AiGenerationSettings, ChangeLog, RoleDutySetting, GlobalDutySettings, ArchivedSchedule, CalendarEvent } from './types';
+import type { Department, Personnel, ShiftType, ScheduleEntry, StaffRequest, CustomRule, ChatMessage, AiGenerationSettings, ChangeLog, GlobalDutySettings, ArchivedSchedule, CalendarEvent } from './types';
 import { Page } from './types';
 import { MOCK_DEPARTMENTS, MOCK_PERSONNEL, MOCK_SHIFT_TYPES, INITIAL_SCHEDULE, DEFAULT_RULES, DEFAULT_AI_SETTINGS, DEFAULT_SCHEDULE_NOTES, DEFAULT_GLOBAL_SETTINGS } from './constants';
 import { Scheduler } from './components/Scheduler';
@@ -13,10 +13,8 @@ import { AiAssistant } from './components/AiAssistant';
 import { DepartmentManager } from './components/DepartmentManager';
 import { SettingsManager } from './components/SettingsManager';
 
-import { auth, db, handleFirestoreError, OperationType } from './services/firebase';
-import { collection, getDocs, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { supabase, isSupabaseConfigured } from './services/supabase';
-import { loadUserDataFromSupabase, saveUserDataToSupabase } from './services/supabaseData';
+import { loadUserDataFromSupabase, saveUserDataToSupabase, stableSignature, type CollectionName, type UserDataPayload } from './services/supabaseData';
 
 type SupabaseUser = {
     id: string;
@@ -129,7 +127,7 @@ function Sidebar({
                     ))}
                 </ul>
             </nav>
-            {/* Firebase Auth Section */}
+            {/* Cloud Auth Section */}
             <div className="px-3 py-4 border-t border-slate-800/70 bg-slate-950/20">
                 {user ? (
                     <div className="flex flex-col gap-2">
@@ -186,11 +184,11 @@ function Sidebar({
                                 </div>
                             )}
                         </button>
-                        {!isCollapsed && authError === 'network-error' && (
+                        {!isCollapsed && authError && (
                             <div className="mt-2 p-2.5 bg-rose-500/15 border border-rose-500/30 rounded-xl text-[10px] text-rose-300 relative text-right flex flex-col gap-1 leading-relaxed">
                                 <button onClick={onClearAuthError} className="absolute left-1.5 top-0.5 text-rose-400 hover:text-white font-bold text-xs">×</button>
                                 <p className="font-bold text-rose-400">محدودیت پیش‌نمایش iframe مرورگر</p>
-                                <p>مرورگر دسترسی امنیتی فایربیس را درون آی‌فریم پیش‌نمایش به دلیل کوکی‌های شخص ثالث مسدود کرده است. لطفاً برنامه را در یک تب مجزا باز کنید:</p>
+                                <p>ورود گوگل درون آی‌فریم پیش‌نمایش به دلیل مسدودسازی کوکی‌های شخص ثالث توسط مرورگر ممکن است کار نکند. لطفاً برنامه را در یک تب مجزا باز کنید:</p>
                                 <a 
                                     href={window.location.href}
                                     target="_blank"
@@ -267,9 +265,12 @@ function App() {
     // Cloud Supabase Auth State
     const [user, setUser] = useState<SupabaseUser | null>(null);
     const [loadingUserData, setLoadingUserData] = useState(false);
-    const isSyncingFromFirestore = useRef(false);
+    const isSyncingFromCloud = useRef(false);
+    // Signatures of the last payload successfully exchanged with Supabase,
+    // used to push only the collections that actually changed.
+    const syncedSignatures = useRef<Partial<Record<keyof UserDataPayload, string>>>({});
 
-    const buildSupabasePayload = () => ({
+    const buildSupabasePayload = (): UserDataPayload => ({
         departments,
         personnel,
         shiftTypes,
@@ -282,18 +283,20 @@ function App() {
         manualBalances,
     });
 
-    const seedLocalToSupabase = async (uid: string) => {
-        try {
-            await saveUserDataToSupabase(uid, buildSupabasePayload());
-            console.log('Seeded current local data to Supabase successfully.');
-        } catch (e) {
-            console.warn('Supabase seed unavailable, falling back to local state.', e);
-        }
+    const rememberSyncedSignatures = (payload: UserDataPayload) => {
+        (Object.keys(payload) as (keyof UserDataPayload)[]).forEach((key) => {
+            syncedSignatures.current[key] = stableSignature(payload[key]);
+        });
+    };
+
+    const seedLocalToSupabase = async (uid: string, payload: UserDataPayload) => {
+        await saveUserDataToSupabase(uid, payload);
+        rememberSyncedSignatures(payload);
     };
 
     const fetchAllFromSupabase = async (uid: string) => {
         setLoadingUserData(true);
-        isSyncingFromFirestore.current = true;
+        isSyncingFromCloud.current = true;
         try {
             const payload = await loadUserDataFromSupabase(uid);
             const hasStoredData = Boolean(payload.departments.length || payload.personnel.length || payload.shiftTypes.length || payload.rules.length || payload.globalSettings);
@@ -311,126 +314,14 @@ function App() {
                     setGlobalSettings(payload.globalSettings);
                 }
                 setManualBalances(payload.manualBalances ?? {});
+                rememberSyncedSignatures(payload);
             } else {
-                await seedLocalToSupabase(uid);
+                await seedLocalToSupabase(uid, buildSupabasePayload());
             }
         } catch (e) {
             console.warn('Unable to load data from Supabase yet, using local state.', e);
         } finally {
-            isSyncingFromFirestore.current = false;
-            setLoadingUserData(false);
-        }
-    };
-
-    // Seed local storage values to Firestore
-    const seedLocalToFirestore = async (uid: string) => {
-        try {
-            const batchWrites: Promise<any>[] = [];
-            
-            departments.forEach(dept => {
-                batchWrites.push(setDoc(doc(db, 'users', uid, 'departments', dept.id), dept));
-            });
-            personnel.forEach(p => {
-                batchWrites.push(setDoc(doc(db, 'users', uid, 'personnel', p.id), p));
-            });
-            shiftTypes.forEach(st => {
-                batchWrites.push(setDoc(doc(db, 'users', uid, 'shiftTypes', st.id), st));
-            });
-            schedule.forEach(se => {
-                const docId = `${se.personnelId}_${se.date}`;
-                batchWrites.push(setDoc(doc(db, 'users', uid, 'schedule', docId), se));
-            });
-            requests.forEach(req => {
-                batchWrites.push(setDoc(doc(db, 'users', uid, 'requests', req.id), req));
-            });
-            rules.forEach(rule => {
-                batchWrites.push(setDoc(doc(db, 'users', uid, 'rules', rule.id), rule));
-            });
-            archives.forEach(arc => {
-                batchWrites.push(setDoc(doc(db, 'users', uid, 'archives', arc.id), arc));
-            });
-            events.forEach(ev => {
-                batchWrites.push(setDoc(doc(db, 'users', uid, 'calendarEvents', ev.id), ev));
-            });
-            batchWrites.push(setDoc(doc(db, 'users', uid, 'globalSettings', 'default'), globalSettings));
-            batchWrites.push(setDoc(doc(db, 'users', uid, 'manualBalances', 'all'), manualBalances));
-
-            await Promise.all(batchWrites);
-            console.log('Seeded current local data to Firestore successfully.');
-        } catch (e) {
-            console.error('Error seeding data to Firestore:', e);
-            handleFirestoreError(e, OperationType.WRITE, `users/${uid}`);
-        }
-    };
-
-    // Load user data from Firestore on login
-    const fetchAllFromFirestore = async (uid: string) => {
-        setLoadingUserData(true);
-        isSyncingFromFirestore.current = true;
-        try {
-            const [
-                deptsSnap,
-                persSnap,
-                shiftsSnap,
-                schedSnap,
-                reqSnap,
-                rulesSnap,
-                archSnap,
-                calSnap,
-                globalSnap,
-                manualSnap
-            ] = await Promise.all([
-                getDocs(collection(db, 'users', uid, 'departments')),
-                getDocs(collection(db, 'users', uid, 'personnel')),
-                getDocs(collection(db, 'users', uid, 'shiftTypes')),
-                getDocs(collection(db, 'users', uid, 'schedule')),
-                getDocs(collection(db, 'users', uid, 'requests')),
-                getDocs(collection(db, 'users', uid, 'rules')),
-                getDocs(collection(db, 'users', uid, 'archives')),
-                getDocs(collection(db, 'users', uid, 'calendarEvents')),
-                getDocs(collection(db, 'users', uid, 'globalSettings')),
-                getDocs(collection(db, 'users', uid, 'manualBalances'))
-            ]);
-
-            const fetchedDepts = deptsSnap.docs.map(d => d.data() as Department);
-            const fetchedPers = persSnap.docs.map(d => d.data() as Personnel);
-            const fetchedShifts = shiftsSnap.docs.map(d => d.data() as ShiftType);
-            const fetchedSchedule = schedSnap.docs.map(d => d.data() as ScheduleEntry);
-            const fetchedRequests = reqSnap.docs.map(d => d.data() as StaffRequest);
-            const fetchedRules = rulesSnap.docs.map(d => d.data() as CustomRule);
-            const fetchedArchives = archSnap.docs.map(d => d.data() as ArchivedSchedule);
-            const fetchedEvents = calSnap.docs.map(d => d.data() as CalendarEvent);
-            
-            let fetchedGlobal = fetchedDepts.length > 0 ? DEFAULT_GLOBAL_SETTINGS : null;
-            if (!globalSnap.empty) {
-                fetchedGlobal = globalSnap.docs[0].data() as GlobalDutySettings;
-            }
-
-            let fetchedManual = {};
-            if (!manualSnap.empty) {
-                fetchedManual = manualSnap.docs[0].data() as Record<string, number>;
-            }
-
-            if (fetchedDepts.length > 0 || fetchedPers.length > 0 || fetchedShifts.length > 0) {
-                setDepartments(fetchedDepts);
-                setPersonnel(fetchedPers);
-                setShiftTypes(fetchedShifts);
-                setSchedule(fetchedSchedule);
-                setRequests(fetchedRequests);
-                setRules(fetchedRules.length > 0 ? fetchedRules : DEFAULT_RULES);
-                setArchives(fetchedArchives);
-                setEvents(fetchedEvents);
-                if (fetchedGlobal) setGlobalSettings(fetchedGlobal);
-                setManualBalances(fetchedManual);
-            } else {
-                // First-time signup check: upload local mock data as starter database contents
-                await seedLocalToFirestore(uid);
-            }
-        } catch (e) {
-            console.error('Error fetching user data from Firestore:', e);
-            handleFirestoreError(e, OperationType.GET, `users/${uid}`);
-        } finally {
-            isSyncingFromFirestore.current = false;
+            isSyncingFromCloud.current = false;
             setLoadingUserData(false);
         }
     };
@@ -485,8 +376,7 @@ function App() {
                 options: {
                     redirectTo: typeof window !== 'undefined' ? window.location.origin : undefined,
                     queryParams: {
-                        access_type: 'offline',
-                        prompt: 'consent',
+                        prompt: 'select_account',
                     },
                 },
             });
@@ -506,7 +396,9 @@ function App() {
             try {
                 await supabase.auth.signOut();
                 setUser(null);
-                localStorage.clear();
+                Object.keys(localStorage)
+                    .filter((key) => key.startsWith('hejleh_'))
+                    .forEach((key) => localStorage.removeItem(key));
                 window.location.reload();
             } catch (error) {
                 console.error('Error SignOut:', error);
@@ -590,13 +482,33 @@ function App() {
         localStorage.setItem('hejleh_calendar_events', JSON.stringify(events));
     }, [events]);
 
-    // High performance debounced automatic Cloud mirroring via Supabase
+    // High performance debounced automatic Cloud mirroring via Supabase.
+    // Only collections whose content actually changed since the last successful
+    // sync are written, and the write itself is a single transactional RPC that
+    // also removes rows deleted locally.
     useEffect(() => {
-        if (!user || isSyncingFromFirestore.current) return;
+        if (!user || isSyncingFromCloud.current) return;
 
         const timeoutId = setTimeout(async () => {
+            if (isSyncingFromCloud.current) return;
+
+            const payload = buildSupabasePayload();
+            const dirtyCollections = (Object.keys(payload) as (keyof UserDataPayload)[]).filter((key) => {
+                if (key === 'globalSettings' || key === 'manualBalances') return false;
+                return syncedSignatures.current[key] !== stableSignature(payload[key]);
+            }) as CollectionName[];
+
+            const singletonsDirty =
+                syncedSignatures.current.globalSettings !== stableSignature(payload.globalSettings) ||
+                syncedSignatures.current.manualBalances !== stableSignature(payload.manualBalances);
+
+            if (dirtyCollections.length === 0 && !singletonsDirty) {
+                return;
+            }
+
             try {
-                await saveUserDataToSupabase(user.id, buildSupabasePayload());
+                await saveUserDataToSupabase(user.id, payload, dirtyCollections, singletonsDirty);
+                rememberSyncedSignatures(payload);
                 console.log('Supabase data successfully updated and mirrored.');
             } catch (err) {
                 console.error('Failed to auto-mirror to Supabase:', err);
@@ -619,7 +531,7 @@ function App() {
             localStorage.setItem('hejleh_calendar_events', JSON.stringify(events));
 
             if (user) {
-                await seedLocalToSupabase(user.id);
+                await seedLocalToSupabase(user.id, buildSupabasePayload());
                 alert('تمامی اطلاعات به همراه همگام‌سازی ابری Supabase با موفقیت ذخیره شد.');
             } else {
                 alert('تمامی اطلاعات به صورت محلی با موفقیت ذخیره شد. برای همگام‌سازی ابری، از طریق دکمه گوشه وارد حساب گوگل خود شوید.');

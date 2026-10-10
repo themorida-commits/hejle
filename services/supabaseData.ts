@@ -24,73 +24,141 @@ export interface UserDataPayload {
   manualBalances: Record<string, number>;
 }
 
-interface AppDataRow {
-  collection_name: string;
-  document_id: string;
-  payload: object;
+export type CollectionName =
+  | 'departments'
+  | 'personnel'
+  | 'shiftTypes'
+  | 'schedule'
+  | 'requests'
+  | 'rules'
+  | 'archives'
+  | 'calendarEvents';
+
+const COLLECTION_NAMES: readonly CollectionName[] = [
+  'departments',
+  'personnel',
+  'shiftTypes',
+  'schedule',
+  'requests',
+  'rules',
+  'archives',
+  'calendarEvents',
+];
+
+export function isCollectionName(value: string): value is CollectionName {
+  return (COLLECTION_NAMES as readonly string[]).includes(value);
+}
+
+/** Stable, order-independent signature used to detect real content changes. */
+export function stableSignature(value: unknown): string {
+  if (value === null || typeof value !== 'object') {
+    return JSON.stringify(value) ?? 'null';
+  }
+  if (Array.isArray(value)) {
+    return `[${value.map(stableSignature).join(',')}]`;
+  }
+  const entries = Object.entries(value as Record<string, unknown>).sort(([a], [b]) =>
+    a < b ? -1 : a > b ? 1 : 0
+  );
+  return `{${entries.map(([k, v]) => `${JSON.stringify(k)}:${stableSignature(v)}`).join(',')}}`;
 }
 
 function getScheduleEntryId(entry: ScheduleEntry): string {
   return `${entry.personnelId}_${entry.date}`;
 }
 
-async function upsertCollectionItems<T extends object>(
-  userId: string,
-  collectionName: string,
-  items: T[],
-  documentIdResolver: (item: T, index: number) => string,
-) {
-  if (!items.length) {
-    return;
-  }
+function getCollectionItems(collection: CollectionName, payload: UserDataPayload): object[] {
+  return payload[collection] as unknown as object[];
+}
 
-  const rows: AppDataRow[] = items.map((item, index) => ({
-    collection_name: collectionName,
-    document_id: documentIdResolver(item, index),
+function getDocumentIds(collection: CollectionName, payload: UserDataPayload): string[] {
+  switch (collection) {
+    case 'schedule':
+      return (payload.schedule ?? []).map(getScheduleEntryId);
+    default:
+      return (getCollectionItems(collection, payload) as { id?: string }[]).map((item) =>
+        item.id ? String(item.id) : ''
+      );
+  }
+}
+
+/**
+ * Replaces one collection in a single transactional round-trip.
+ * The database function removes rows that no longer exist locally and
+ * upserts (insert or update) every current row.
+ */
+async function replaceCollection(collectionName: CollectionName, payload: UserDataPayload) {
+  const items = getCollectionItems(collectionName, payload);
+  const documentIds = getDocumentIds(collectionName, payload);
+
+  const rows = items.map((item, index) => ({
+    document_id: documentIds[index],
     payload: item,
   }));
 
-  const { error } = await supabase
-    .from('app_data')
-    .upsert(
-      rows.map((row) => ({
-        user_id: userId,
-        collection_name: row.collection_name,
-        document_id: row.document_id,
-        payload: row.payload,
-      })),
-      { onConflict: 'user_id,collection_name,document_id' },
-    );
+  const { error } = await supabase.rpc('replace_collection', {
+    p_collection: collectionName,
+    p_rows: rows,
+  });
 
   if (error) {
     throw error;
   }
 }
 
-async function upsertSingletonItem<T extends object>(
+async function saveSingleton<T extends object>(
   userId: string,
   collectionName: string,
   documentId: string,
-  payload: T,
+  value: T | null
 ) {
-  const { error } = await supabase
-    .from('app_data')
-    .upsert(
-      {
-        user_id: userId,
-        collection_name: collectionName,
-        document_id: documentId,
-        payload,
-      },
-      { onConflict: 'user_id,collection_name,document_id' },
-    );
+  if (!value || Object.keys(value).length === 0) {
+    return;
+  }
+
+  const { error } = await supabase.from('app_data').upsert(
+    {
+      user_id: userId,
+      collection_name: collectionName,
+      document_id: documentId,
+      payload: value,
+    },
+    { onConflict: 'user_id,collection_name,document_id' }
+  );
 
   if (error) {
     throw error;
   }
 }
 
-async function fetchCollectionItems<T>(userId: string, collectionName: string): Promise<T[]> {
+/**
+ * Persists user data to Supabase. When `dirtyCollections` is provided only
+ * those collections are rewritten; otherwise every collection is written.
+ */
+export async function saveUserDataToSupabase(
+  userId: string,
+  payload: UserDataPayload,
+  dirtyCollections?: CollectionName[],
+  includeSingletons = true
+) {
+  if (!isSupabaseConfigured) {
+    return;
+  }
+
+  const collections =
+    dirtyCollections && dirtyCollections.length > 0 ? dirtyCollections : [...COLLECTION_NAMES];
+
+  for (const collection of collections) {
+    await replaceCollection(collection, payload);
+  }
+
+  if (includeSingletons) {
+    await saveSingleton(userId, 'globalSettings', 'default', payload.globalSettings);
+    await saveSingleton(userId, 'manualBalances', 'all', payload.manualBalances);
+  }
+}
+
+async function fetchCollectionItems<T>(userId: string, collectionName: CollectionName): Promise<T[]> {
   const { data, error } = await supabase
     .from('app_data')
     .select('payload')
@@ -104,7 +172,11 @@ async function fetchCollectionItems<T>(userId: string, collectionName: string): 
   return (data ?? []).map((row) => row.payload as T);
 }
 
-async function fetchSingletonItem<T>(userId: string, collectionName: string, documentId: string): Promise<T | null> {
+async function fetchSingletonItem<T>(
+  userId: string,
+  collectionName: string,
+  documentId: string
+): Promise<T | null> {
   const { data, error } = await supabase
     .from('app_data')
     .select('payload')
@@ -118,23 +190,6 @@ async function fetchSingletonItem<T>(userId: string, collectionName: string, doc
   }
 
   return (data?.payload as T) ?? null;
-}
-
-export async function saveUserDataToSupabase(userId: string, payload: UserDataPayload) {
-  if (!isSupabaseConfigured) {
-    return;
-  }
-  await upsertCollectionItems(userId, 'departments', payload.departments, (item) => item.id);
-  await upsertCollectionItems(userId, 'personnel', payload.personnel, (item) => item.id);
-  await upsertCollectionItems(userId, 'shiftTypes', payload.shiftTypes, (item) => item.id);
-  await upsertCollectionItems(userId, 'schedule', payload.schedule, (item) => getScheduleEntryId(item));
-  await upsertCollectionItems(userId, 'requests', payload.requests, (item) => item.id);
-  await upsertCollectionItems(userId, 'rules', payload.rules, (item) => item.id);
-  await upsertCollectionItems(userId, 'archives', payload.archives, (item) => item.id);
-  await upsertCollectionItems(userId, 'calendarEvents', payload.calendarEvents, (item) => item.id);
-
-  await upsertSingletonItem(userId, 'globalSettings', 'default', payload.globalSettings ?? {});
-  await upsertSingletonItem(userId, 'manualBalances', 'all', payload.manualBalances ?? {});
 }
 
 export async function loadUserDataFromSupabase(userId: string): Promise<UserDataPayload> {
