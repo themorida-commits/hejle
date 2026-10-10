@@ -142,7 +142,7 @@ export function RulesManager({ rules, setRules }: RulesManagerProps) {
     }, [rules, isSorted]);
 
     return (
-        <div className="p-6 bg-slate-50 flex-grow h-full overflow-auto custom-scrollbar">
+        <div className="p-6 bg-slate-50 grow h-full overflow-auto custom-scrollbar">
             <div className="flex justify-between items-center mb-8">
                 <div>
                     <div className="flex items-center gap-2 mb-1">
@@ -169,7 +169,7 @@ export function RulesManager({ rules, setRules }: RulesManagerProps) {
                 {displayedRules.map((rule, index) => (
                     <div key={rule.id} className={`group bg-white rounded-2xl border transition-all duration-300 border-slate-300 ${rule.isEnabled ? 'shadow-sm' : 'border-slate-200 opacity-60'}`}>
                         <div className="p-5 flex items-center justify-between">
-                            <div className="flex items-start gap-4 flex-grow">
+                            <div className="flex items-start gap-4 grow">
                                 <div className={`mt-1 w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border ${rule.isEnabled ? 'bg-blue-50 border-blue-100 text-blue-600' : 'bg-slate-50 border-slate-200 text-slate-400'}`}>
                                     {rule.type === 'custom' ? (
                                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1.001.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
@@ -177,7 +177,7 @@ export function RulesManager({ rules, setRules }: RulesManagerProps) {
                                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
                                     )}
                                 </div>
-                                <div className="flex-grow">
+                                <div className="grow">
                                     <h3 className={`font-black text-sm mb-1 ${rule.isEnabled ? 'text-slate-800' : 'text-slate-500'}`}>
                                         <span className="ml-2 text-blue-600">{index + 1}.</span>
                                         {rule.description}
@@ -209,7 +209,7 @@ export function RulesManager({ rules, setRules }: RulesManagerProps) {
                                 <div className="h-8 w-[1px] bg-slate-200 mx-2"></div>
                                 <button 
                                     onClick={() => toggleRule(rule.id)}
-                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${rule.isEnabled ? 'bg-emerald-500' : 'bg-slate-200'}`}
+                                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-hidden ${rule.isEnabled ? 'bg-emerald-500' : 'bg-slate-200'}`}
                                 >
                                     <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${rule.isEnabled ? '-translate-x-6' : '-translate-x-1'}`} />
                                 </button>
@@ -269,7 +269,7 @@ export function RulesManager({ rules, setRules }: RulesManagerProps) {
                                         <textarea
                                             value={ruleDescription}
                                             onChange={(e) => setRuleDescription(e.target.value)}
-                                            className="w-full p-4 bg-slate-50 border border-slate-300 rounded-2xl h-32 text-sm font-bold focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
+                                            className="w-full p-4 bg-slate-50 border border-slate-300 rounded-2xl h-32 text-sm font-bold focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-hidden transition-all"
                                             placeholder="مثلاً: پرستارانی که شیفت شب هستند نباید روز بعد شیفت صبح باشند..."
                                             required
                                         ></textarea>
@@ -282,7 +282,7 @@ export function RulesManager({ rules, setRules }: RulesManagerProps) {
                                                 type="number"
                                                 value={ruleValue}
                                                 onChange={(e) => setRuleValue(Number(e.target.value))}
-                                                className="w-20 p-2 bg-white border border-slate-300 rounded-xl text-center font-black outline-none focus:border-blue-500"
+                                                className="w-20 p-2 bg-white border border-slate-300 rounded-xl text-center font-black outline-hidden focus:border-blue-500"
                                                 min="1"
                                                 required
                                             />

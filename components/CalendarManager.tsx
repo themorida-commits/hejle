@@ -121,10 +121,10 @@ export function CalendarManager({ settings, setSettings, events, setEvents }: Ca
                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
                     </button>
                     <div className="h-6 w-px bg-slate-300 mx-1"></div>
-                    <select value={month} onChange={e => setMonth(Number(e.target.value))} className="p-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-black outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer">
+                    <select value={month} onChange={e => setMonth(Number(e.target.value))} className="p-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-black outline-hidden focus:ring-2 focus:ring-indigo-500 cursor-pointer">
                         {MONTHS.map(m => <option key={m.value} value={m.value}>{m.name}</option>)}
                     </select>
-                    <input type="number" value={year} onChange={e => setYear(Number(e.target.value))} className="w-16 p-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-black text-center outline-none focus:ring-2 focus:ring-indigo-500" />
+                    <input type="number" value={year} onChange={e => setYear(Number(e.target.value))} className="w-16 p-1.5 bg-slate-50 border border-slate-300 rounded-lg text-xs font-black text-center outline-hidden focus:ring-2 focus:ring-indigo-500" />
                 </div>
             </div>
 
@@ -170,14 +170,14 @@ export function CalendarManager({ settings, setSettings, events, setEvents }: Ca
             )}
 
             {/* Calendar Main View */}
-            <div className="flex-grow p-4 flex flex-col overflow-hidden">
+            <div className="grow p-4 flex flex-col overflow-hidden">
                 <div className="grid grid-cols-7 gap-1 mb-2 shrink-0">
                     {['شنبه', '۱شنبه', '۲شنبه', '۳شنبه', '۴شنبه', '۵شنبه', 'جمعه'].map((d, i) => (
                         <div key={d} className={`text-center py-2 text-[10px] font-black uppercase tracking-tight ${i === 6 ? 'text-rose-600' : 'text-slate-500'}`}>{d}</div>
                     ))}
                 </div>
 
-                <div className="grid grid-cols-7 gap-2 flex-grow auto-rows-fr">
+                <div className="grid grid-cols-7 gap-2 grow auto-rows-fr">
                     {calendarGrid.map((day, idx) => {
                         if (day === null) return <div key={`empty-${idx}`} className="bg-transparent opacity-0"></div>;
                         const isFriday = idx % 7 === 6;
@@ -266,16 +266,16 @@ export function CalendarManager({ settings, setSettings, events, setEvents }: Ca
 
                             <div className="pt-4 border-t border-slate-100 space-y-4">
                                 <h3 className="text-[9px] font-black text-slate-400 uppercase tracking-widest text-center">افزودن یادداشت جدید</h3>
-                                <input type="text" placeholder="عنوان رویداد..." value={eventTitle} onChange={e => setEventTitle(e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:border-indigo-500 outline-none text-right shadow-inner" />
+                                <input type="text" placeholder="عنوان رویداد..." value={eventTitle} onChange={e => setEventTitle(e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:border-indigo-500 outline-hidden text-right shadow-inner" />
                                 
                                 <div className="grid grid-cols-2 gap-3">
                                     <div className="text-right">
                                         <label className="block text-[8px] font-black text-slate-400 mb-1">اطلاع‌رسانی (دقیقه قبل)</label>
-                                        <input type="number" value={eventLeadMinutes} onChange={e => setEventLeadMinutes(Number(e.target.value))} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:border-indigo-500 outline-none text-center" />
+                                        <input type="number" value={eventLeadMinutes} onChange={e => setEventLeadMinutes(Number(e.target.value))} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:border-indigo-500 outline-hidden text-center" />
                                     </div>
                                     <div className="text-right">
                                         <label className="block text-[8px] font-black text-slate-400 mb-1">ساعت برگزاری</label>
-                                        <input type="time" value={eventTime} onChange={e => setEventTime(e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:border-indigo-500 outline-none text-center" />
+                                        <input type="time" value={eventTime} onChange={e => setEventTime(e.target.value)} className="w-full p-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold focus:border-indigo-500 outline-hidden text-center" />
                                     </div>
                                 </div>
 

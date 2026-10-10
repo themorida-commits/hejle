@@ -1,0 +1,10 @@
+project_id = "hejleh"
+
+[functions.health]
+verify_jwt = false
+
+[functions.generate-schedule]
+verify_jwt = false
+
+[functions.get-chat-response]
+verify_jwt = false

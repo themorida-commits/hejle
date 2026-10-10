@@ -42,7 +42,7 @@ export function SettingsManager({ settings, setSettings }: SettingsManagerProps)
     };
 
     return (
-        <div className="p-4 bg-slate-50 flex-grow h-full overflow-auto custom-scrollbar text-right">
+        <div className="p-4 bg-slate-50 grow h-full overflow-auto custom-scrollbar text-right">
             <div className="mb-6 flex justify-between items-center">
                 <div className="text-right">
                     <h1 className="text-2xl font-black text-slate-800 tracking-tight">تنظیمات پایه محاسبات</h1>
@@ -72,13 +72,13 @@ export function SettingsManager({ settings, setSettings }: SettingsManagerProps)
                                     const next = [...localSettings.roleDeductions];
                                     next[i].role = e.target.value;
                                     updateRoles(next);
-                                }} className="flex-grow p-1.5 bg-white border border-slate-200 rounded-lg text-[10px] font-bold outline-none text-right" />
+                                }} className="grow p-1.5 bg-white border border-slate-200 rounded-lg text-[10px] font-bold outline-hidden text-right" />
                                 <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg px-2">
                                     <input type="number" value={r.deduction} onChange={e => {
                                         const next = [...localSettings.roleDeductions];
                                         next[i].deduction = Number(e.target.value);
                                         updateRoles(next);
-                                    }} className="w-12 p-1 text-center font-mono font-bold text-[11px] outline-none" />
+                                    }} className="w-12 p-1 text-center font-mono font-bold text-[11px] outline-hidden" />
                                     <span className="text-[8px] font-black text-slate-400">ساعت</span>
                                 </div>
                                 <button onClick={() => removeRole(i)} className="p-1 text-slate-300 hover:text-rose-500 transition-opacity">
@@ -110,13 +110,13 @@ export function SettingsManager({ settings, setSettings }: SettingsManagerProps)
                                     const next = [...localSettings.employmentStatuses];
                                     next[i].status = e.target.value;
                                     updateEmployment(next);
-                                }} className="flex-grow p-1.5 bg-white border border-slate-200 rounded-lg text-[10px] font-bold outline-none text-right" />
+                                }} className="grow p-1.5 bg-white border border-slate-200 rounded-lg text-[10px] font-bold outline-hidden text-right" />
                                 <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg px-2">
                                     <input type="number" value={s.baseHours} onChange={e => {
                                         const next = [...localSettings.employmentStatuses];
                                         next[i].baseHours = Number(e.target.value);
                                         updateEmployment(next);
-                                    }} className="w-14 p-1 text-center font-mono font-bold text-[11px] outline-none" />
+                                    }} className="w-14 p-1 text-center font-mono font-bold text-[11px] outline-hidden" />
                                     <span className="text-[8px] font-black text-slate-400">ساعت</span>
                                 </div>
                                 <button onClick={() => removeEmployment(i)} className="p-1 text-slate-300 hover:text-rose-500 transition-opacity">
@@ -157,14 +157,14 @@ export function SettingsManager({ settings, setSettings }: SettingsManagerProps)
                                                 const next = [...localSettings.seniorityDeductions];
                                                 next[i].minMonths = minY * 12 + Number(e.target.value);
                                                 updateSeniority(next);
-                                            }} className="w-6 text-center font-mono font-black text-[10px] outline-none text-blue-600" />
+                                            }} className="w-6 text-center font-mono font-black text-[10px] outline-hidden text-blue-600" />
                                             <span className="text-[8px] text-slate-400 font-bold">M</span>
                                             <span className="text-slate-300 mx-0.5">/</span>
                                             <input type="number" value={minY} onChange={e => {
                                                 const next = [...localSettings.seniorityDeductions];
                                                 next[i].minMonths = Number(e.target.value) * 12 + minM;
                                                 updateSeniority(next);
-                                            }} className="w-8 text-center font-mono font-black text-[10px] outline-none" />
+                                            }} className="w-8 text-center font-mono font-black text-[10px] outline-hidden" />
                                             <span className="text-[8px] text-slate-400 font-bold">Y</span>
                                         </div>
                                         <span className="text-[8px] font-black text-slate-300 italic px-0.5">تا</span>
@@ -174,14 +174,14 @@ export function SettingsManager({ settings, setSettings }: SettingsManagerProps)
                                                 const next = [...localSettings.seniorityDeductions];
                                                 next[i].maxMonths = maxY * 12 + Number(e.target.value);
                                                 updateSeniority(next);
-                                            }} className="w-6 text-center font-mono font-bold text-[10px] outline-none text-blue-600" />
+                                            }} className="w-6 text-center font-mono font-bold text-[10px] outline-hidden text-blue-600" />
                                             <span className="text-[8px] text-slate-400 font-bold">M</span>
                                             <span className="text-slate-300 mx-0.5">/</span>
                                             <input type="number" value={maxY} onChange={e => {
                                                 const next = [...localSettings.seniorityDeductions];
                                                 next[i].maxMonths = Number(e.target.value) * 12 + maxM;
                                                 updateSeniority(next);
-                                            }} className="w-8 text-center font-mono font-black text-[10px] outline-none" />
+                                            }} className="w-8 text-center font-mono font-black text-[10px] outline-hidden" />
                                             <span className="text-[8px] text-slate-400 font-bold">Y</span>
                                         </div>
                                         <div className="flex items-center gap-0.5 bg-amber-50 border border-amber-200 rounded-lg px-1 shrink-0 h-7">
@@ -189,7 +189,7 @@ export function SettingsManager({ settings, setSettings }: SettingsManagerProps)
                                                 const next = [...localSettings.seniorityDeductions];
                                                 next[i].deduction = Number(e.target.value);
                                                 updateSeniority(next);
-                                            }} className="w-8 p-0 text-center font-mono font-black text-[10px] bg-transparent text-amber-700 outline-none" />
+                                            }} className="w-8 p-0 text-center font-mono font-black text-[10px] bg-transparent text-amber-700 outline-hidden" />
                                             <span className="text-[7px] font-black text-amber-400">h</span>
                                         </div>
                                         <button 

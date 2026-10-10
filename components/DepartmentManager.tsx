@@ -158,7 +158,7 @@ export function DepartmentManager({ departments, setDepartments, personnel, arch
     };
 
     return (
-        <div className="p-6 bg-slate-50 flex-grow h-full overflow-auto custom-scrollbar">
+        <div className="p-6 bg-slate-50 grow h-full overflow-auto custom-scrollbar">
             <div className="flex justify-between items-center mb-8">
                 <div>
                     <h1 className="text-3xl font-black text-slate-800 tracking-tight">مدیریت بخش‌ها</h1>
@@ -261,13 +261,13 @@ export function DepartmentManager({ departments, setDepartments, personnel, arch
                                     placeholder="جستجوی نام یا کد پرسنلی در این بخش..." 
                                     value={personnelSearchQuery}
                                     onChange={(e) => setPersonnelSearchQuery(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-bold focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all"
+                                    className="w-full pl-10 pr-4 py-3 bg-slate-50 border border-slate-300 rounded-xl text-sm font-bold focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-hidden transition-all"
                                 />
                                 <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                             </div>
                         </div>
 
-                        <div className="flex-grow overflow-y-auto p-6 custom-scrollbar space-y-3">
+                        <div className="grow overflow-y-auto p-6 custom-scrollbar space-y-3">
                             {filteredPersonnel.length > 0 ? (
                                 filteredPersonnel.map(p => (
                                     <div key={p.id} className="flex items-center justify-between p-3 bg-white border border-slate-300 rounded-xl hover:border-blue-400 hover:shadow-lg hover:shadow-blue-500/5 transition-all group">
@@ -330,7 +330,7 @@ export function DepartmentManager({ departments, setDepartments, personnel, arch
                             </button>
                         </div>
                         
-                        <div className="flex-grow overflow-y-auto p-6 custom-scrollbar">
+                        <div className="grow overflow-y-auto p-6 custom-scrollbar">
                             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 mb-6">
                                 {filteredArchives.length > 0 ? (
                                     filteredArchives.map(arc => (
@@ -385,7 +385,7 @@ export function DepartmentManager({ departments, setDepartments, personnel, arch
                                     <input 
                                         name="name" 
                                         defaultValue={editingDepartment?.name} 
-                                        className="w-full p-4 bg-slate-50 border border-slate-300 rounded-xl text-sm font-bold focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all" 
+                                        className="w-full p-4 bg-slate-50 border border-slate-300 rounded-xl text-sm font-bold focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-hidden transition-all" 
                                         placeholder="مثلاً: بخش CCU"
                                         required 
                                     />
@@ -401,7 +401,7 @@ export function DepartmentManager({ departments, setDepartments, personnel, arch
                                             className="w-14 h-12 p-1 bg-white border border-slate-300 rounded-xl cursor-pointer" 
                                         />
                                         <div 
-                                            className="flex-grow h-12 rounded-xl flex items-center justify-center text-white font-black text-xs shadow-inner border border-black/5" 
+                                            className="grow h-12 rounded-xl flex items-center justify-center text-white font-black text-xs shadow-inner border border-black/5" 
                                             style={{ backgroundColor: previewColor }}
                                         >
                                             پیش‌نمایش رنگ

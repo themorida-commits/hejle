@@ -52,7 +52,7 @@ export function ShiftTypeManager({ departments, shiftTypes, setShiftTypes }: Shi
     };
 
     return (
-        <div className="p-2 bg-slate-200 flex-grow h-full overflow-auto custom-scrollbar">
+        <div className="p-2 bg-slate-200 grow h-full overflow-auto custom-scrollbar">
             {/* Compact Header */}
             <div className="flex justify-between items-center mb-2 bg-white p-2 rounded-xl shadow-md border border-slate-300">
                 <div className="text-right">
@@ -140,18 +140,18 @@ export function ShiftTypeManager({ departments, shiftTypes, setShiftTypes }: Shi
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-right">
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-black text-slate-400 mr-2 uppercase tracking-widest">عنوان شیفت</label>
-                                    <input name="name" defaultValue={editingShift?.name} required className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-black focus:border-blue-500 outline-none transition-all shadow-inner" placeholder="مثلاً: عصر و شب" />
+                                    <input name="name" defaultValue={editingShift?.name} required className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-black focus:border-blue-500 outline-hidden transition-all shadow-inner" placeholder="مثلاً: عصر و شب" />
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-black text-slate-400 mr-2 uppercase tracking-widest">نماد (حداکثر ۳ حرف)</label>
-                                    <input name="symbol" defaultValue={editingShift?.symbol} required dir="ltr" maxLength={3} className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-black focus:border-blue-500 outline-none transition-all text-center shadow-inner" placeholder="EN" />
+                                    <input name="symbol" defaultValue={editingShift?.symbol} required dir="ltr" maxLength={3} className="w-full p-2.5 bg-slate-50 border border-slate-300 rounded-xl text-xs font-black focus:border-blue-500 outline-hidden transition-all text-center shadow-inner" placeholder="EN" />
                                 </div>
                                 
                                 <div className="md:col-span-2 space-y-1">
                                     <label className="text-[10px] font-black text-slate-400 mr-2 uppercase tracking-widest">رنگ نماد در جدول</label>
                                     <div className="flex items-center gap-3">
                                         <input type="color" name="displayColor" value={previewColor} onChange={(e) => setPreviewColor(e.target.value)} className="w-14 h-11 p-1 bg-white border border-slate-300 rounded-xl cursor-pointer" />
-                                        <div className="flex-grow h-11 rounded-xl flex items-center justify-center text-white font-black text-[10px] shadow-md border border-black/5" style={{ backgroundColor: previewColor }}>{previewColor}</div>
+                                        <div className="grow h-11 rounded-xl flex items-center justify-center text-white font-black text-[10px] shadow-md border border-black/5" style={{ backgroundColor: previewColor }}>{previewColor}</div>
                                     </div>
                                 </div>
 

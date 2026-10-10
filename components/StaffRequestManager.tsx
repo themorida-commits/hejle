@@ -152,7 +152,7 @@ export function StaffRequestManager({ isOpen, onClose, personnel, shiftTypes, re
                     <button type="button" onClick={onClose} className="text-slate-400 hover:text-rose-500 text-3xl font-light transition-colors">&times;</button>
                 </div>
                 
-                <div className="flex-grow overflow-y-auto pr-2 custom-scrollbar">
+                <div className="grow overflow-y-auto pr-2 custom-scrollbar">
                     <div className="bg-slate-50 p-4 rounded-xl mb-6 border border-slate-200 shadow-inner">
                         <form onSubmit={handleAddRequest} className="grid grid-cols-1 md:grid-cols-6 gap-3 items-end">
                             <div className="md:col-span-1 text-right">

@@ -49,7 +49,7 @@ const EditableCell = ({ value, onSave, type = 'text', options = [], dir = 'rtl',
                     value={currentValue} 
                     onChange={(e) => setCurrentValue(e.target.value)} 
                     onBlur={handleSave} 
-                    className="w-full p-0 bg-white border-none rounded-full text-[10px] font-black text-center outline-none ring-1 ring-blue-500"
+                    className="w-full p-0 bg-white border-none rounded-full text-[10px] font-black text-center outline-hidden ring-1 ring-blue-500"
                 >
                     {options.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                 </select>
@@ -64,7 +64,7 @@ const EditableCell = ({ value, onSave, type = 'text', options = [], dir = 'rtl',
                 onBlur={handleSave} 
                 onKeyDown={handleKeyDown} 
                 dir={dir} 
-                className="w-full p-0 bg-white border-none rounded-full text-[10px] font-black text-center outline-none ring-1 ring-blue-500" 
+                className="w-full p-0 bg-white border-none rounded-full text-[10px] font-black text-center outline-hidden ring-1 ring-blue-500" 
             />
         );
     }
@@ -116,7 +116,7 @@ export function PersonnelManager({ departments, personnel, setPersonnel, globalS
     const roleOptions = globalSettings.roleDeductions.map(r => ({ value: r.role, label: r.role }));
 
     return (
-        <div className="p-3 bg-slate-100 flex-grow h-full overflow-auto custom-scrollbar">
+        <div className="p-3 bg-slate-100 grow h-full overflow-auto custom-scrollbar">
             {/* Header Area */}
             <div className="flex flex-col md:flex-row justify-between items-center mb-4 gap-2">
                 <div className="text-right w-full md:w-auto">
@@ -125,13 +125,13 @@ export function PersonnelManager({ departments, personnel, setPersonnel, globalS
                 </div>
                 
                 <div className="flex items-center gap-2 w-full md:w-auto">
-                    <div className="relative flex-grow md:w-64">
+                    <div className="relative grow md:w-64">
                          <input 
                             type="text" 
                             placeholder="جستجوی هوشمند..." 
                             value={searchQuery} 
                             onChange={(e) => setSearchQuery(e.target.value)} 
-                            className="w-full p-2 pr-9 bg-white border border-slate-300 rounded-full shadow-sm text-[10px] font-black outline-none transition-all focus:border-blue-500" 
+                            className="w-full p-2 pr-9 bg-white border border-slate-300 rounded-full shadow-sm text-[10px] font-black outline-hidden transition-all focus:border-blue-500" 
                         />
                          <svg className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
                     </div>
@@ -306,55 +306,55 @@ export function PersonnelManager({ departments, personnel, setPersonnel, globalS
                             </div>
 
                             {/* Inputs Area */}
-                            <div className="flex-grow p-8">
+                            <div className="grow p-8">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-right">
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-black text-slate-400 mr-2 uppercase tracking-widest">نام و نام خانوادگی <span className="text-rose-500 font-black">*</span></label>
-                                        <input name="name" defaultValue={editingPersonnel?.name} required className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black focus:border-blue-500 outline-none transition-all" />
+                                        <input name="name" defaultValue={editingPersonnel?.name} required className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black focus:border-blue-500 outline-hidden transition-all" />
                                     </div>
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-black text-slate-400 mr-2 uppercase tracking-widest">کد پرسنلی اختصاصی <span className="text-rose-500 font-black">*</span></label>
-                                        <input name="personnelCode" defaultValue={editingPersonnel?.personnelCode} required dir="ltr" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black focus:border-blue-500 outline-none transition-all" />
+                                        <input name="personnelCode" defaultValue={editingPersonnel?.personnelCode} required dir="ltr" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black focus:border-blue-500 outline-hidden transition-all" />
                                     </div>
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-black text-slate-400 mr-2 uppercase tracking-widest">کد ملی <span className="text-rose-500 font-black">*</span></label>
-                                        <input name="nationalCode" defaultValue={editingPersonnel?.nationalCode} required dir="ltr" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black focus:border-blue-500 outline-none transition-all" />
+                                        <input name="nationalCode" defaultValue={editingPersonnel?.nationalCode} required dir="ltr" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black focus:border-blue-500 outline-hidden transition-all" />
                                     </div>
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-black text-slate-400 mr-2 uppercase tracking-widest">سمت شغلی <span className="text-rose-500 font-black">*</span></label>
-                                        <select name="role" defaultValue={editingPersonnel?.role} required className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black outline-none focus:border-blue-500 transition-all">
+                                        <select name="role" defaultValue={editingPersonnel?.role} required className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black outline-hidden focus:border-blue-500 transition-all">
                                             {globalSettings.roleDeductions.map(r => <option key={r.role} value={r.role}>{r.role}</option>)}
                                         </select>
                                     </div>
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-black text-slate-400 mr-2 uppercase tracking-widest">وضعیت استخدام <span className="text-rose-500 font-black">*</span></label>
-                                        <select name="employmentStatus" defaultValue={editingPersonnel?.employmentStatus} required className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black outline-none focus:border-blue-500 transition-all">
+                                        <select name="employmentStatus" defaultValue={editingPersonnel?.employmentStatus} required className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black outline-hidden focus:border-blue-500 transition-all">
                                             {globalSettings.employmentStatuses.map(s => <option key={s.status} value={s.status}>{s.status}</option>)}
                                         </select>
                                     </div>
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-black text-slate-400 mr-2 uppercase tracking-widest">بخش سرویس‌دهی <span className="text-rose-500 font-black">*</span></label>
-                                        <select name="departmentId" defaultValue={editingPersonnel?.departmentId || departments[0]?.id} required className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black outline-none focus:border-blue-500 transition-all">
+                                        <select name="departmentId" defaultValue={editingPersonnel?.departmentId || departments[0]?.id} required className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black outline-hidden focus:border-blue-500 transition-all">
                                             {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
                                         </select>
                                     </div>
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-black text-slate-400 mr-2 uppercase tracking-widest">تاریخ دقیق استخدام <span className="text-rose-500 font-black">*</span></label>
-                                        <input name="employmentDate" defaultValue={editingPersonnel?.employmentDate} required dir="ltr" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black outline-none focus:border-blue-500 transition-all" placeholder="1402/01/01" />
+                                        <input name="employmentDate" defaultValue={editingPersonnel?.employmentDate} required dir="ltr" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black outline-hidden focus:border-blue-500 transition-all" placeholder="1402/01/01" />
                                     </div>
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-black text-slate-400 mr-2 uppercase tracking-widest">سطح ارشدیت (سابقه سال) <span className="text-rose-500 font-black">*</span></label>
-                                        <input type="number" name="seniorityLevel" defaultValue={editingPersonnel?.seniorityLevel || 0} required className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black focus:border-blue-500 outline-none transition-all" />
+                                        <input type="number" name="seniorityLevel" defaultValue={editingPersonnel?.seniorityLevel || 0} required className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black focus:border-blue-500 outline-hidden transition-all" />
                                     </div>
 
                                     {/* Optional Fields */}
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-black text-slate-400 mr-2 uppercase tracking-widest">شماره تماس (اختیاری)</label>
-                                        <input name="contactNumber" defaultValue={editingPersonnel?.contactNumber} dir="ltr" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black outline-none focus:border-blue-500 transition-all" />
+                                        <input name="contactNumber" defaultValue={editingPersonnel?.contactNumber} dir="ltr" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black outline-hidden focus:border-blue-500 transition-all" />
                                     </div>
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-black text-slate-400 mr-2 uppercase tracking-widest">آدرس محل سکونت (اختیاری)</label>
-                                        <input name="address" defaultValue={editingPersonnel?.address} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black outline-none focus:border-blue-500 transition-all" />
+                                        <input name="address" defaultValue={editingPersonnel?.address} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-xs font-black outline-hidden focus:border-blue-500 transition-all" />
                                     </div>
                                 </div>
 

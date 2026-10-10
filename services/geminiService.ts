@@ -1,6 +1,31 @@
 import type { ScheduleEntry, Personnel, ShiftType, StaffRequest, CustomRule, ChatMessage, AiGenerationSettings, RoleDutySetting, GlobalDutySettings } from '../types';
 
 /**
+ * آدرس پایه‌ی API.
+ * - اگر VITE_API_BASE_URL تنظیم شده باشد (مثلاً Supabase Edge Functions):
+ *   https://<project-ref>.supabase.co/functions/v1
+ * - در غیر این صورت همان origin سرور می‌شود: /api/...
+ */
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').trim().replace(/\/+$/, '');
+
+function buildEndpoint(name: 'generate-schedule' | 'get-chat-response'): string {
+    return API_BASE_URL ? `${API_BASE_URL}/${name}` : `/api/${name}`;
+}
+
+async function resolveErrorMessage(response: Response, defaultMessage: string): Promise<string> {
+    try {
+        const errorData = await response.json();
+        if (typeof errorData?.error === 'string') return errorData.error;
+        if (errorData?.error && typeof errorData.error.message === 'string') return errorData.error.message;
+        if (typeof errorData?.message === 'string') return errorData.message;
+        if (typeof errorData?.error === 'object') return JSON.stringify(errorData.error);
+    } catch {
+        // پاسخ JSON نداشت
+    }
+    return defaultMessage;
+}
+
+/**
  * Generates a monthly schedule securely utilizing the server-side full stack API.
  */
 export async function completeScheduleAI(
@@ -18,7 +43,7 @@ export async function completeScheduleAI(
     manualBalances: Record<string, number> = {}
 ): Promise<ScheduleEntry[]> {
     try {
-        const response = await fetch("/api/generate-schedule", {
+        const response = await fetch(buildEndpoint('generate-schedule'), {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -40,19 +65,7 @@ export async function completeScheduleAI(
         });
 
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            let errMsg = "خطای نامشخص در سمت سرور";
-            if (errorData) {
-                if (typeof errorData.error === "string") {
-                    errMsg = errorData.error;
-                } else if (errorData.error && typeof errorData.error.message === "string") {
-                    errMsg = errorData.error.message;
-                } else if (typeof errorData.message === "string") {
-                    errMsg = errorData.message;
-                } else if (typeof errorData.error === "object") {
-                    errMsg = JSON.stringify(errorData.error);
-                }
-            }
+            const errMsg = await resolveErrorMessage(response, "خطای نامشخص در سمت سرور");
             throw new Error(errMsg);
         }
 
@@ -75,7 +88,7 @@ export async function getAiChatResponse(
     shiftTypes: ShiftType[]
 ): Promise<string> {
     try {
-        const response = await fetch("/api/get-chat-response", {
+        const response = await fetch(buildEndpoint('get-chat-response'), {
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
@@ -89,19 +102,7 @@ export async function getAiChatResponse(
         });
 
         if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            let errMsg = "خطا در برقراری ارتباط با پورتال پشتیبانی هوش مصنوعی";
-            if (errorData) {
-                if (typeof errorData.error === "string") {
-                    errMsg = errorData.error;
-                } else if (errorData.error && typeof errorData.error.message === "string") {
-                    errMsg = errorData.error.message;
-                } else if (typeof errorData.message === "string") {
-                    errMsg = errorData.message;
-                } else if (typeof errorData.error === "object") {
-                    errMsg = JSON.stringify(errorData.error);
-                }
-            }
+            const errMsg = await resolveErrorMessage(response, "خطا در برقراری ارتباط با پورتال پشتیبانی هوش مصنوعی");
             throw new Error(errMsg);
         }
 

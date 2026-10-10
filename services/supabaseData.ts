@@ -9,6 +9,7 @@ import type {
   ShiftType,
   StaffRequest,
 } from '../types';
+import type { Json } from '../database.types';
 import { supabase, isSupabaseConfigured } from './supabase';
 
 export interface UserDataPayload {
@@ -93,7 +94,7 @@ async function replaceCollection(collectionName: CollectionName, payload: UserDa
 
   const rows = items.map((item, index) => ({
     document_id: documentIds[index],
-    payload: item,
+    payload: item as Json,
   }));
 
   const { error } = await supabase.rpc('replace_collection', {
@@ -121,7 +122,7 @@ async function saveSingleton<T extends object>(
       user_id: userId,
       collection_name: collectionName,
       document_id: documentId,
-      payload: value,
+      payload: value as Json,
     },
     { onConflict: 'user_id,collection_name,document_id' }
   );

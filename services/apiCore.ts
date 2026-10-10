@@ -5,7 +5,7 @@ import type { ScheduleEntry } from '../types';
  * هسته‌ی مشترک endpointهای سرور.
  * این ماژول هم توسط سرور Express (server.ts) و هم توسط توابع
  * سرورلس Vercel (api/index.ts) استفاده می‌شود تا منطق API
- * در exactly یک نقطه نگهداری شود.
+ * فقط در یک نقطه نگهداری شود.
  *
  * نکته امنیتی: GEMINI_API_KEY فقط در سمت سرور خوانده می‌شود و
  * هرگز به کلاینت نمی‌رود.
@@ -141,18 +141,31 @@ export async function handleGenerateSchedule(req: ApiRequestLike, res: ApiRespon
       return res.json({ success: true, schedule: [] });
     }
 
+    const defaultGlobalSettings = {
+      employmentStatuses: [],
+      roleDeductions: [],
+      seniorityDeductions: [],
+      reminderLeadDays: 1,
+      defaultReminderMinutes: 60,
+    };
+
     const schedule: ScheduleEntry[] = generateScheduleDeterministic({
       personnel,
       shiftTypes,
-      currentSchedule,
-      requests,
+      currentSchedule: Array.isArray(currentSchedule) ? currentSchedule : [],
+      requests: Array.isArray(requests) ? requests : [],
       jMonth,
       jYear,
-      rules,
-      aiSettings,
+      rules: Array.isArray(rules) ? rules : [],
+      aiSettings: aiSettings ?? {
+        distributionAlgorithm: 'even',
+        minRestHours: 12,
+        maxConsecutiveWorkDays: 3,
+        weekendDistribution: 'even',
+      },
       dailyReqs,
-      globalSettings,
-      manualBalances,
+      globalSettings: globalSettings ?? defaultGlobalSettings,
+      manualBalances: manualBalances ?? {},
     });
 
     res.json({ success: true, schedule });

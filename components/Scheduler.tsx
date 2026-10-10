@@ -337,7 +337,7 @@ export function Scheduler({
     const totalWidth = offsets.totalFixed + (daysInJMonth * ds.dayW) + (2 * ds.statsW);
 
     return (
-        <div className="p-2 bg-slate-200 flex-grow h-full overflow-hidden flex flex-col relative">
+        <div className="p-2 bg-slate-200 grow h-full overflow-hidden flex flex-col relative">
             <style>{`
                 .collapsible-row { transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1); overflow: hidden; }
                 .collapsed { opacity: 0; transform: translateY(-5px); visibility: collapse; height: 0 !important; }
@@ -392,7 +392,7 @@ export function Scheduler({
                 </div>
             </div>
 
-            <div ref={gridContainerRef} className="flex-grow overflow-auto bg-white border border-slate-400 shadow-2xl rounded-2xl relative custom-scrollbar">
+            <div ref={gridContainerRef} className="grow overflow-auto bg-white border border-slate-400 shadow-2xl rounded-2xl relative custom-scrollbar">
                 {selectedCell && showPalette && palettePos && (
                     <div 
                         className="absolute z-[100] bg-white/95 backdrop-blur-sm shadow-2xl rounded-xl border border-slate-300 p-1 flex flex-col gap-1 pointer-events-auto animate-in fade-in zoom-in duration-100"
@@ -435,7 +435,7 @@ export function Scheduler({
                             <tr key={`need-${type}`} className={`collapsible-row ${showNeeds ? 'expanded' : 'collapsed'}`} style={{ height: showNeeds ? `${getScaled(12)}px` : '0px' }}>
                                 <th colSpan={6} className="sticky right-0 z-[70] px-1 border-l-2 border-slate-500 border-b border-slate-300 font-black bg-white/95 align-middle" style={{ right: 0, fontSize: ds.microFontSize }}>
                                     <div className="relative w-full h-full flex items-center justify-center gap-1.5 text-right">
-                                        <input type="number" min="0" className="w-8 h-5 bg-white border border-slate-400 rounded text-center font-bold outline-none shadow-sm focus:ring-1 focus:ring-blue-400" style={{ fontSize: '9px' }} onChange={e => handleBatchReq(type as any, e.target.value)} placeholder="0" />
+                                        <input type="number" min="0" className="w-8 h-5 bg-white border border-slate-400 rounded text-center font-bold outline-hidden shadow-sm focus:ring-1 focus:ring-blue-400" style={{ fontSize: '9px' }} onChange={e => handleBatchReq(type as any, e.target.value)} placeholder="0" />
                                         <span className="text-slate-600 font-black whitespace-nowrap">نیاز {type === 'morning' ? 'صبح' : type === 'evening' ? 'عصر' : 'شب'}</span>
                                     </div>
                                 </th>
@@ -515,7 +515,7 @@ export function Scheduler({
                                         let cellBg = (isH || isF) ? 'bg-orange-100' : 'bg-white';
                                         const isSelected = selectedCell?.personId === p.id && selectedCell?.day === day;
                                         return (
-                                            <td key={dateStr} className={`border-l border-slate-300 border-b border-slate-300 text-center cursor-pointer relative transition-all align-middle active:scale-95 ${cellBg} ${isSelected ? 'ring-2 ring-blue-500 ring-inset z-[80] shadow-2xl' : ''}`} style={{ backgroundColor: shift?.displayColor || undefined, color: entry ? getTextColorForBackground(shift?.displayColor || '#fff') : undefined }} onClick={(e) => handleCellClick(e, p.id, day)} onDoubleClick={(e) => handleCellDoubleClick(e, p.id, day)} title={request ? (request.requestType === 'Leave' ? 'درخواست مرخصی' : 'شیفت درخواستی') : undefined}>
+                                            <td key={dateStr} className={`border-l border-slate-300 border-b border-slate-300 text-center cursor-pointer relative transition-all align-middle active:scale-95 ${cellBg} ${isSelected ? 'ring-2 ring-blue-500 inset-ring z-[80] shadow-2xl' : ''}`} style={{ backgroundColor: shift?.displayColor || undefined, color: entry ? getTextColorForBackground(shift?.displayColor || '#fff') : undefined }} onClick={(e) => handleCellClick(e, p.id, day)} onDoubleClick={(e) => handleCellDoubleClick(e, p.id, day)} title={request ? (request.requestType === 'Leave' ? 'درخواست مرخصی' : 'شیفت درخواستی') : undefined}>
                                                 <span className="font-mono font-black leading-none inline-block align-middle" style={{ fontSize: ds.fontSize }}>{shift?.symbol || ''}</span>
                                                 {cellConflicts && (<div className="absolute top-0 right-0 w-2 h-2 flex items-center justify-center"><div className="w-1.5 h-1.5 bg-rose-600 rounded-bl-full shadow-sm"></div></div>)}
                                                 {request && (<div className="absolute bottom-0 right-0 p-0.5"><svg className={`w-2 h-2 ${entry ? 'text-white/80' : 'text-amber-500'}`} fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a6 6 0 00-6 6v3.586l-.707.707A1 1 0 004 14h12a1 1 0 00.707-1.707L16 11.586V8a6 6 0 00-6-6zM10 18a3 3 0 01-3-3h6a3 3 0 01-3 3z"/></svg></div>)}

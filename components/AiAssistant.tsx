@@ -162,16 +162,16 @@ export function AiAssistant({ personnel, shiftTypes, messages, setMessages, aiSe
     };
 
     return (
-        <div className="p-6 bg-gray-50 flex-grow h-full flex flex-col overflow-hidden">
-            <div className="flex-shrink-0">
+        <div className="p-6 bg-gray-50 grow h-full flex flex-col overflow-hidden">
+            <div className="shrink-0">
                 <h1 className="text-3xl font-bold text-gray-800">دستیار هوش مصنوعی</h1>
                 <p className="text-gray-600 mt-2 mb-6">از هوش مصنوعی برای ایجاد برنامه‌ها یا دریافت راهنمایی استفاده کنید.</p>
             </div>
             
             <AiSettings settings={aiSettings} setSettings={setAiSettings} />
 
-            <div className="flex-grow bg-white rounded-lg shadow p-4 flex flex-col overflow-hidden">
-                <div className="flex-grow overflow-y-auto mb-4 space-y-4 pr-2">
+            <div className="grow bg-white rounded-lg shadow p-4 flex flex-col overflow-hidden">
+                <div className="grow overflow-y-auto mb-4 space-y-4 pr-2">
                     {messages.map((msg, index) => (
                         <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                             <div className={`max-w-3xl p-3 rounded-lg ${msg.role === 'user' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-800'}`}>
@@ -211,14 +211,14 @@ export function AiAssistant({ personnel, shiftTypes, messages, setMessages, aiSe
                     </div>
                 )}
                 
-                <div className="flex-shrink-0 mt-auto">
+                <div className="shrink-0 mt-auto">
                     <form onSubmit={handleSubmit} className="flex gap-2">
                         <input
                             type="text"
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             placeholder="پیام خود را اینجا بنویسید..."
-                            className="flex-grow p-3 border rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                            className="grow p-3 border rounded-md focus:ring-2 focus:ring-blue-500 focus:outline-hidden"
                             disabled={isLoading}
                         />
                         <button type="submit" disabled={isLoading} className="bg-blue-600 text-white px-6 py-2 rounded-md font-semibold hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed">

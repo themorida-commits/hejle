@@ -1,6 +1,7 @@
 -- =====================================================================
--- Hejleh App — Supabase schema (production hardened)
+-- Hejleh App — Supabase schema (production hardened, idempotent)
 -- اجرا: Supabase Dashboard → SQL Editor → New query → paste → Run
+-- این فایل هم برای استقرار تازه و هم برای ارتقای نسخه‌ی قبلی کار می‌کند.
 -- =====================================================================
 
 create extension if not exists pgcrypto;
@@ -41,6 +42,69 @@ create table if not exists public.app_data (
 comment on table public.app_data is 'داده‌های کاربرها؛ هر ردیف یک سند jsonb در یک مجموعه منطقی';
 comment on column public.app_data.user_id is 'مالک سند؛ به auth.users متصل و با حذف کاربر پاک می‌شود';
 
+-- ---------------------------------------------------------------------
+-- حذف policyهای نسخه‌ی قبلی (قبل از تغییر نوع ستون انجام می‌شود تا
+-- عبارات وابسته دوباره ارزیابی نشوند و خطا ندهند)
+-- ---------------------------------------------------------------------
+drop policy if exists app_data_select_policy on public.app_data;
+drop policy if exists app_data_insert_policy on public.app_data;
+drop policy if exists app_data_update_policy on public.app_data;
+drop policy if exists app_data_delete_policy on public.app_data;
+
+-- ---------------------------------------------------------------------
+-- ارتقای جدول‌های ساخته‌شده با نسخه‌های قبلی (text → uuid و محدودیت‌ها)
+-- ---------------------------------------------------------------------
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'app_data'
+      and column_name = 'user_id'
+      and data_type = 'text'
+  ) then
+    alter table public.app_data
+      alter column user_id type uuid using user_id::uuid;
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint where conname = 'app_data_user_id_fkey'
+  ) then
+    alter table public.app_data
+      add constraint app_data_user_id_fkey
+      foreign key (user_id) references auth.users (id) on delete cascade;
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint where conname = 'app_data_collection_name_check'
+  ) then
+    alter table public.app_data
+      add constraint app_data_collection_name_check check (
+        collection_name in (
+          'departments',
+          'personnel',
+          'shiftTypes',
+          'schedule',
+          'requests',
+          'rules',
+          'archives',
+          'calendarEvents',
+          'globalSettings',
+          'manualBalances'
+        )
+      );
+  end if;
+
+  if not exists (
+    select 1 from pg_constraint where conname = 'app_data_payload_size_check'
+  ) then
+    alter table public.app_data
+      add constraint app_data_payload_size_check check (
+        octet_length(payload::text) <= 1048576
+      );
+  end if;
+end $$;
+
 -- پوشش کوئری‌های اصلی (select/update/delete روی هر مجموعه)
 create index if not exists app_data_user_collection_idx
   on public.app_data (user_id, collection_name);
@@ -72,26 +136,22 @@ create trigger app_data_set_updated_at
 -- ---------------------------------------------------------------------
 alter table public.app_data enable row level security;
 
-drop policy if exists app_data_select_policy on public.app_data;
 create policy app_data_select_policy on public.app_data
   for select
   to authenticated
   using (user_id = (select auth.uid()));
 
-drop policy if exists app_data_insert_policy on public.app_data;
 create policy app_data_insert_policy on public.app_data
   for insert
   to authenticated
   with check (user_id = (select auth.uid()));
 
-drop policy if exists app_data_update_policy on public.app_data;
 create policy app_data_update_policy on public.app_data
   for update
   to authenticated
   using (user_id = (select auth.uid()))
   with check (user_id = (select auth.uid()));
 
-drop policy if exists app_data_delete_policy on public.app_data;
 create policy app_data_delete_policy on public.app_data
   for delete
   to authenticated
@@ -148,7 +208,7 @@ $$;
 revoke all on function public.replace_collection(text, jsonb) from anon;
 
 -- ---------------------------------------------------------------------
--- محدودسازی نرخ درخواست endpoints هوش مصنوعی
+-- محدودسازی نرخ درخواست endpointهای هوش مصنوعی
 -- ---------------------------------------------------------------------
 create table if not exists public.ai_request_log (
   id bigint generated always as identity primary key,

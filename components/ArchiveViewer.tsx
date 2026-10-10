@@ -95,7 +95,7 @@ export function ArchiveViewer({ personnel, shiftTypes, schedule, globalSettings 
     };
 
     return (
-        <div className="p-6 bg-slate-50 flex-grow h-full overflow-auto custom-scrollbar">
+        <div className="p-6 bg-slate-50 grow h-full overflow-auto custom-scrollbar">
             <div className="mb-8">
                 <h1 className="text-3xl font-black text-slate-800 tracking-tight">بایگانی برنامه و گزارشات</h1>
                 <p className="text-slate-500 mt-1 font-medium">مشاهده عملکرد ماهانه پرسنل بر اساس محاسبات حقوقی دقیق</p>
@@ -107,15 +107,15 @@ export function ArchiveViewer({ personnel, shiftTypes, schedule, globalSettings 
                     فیلتر گزارش ماهانه
                 </h2>
                 <div className="flex flex-wrap items-end gap-6">
-                    <div className="flex-grow max-w-[200px]">
+                    <div className="grow max-w-[200px]">
                         <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">انتخاب سال</label>
-                        <select value={selectedYear} onChange={e => setSelectedYear(Number(e.target.value))} className="w-full p-3 bg-slate-50 border border-slate-300 rounded-2xl font-bold text-sm focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all">
+                        <select value={selectedYear} onChange={e => setSelectedYear(Number(e.target.value))} className="w-full p-3 bg-slate-50 border border-slate-300 rounded-2xl font-bold text-sm focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-hidden transition-all">
                              {years.map(y => <option key={y} value={y}>{y}</option>)}
                         </select>
                     </div>
-                    <div className="flex-grow max-w-[200px]">
+                    <div className="grow max-w-[200px]">
                         <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">انتخاب ماه</label>
-                        <select value={selectedMonth} onChange={e => setSelectedMonth(Number(e.target.value))} className="w-full p-3 bg-slate-50 border border-slate-300 rounded-2xl font-bold text-sm focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all">
+                        <select value={selectedMonth} onChange={e => setSelectedMonth(Number(e.target.value))} className="w-full p-3 bg-slate-50 border border-slate-300 rounded-2xl font-bold text-sm focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-hidden transition-all">
                              {MONTHS.map(m => <option key={m.value} value={m.value}>{m.name}</option>)}
                         </select>
                     </div>

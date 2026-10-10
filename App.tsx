@@ -1,220 +1,38 @@
 
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, lazy, Suspense } from 'react';
 import type { Department, Personnel, ShiftType, ScheduleEntry, StaffRequest, CustomRule, ChatMessage, AiGenerationSettings, ChangeLog, GlobalDutySettings, ArchivedSchedule, CalendarEvent } from './types';
 import { Page } from './types';
 import { MOCK_DEPARTMENTS, MOCK_PERSONNEL, MOCK_SHIFT_TYPES, INITIAL_SCHEDULE, DEFAULT_RULES, DEFAULT_AI_SETTINGS, DEFAULT_SCHEDULE_NOTES, DEFAULT_GLOBAL_SETTINGS } from './constants';
-import { Scheduler } from './components/Scheduler';
-import { PersonnelManager } from './components/PersonnelManager';
-import { ShiftTypeManager } from './components/ShiftTypeManager';
-import { ArchiveViewer } from './components/ArchiveViewer';
-import { RulesManager } from './components/RulesManager';
-import { CalendarManager } from './components/CalendarManager';
-import { AiAssistant } from './components/AiAssistant';
-import { DepartmentManager } from './components/DepartmentManager';
-import { SettingsManager } from './components/SettingsManager';
+import { Sidebar, type SidebarUser } from './components/Sidebar';
+
+// بارگذاری تنبل صفحه‌ها برای کاهش حجم اولیه (code splitting)
+const Scheduler = lazy(() => import('./components/Scheduler').then((m) => ({ default: m.Scheduler })));
+const PersonnelManager = lazy(() => import('./components/PersonnelManager').then((m) => ({ default: m.PersonnelManager })));
+const ShiftTypeManager = lazy(() => import('./components/ShiftTypeManager').then((m) => ({ default: m.ShiftTypeManager })));
+const ArchiveViewer = lazy(() => import('./components/ArchiveViewer').then((m) => ({ default: m.ArchiveViewer })));
+const RulesManager = lazy(() => import('./components/RulesManager').then((m) => ({ default: m.RulesManager })));
+const CalendarManager = lazy(() => import('./components/CalendarManager').then((m) => ({ default: m.CalendarManager })));
+const AiAssistant = lazy(() => import('./components/AiAssistant').then((m) => ({ default: m.AiAssistant })));
+const DepartmentManager = lazy(() => import('./components/DepartmentManager').then((m) => ({ default: m.DepartmentManager })));
+const SettingsManager = lazy(() => import('./components/SettingsManager').then((m) => ({ default: m.SettingsManager })));
 
 import { supabase, isSupabaseConfigured } from './services/supabase';
 import { loadUserDataFromSupabase, saveUserDataToSupabase, stableSignature, type CollectionName, type UserDataPayload } from './services/supabaseData';
 
-type SupabaseUser = {
-    id: string;
-    email?: string | null;
-    user_metadata?: {
-        full_name?: string | null;
-        avatar_url?: string | null;
-        name?: string | null;
-    };
-};
+type SupabaseUser = SidebarUser;
 
-const ICONS: Record<Page, React.ReactElement> = {
-    [Page.Scheduler]: <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>,
-    [Page.Personnel]: <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M15 21a6 6 0 00-9-5.197m0 0A5.995 5.995 0 0112 13a5.995 5.995 0 013 1.003m-3-1.003A4.002 4.002 0 0112 4.354M7 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>,
-    [Page.ShiftTypes]: <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 21a4 4 0 01-4-4V5a4 4 0 014-4h10a4 4 0 014 4v12a4 4 0 01-4 4H7zM12 9v6m-3-3h6" /></svg>,
-    [Page.DepartmentManagement]: <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" /></svg>,
-    [Page.Rules]: <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>,
-    [Page.Calendar]: <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>,
-    [Page.AiAssistant]: <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" /></svg>,
-    [Page.Archive]: <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" /></svg>,
-    [Page.Settings]: <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>,
-};
-
-function HejlehLogo() {
-    const [imgError, setImgError] = useState(false);
-    if (imgError) {
-        return (
-            <svg viewBox="0 0 100 100" className="w-12 h-12 flex-shrink-0" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M50 88.5C50 88.5 88 65 88 42C88 25 75 15 60 15C50 15 45 20 45 20C45 20 40 15 30 15C15 15 2 25 2 42C2 65 40 88.5 40 88.5" stroke="#EF4444" strokeWidth="8" strokeLinecap="round" strokeLinejoin="round" />
-                <circle cx="30" cy="25" r="10" fill="#22C55E" />
-                <path d="M12 60C12 60 22 40 62 30" stroke="#22C55E" strokeWidth="8" strokeLinecap="round" />
-            </svg>
-        );
-    }
-    return <img src="/logo.png" alt="Hejleh Logo" className="w-12 h-12 object-contain relative z-10" onError={() => setImgError(true)} />;
-}
-
-function Sidebar({ 
-    currentPage, 
-    setCurrentPage, 
-    activeRemindersCount,
-    user,
-    loadingUserData,
-    onGoogleSignIn,
-    onSignOut,
-    authError,
-    onClearAuthError
-}: { 
-    currentPage: Page, 
-    setCurrentPage: (page: Page) => void, 
-    activeRemindersCount: number,
-    user: SupabaseUser | null,
-    loadingUserData: boolean,
-    onGoogleSignIn: () => void,
-    onSignOut: () => void,
-    authError: string | null,
-    onClearAuthError: () => void
-}) {
-    const [isCollapsed, setIsCollapsed] = useState(false);
-    const displayName = user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || 'کاربر';
-    const avatarUrl = user?.user_metadata?.avatar_url || null;
-    const navItems = [
-        { page: Page.Scheduler, label: 'برنامه شیفت' },
-        { page: Page.Personnel, label: 'پرسنل' },
-        { page: Page.ShiftTypes, label: 'انواع شیفت' },
-        { page: Page.DepartmentManagement, label: 'مدیریت بخش'},
-        { page: Page.Rules, label: 'قوانین' },
-        { page: Page.Calendar, label: 'تقویم' },
-        { page: Page.Settings, label: 'تنظیمات موظفی' },
-        { page: Page.AiAssistant, label: 'دستیار هوش مصنوعی' },
-        { page: Page.Archive, label: 'بایگانی برنامه' },
-    ];
-
+function PageLoadingFallback() {
     return (
-        <div className={`${isCollapsed ? 'w-20' : 'w-64'} bg-slate-900 text-white flex flex-col flex-shrink-0 shadow-2xl z-20 transition-all duration-300 ease-in-out relative overflow-hidden`}>
-            <div className="absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-[400px] bg-gradient-to-b from-blue-900/30 via-slate-900/10 to-transparent"></div>
-            </div>
-            <button onClick={() => setIsCollapsed(!isCollapsed)} className="absolute left-0 top-12 transform -translate-x-1/2 bg-slate-800 text-white p-1 rounded-full border border-slate-700 hover:bg-blue-600 shadow-lg z-50 focus:outline-none flex items-center justify-center w-7 h-7">
-                <svg xmlns="http://www.w3.org/2000/svg" className={`h-4 w-4 transition-transform duration-300 ${isCollapsed ? 'rotate-180' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /> 
-                </svg>
-            </button>
-            <div className={`relative z-10 flex flex-col items-center mt-6 mb-8 px-2 transition-all duration-300 overflow-hidden`}>
-                <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'justify-center gap-3'} transition-all duration-300`}>
-                    <HejlehLogo />
-                    <h1 className={`text-2xl font-bold whitespace-nowrap tracking-tight transition-all duration-300 ${isCollapsed ? 'w-0 opacity-0 scale-0 hidden' : 'w-auto opacity-100 scale-100'}`}>
-                        <span className="text-amber-500">Hejleh</span> <span className="text-amber-600">App</span>
-                    </h1>
-                </div>
-            </div>
-            <nav className="flex-1 w-full px-3 pb-4 z-10 overflow-y-auto custom-scrollbar">
-                <ul className="space-y-1.5">
-                    {navItems.map(item => (
-                        <li key={item.page} className="relative group">
-                            <button onClick={() => setCurrentPage(item.page)} className={`w-full p-3 rounded-xl transition-all duration-300 flex items-center relative overflow-hidden group ${isCollapsed ? 'justify-center' : 'justify-start gap-3 text-right'} ${currentPage === item.page ? 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-lg shadow-blue-500/30' : 'text-slate-300 hover:bg-slate-800 hover:text-white'}`}>
-                                <div className={`flex-shrink-0 relative z-10 transition-colors duration-300 ${currentPage === item.page ? 'text-white' : 'text-slate-400 group-hover:text-blue-400'}`}>
-                                    {ICONS[item.page as Page]}
-                                </div>
-                                <span className={`whitespace-nowrap overflow-hidden transition-all duration-300 relative z-10 font-medium ${isCollapsed ? 'w-0 opacity-0 hidden' : 'w-auto opacity-100'}`}>
-                                    {item.label}
-                                </span>
-                                {item.page === Page.Calendar && activeRemindersCount > 0 && (
-                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 bg-rose-500 text-white text-[10px] font-black rounded-full flex items-center justify-center animate-pulse shadow-lg border border-white/20">
-                                        {activeRemindersCount}
-                                    </span>
-                                )}
-                            </button>
-                        </li>
-                    ))}
-                </ul>
-            </nav>
-            {/* Cloud Auth Section */}
-            <div className="px-3 py-4 border-t border-slate-800/70 bg-slate-950/20">
-                {user ? (
-                    <div className="flex flex-col gap-2">
-                        <div className={`flex items-center gap-3 ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
-                            <div className="flex items-center gap-2 overflow-hidden">
-                                {avatarUrl ? (
-                                    <img src={avatarUrl} alt={displayName} className="w-8 h-8 rounded-full border border-teal-500/50 shadow-md shrink-0 focus:outline-none" referrerPolicy="no-referrer" />
-                                ) : (
-                                    <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center text-slate-300 font-bold shrink-0">
-                                        {displayName[0] || 'U'}
-                                    </div>
-                                )}
-                                {!isCollapsed && (
-                                    <div className="flex flex-col text-right overflow-hidden">
-                                        <span className="text-xs font-semibold text-slate-100 truncate">{displayName}</span>
-                                        <span className="text-[10px] text-teal-400 font-medium font-mono">سرویس ابری Supabase</span>
-                                    </div>
-                                )}
-                            </div>
-                            {!isCollapsed && (
-                                <button onClick={onSignOut} className="text-slate-400 hover:text-rose-400 p-1.5 rounded-lg hover:bg-slate-800 transition-colors" title="خروج از حساب">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                                    </svg>
-                                </button>
-                            )}
-                        </div>
-                        {isCollapsed && (
-                            <button onClick={onSignOut} className="text-slate-400 hover:text-rose-400 p-1 rounded-lg hover:bg-slate-800 transition-colors flex justify-center w-full mt-1" title="خروج از حساب">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-                                </svg>
-                            </button>
-                        )}
-                    </div>
-                ) : (
-                    <div className="flex flex-col gap-2">
-                        <button 
-                            onClick={onGoogleSignIn} 
-                            disabled={loadingUserData}
-                            className={`w-full p-2.5 rounded-xl transition-all duration-350 flex items-center bg-gradient-to-r from-amber-600 to-amber-500 text-white font-medium hover:brightness-110 active:brightness-95 shadow-lg shadow-amber-500/20 overflow-hidden ${isCollapsed ? 'justify-center' : 'justify-start gap-4'}`}
-                        >
-                            {loadingUserData ? (
-                                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                            ) : (
-                                <svg className="w-5 h-5 shrink-0 text-white" viewBox="0 0 24 24" fill="currentColor">
-                                    <path d="M12.24 10.285V13.4h6.887C18.2 15.614 15.645 18 12.24 18 8.79 18 6 15.21 6 11.76S8.79 5.52 12.24 5.52c1.49 0 2.859.54 3.93 1.54l2.42-2.42C16.91 3.09 14.73 2 12.24 2 6.84 2 2.48 6.36 2.48 11.76s4.36 9.76 9.76 9.76c5.62 0 9.34-3.95 9.34-9.51 0-.64-.06-1.12-.18-1.73H12.24z"/>
-                                </svg>
-                            )}
-                            {!isCollapsed && (
-                                <div className="text-right">
-                                    <p className="text-xs font-black text-slate-100">سرویس ابری Supabase</p>
-                                    <p className="text-[9px] text-amber-200">ثبت‌نام و همگام‌سازی</p>
-                                </div>
-                            )}
-                        </button>
-                        {!isCollapsed && authError && (
-                            <div className="mt-2 p-2.5 bg-rose-500/15 border border-rose-500/30 rounded-xl text-[10px] text-rose-300 relative text-right flex flex-col gap-1 leading-relaxed">
-                                <button onClick={onClearAuthError} className="absolute left-1.5 top-0.5 text-rose-400 hover:text-white font-bold text-xs">×</button>
-                                <p className="font-bold text-rose-400">محدودیت پیش‌نمایش iframe مرورگر</p>
-                                <p>ورود گوگل درون آی‌فریم پیش‌نمایش به دلیل مسدودسازی کوکی‌های شخص ثالث توسط مرورگر ممکن است کار نکند. لطفاً برنامه را در یک تب مجزا باز کنید:</p>
-                                <a 
-                                    href={window.location.href}
-                                    target="_blank"
-                                    className="text-amber-400 font-bold underline font-mono text-[9px] text-center hover:text-amber-300 mt-1 block py-1 bg-slate-950/40 rounded"
-                                    rel="noreferrer"
-                                >
-                                    بازکردن در تب مستقل ↗
-                                </a>
-                            </div>
-                        )}
-                        {!isCollapsed && !authError && typeof window !== 'undefined' && window.self !== window.top && (
-                            <p className="text-[9px] text-slate-400 text-right leading-relaxed mt-1 opacity-70">
-                                ℹ️ برای ورود موفق، بهتر است برنامه را در <a href={window.location.href} target="_blank" rel="noreferrer" className="text-blue-400 hover:underline">یک تب مستقل ↗</a> باز کنید.
-                            </p>
-                        )}
-                    </div>
-                )}
-            </div>
-            <div className="p-4 z-10 border-t border-slate-800/50">
-                <p className={`text-xs text-slate-500 text-center transition-opacity duration-300 ${isCollapsed ? 'opacity-0 hidden' : 'opacity-100'}`}>نسخه ۱.۲.۰</p>
+        <div className="flex flex-1 items-center justify-center bg-gray-100" role="status" aria-live="polite">
+            <div className="flex flex-col items-center gap-4">
+                <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                <p className="text-sm font-bold text-slate-500">در حال بارگذاری...</p>
             </div>
         </div>
     );
 }
 
-function App() {
+function HejlehApp() {
     const [currentPage, setCurrentPage] = useState<Page>(Page.Scheduler);
     const [authError, setAuthError] = useState<string | null>(null);
     const [departments, setDepartments] = useState<Department[]>(() => {
@@ -644,4 +462,10 @@ function App() {
     );
 }
 
-export default App;
+export default function App() {
+    return (
+        <Suspense fallback={<PageLoadingFallback />}>
+            <HejlehApp />
+        </Suspense>
+    );
+}
