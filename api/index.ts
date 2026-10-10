@@ -89,30 +89,6 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok", fsd: "healthy" });
 });
 
-// TEMPORARY DIAGNOSTIC - remove after debugging
-app.get("/api/_diag", (req, res) => {
-  const out: Record<string, unknown> = {
-    moduleLoaded: true,
-    nodeVersion: process.version,
-    cwd: process.cwd(),
-    distExists: fs.existsSync(path.join(process.cwd(), "dist")),
-    distContents: (() => { try { return fs.readdirSync(path.join(process.cwd(), "dist")).slice(0, 10); } catch { return null; } })(),
-    pathToRegexpVersion: (() => { try { return require("path-to-regexp/package.json").version; } catch (e) { return "ERR:" + String(e).slice(0, 80); } })(),
-    routerVersion: (() => { try { return require("router/package.json").version; } catch (e) { return "ERR:" + String(e).slice(0, 80); } })(),
-    routeRegistration: {} as Record<string, string>,
-  };
-  for (const pat of ["*", "/*", "/*splat", "*splat", "/{*splat}", "/{*path}"]) {
-    try {
-      const probe = express();
-      probe.get(pat, (_q, s) => s.end("x"));
-      out.routeRegistration = { ...(out.routeRegistration as object), [pat]: "OK" } as Record<string, string>;
-    } catch (e: any) {
-      out.routeRegistration = { ...(out.routeRegistration as object), [pat]: "THROWS: " + String(e?.message).slice(0, 90) } as Record<string, string>;
-    }
-  }
-  res.json(out);
-});
-
 app.post("/api/generate-schedule", async (req, res) => {
   try {
     const {
