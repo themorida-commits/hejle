@@ -2,7 +2,13 @@ import express from "express";
 import path from "path";
 import fs from "fs";
 import { createServer as createViteServer } from "vite";
-import { handleChatResponse, handleGenerateSchedule, handleHealth } from "./services/apiCore";
+import {
+    handleChatResponse,
+    handleGenerateSchedule,
+    handleHealth,
+    applyApiHeaders,
+    MAX_BODY_BYTES,
+} from "./services/apiCore";
 
 // بارگذاری فایل‌های .env در صورت نبود متغیرهای محیطی (اجرای محلی/سرور شخصی)
 if (!process.env.GEMINI_API_KEY) {
@@ -35,33 +41,16 @@ if (!process.env.GEMINI_API_KEY) {
     }
 }
 
-function getAllowedOrigins(): string[] {
-    return (process.env.ALLOWED_ORIGINS || "")
-        .split(",")
-        .map((origin) => origin.trim())
-        .filter(Boolean);
-}
-
 async function startServer() {
     const app = express();
     const PORT = Number(process.env.PORT) || 3000;
-    const allowedOrigins = getAllowedOrigins();
 
-    app.use(express.json({ limit: "5mb" }));
+    // سقف بدنه یکسان با مسیر Vercel: ۴.۵ مگابایت (body-parser عدد را بایت می‌گیرد)
+    app.use(express.json({ limit: MAX_BODY_BYTES }));
 
     app.use((req, res, next) => {
-        const origin = req.headers.origin;
-        if (origin && allowedOrigins.length > 0 && allowedOrigins.includes(origin)) {
-            res.setHeader("Access-Control-Allow-Origin", origin);
-            res.setHeader("Vary", "Origin");
-            res.setHeader("Access-Control-Allow-Credentials", "true");
-        }
-        res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-        res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-        res.setHeader("X-Content-Type-Options", "nosniff");
-        res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
-        if (req.method === "OPTIONS") {
-            return res.sendStatus(204);
+        if (applyApiHeaders(req as any, res as any)) {
+            return;
         }
         next();
     });
@@ -69,6 +58,20 @@ async function startServer() {
     app.get("/api/health", handleHealth);
     app.post("/api/generate-schedule", handleGenerateSchedule);
     app.post("/api/get-chat-response", handleChatResponse);
+
+    // خطای سقف حجم بدنه (body-parser) به‌صورت JSON برمی‌گردد
+    app.use((err: any, _req: express.Request, res: express.Response, next: express.NextFunction) => {
+        if (err?.type === "entity.too.large") {
+            return res.status(413).json({
+                success: false,
+                error: "حجم داده‌های درخواست بیش از حد مجاز (۴.۵ مگابایت) است.",
+            });
+        }
+        if (err?.type === "entity.parse.failed") {
+            return res.status(400).json({ success: false, error: "بدنه‌ی درخواست JSON نامعتبر است." });
+        }
+        return next(err);
+    });
 
     // در حالت توسعه میان‌افزار Vite اجرا می‌شود و در تولید فایل‌های استاتیک سرو می‌شوند
     if (process.env.NODE_ENV !== "production") {

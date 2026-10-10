@@ -140,6 +140,20 @@ GEMINI_API_KEY=... PORT=3000 NODE_ENV=production npm start
 - نوشتن روی ابر با یک RPC تراکنشنی به‌جای ۱۰ درخواست جدا
 - کش طولانی برای `assets/*` در میزبان استاتیک (Vite هش می‌زند)
 
+### سقف‌های زمان و حجم (سازگار با Vercel Hobby و Supabase)
+
+| محدودیت | مقدار رعایت‌شده | جای پیاده‌سازی |
+|---|---|---|
+| سقف بدنه‌ی درخواست | ۴.۵ مگابایت → پاسخ ۴۱۳ | `services/apiCore.ts` (`MAX_BODY_BYTES`) و `supabase/functions/_shared/http.ts` |
+| تایم‌اوت هر تلاش Gemini | ۸ ثانیه (`GEMINI_TIMEOUT_MS`) | `services/apiCore.ts` و `_shared/gemini.ts` |
+| بودجه‌ی کل زنجیره‌ی AI | ۸ ثانیه (`AI_TOTAL_BUDGET_MS`) | مدل اصلی + fallback در یک سقف زمانی |
+| maxDuration توابع Vercel | ۱۰ ثانیه | `vercel.json` |
+| بدنه‌ی Express سرور شخصی | ۴.۵ مگابایت | `server.ts` (همان `MAX_BODY_BYTES`) |
+
+- اگر زمان باقی‌مانده از بودجه کمتر از ۲۵۰ میلی‌ثانیه باشد، مدل جایگزین اجرا نمی‌شود و خطای «زمان پاسخ‌دهی به سر رسید» برگردانده می‌شود.
+- کلاینت پیش از ارسال، فیلدهای سنگین/حساس (عکس، کد ملی، تلفن، آدرس) را حذف می‌کند (`services/geminiService.ts`) تا بدنه کوچک بماند و اطلاعات حساس به سرویس AI نرود.
+- محدودسازی نرخ: مسیر Supabase با جدول `ai_request_log` (دیتابیس) و مسیر Express/Vercel با پنجره‌ی لغزان درون‌حافظه‌ای (`checkRateLimit`) محافظت می‌شود.
+
 ## ۸. عیب‌یابی
 
 | نشانه | علت | راه‌حل |
@@ -149,6 +163,8 @@ GEMINI_API_KEY=... PORT=3000 NODE_ENV=production npm start
 | خطای ۴۲۹ از AI | سهمیه نرخ | `AI_RATE_LIMIT_MAX` را تنظیم یا کلید تجاری بگذارید |
 | «سرویس ابری پیکربندی نشده» | `VITE_SUPABASE_*` خالی است | `.env.local` را پر و دوباره build کنید |
 | توابع ۴۰۴ می‌دهند | deploy نشده‌اند | `supabase functions deploy <name>` |
+| خطای ۴۱۳ «حجم بیش از حد» | بدنه بزرگ‌تر از ۴.۵MB | کلاینت عکس پرسنل را کوچک کند؛ سقف با `MAX_PAYLOAD_BYTES` قابل تنظیم است |
+| خطای «زمان پاسخ‌دهی به سر رسید» | بودجه‌ی ۸ ثانیه‌ای AI تمام شد | `AI_TOTAL_BUDGET_MS`/`GEMINI_TIMEOUT_MS` را افزایش دهید (بیشتر از maxDuration نباشد) |
 | CORS error | Allowlist | `ALLOWED_ORIGINS` را شامل origin فرانت‌اند کنید |
 
 ## ۹. همگام‌سازی کد scheduler در Edge Functions

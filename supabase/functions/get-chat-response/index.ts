@@ -1,9 +1,11 @@
 import { handlePreflight, jsonResponse } from '../_shared/cors.ts';
 import { generateWithGemini } from '../_shared/gemini.ts';
+import { PayloadTooLargeError, readJsonBody } from '../_shared/http.ts';
 import { enforceAiQuota, identifyCaller } from '../_shared/supabaseAdmin.ts';
 
 const MAX_PROMPT_LENGTH = 4000;
 const MAX_HISTORY_ITEMS = 20;
+const PAYLOAD_TOO_LARGE_MESSAGE = 'حجم داده‌های درخواست بیش از حد مجاز (۴.۵ مگابایت) است.';
 
 Deno.serve(async (req: Request) => {
   const preflight = handlePreflight(req);
@@ -24,7 +26,7 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const { prompt, history, personnel, shiftTypes } = await req.json();
+    const { prompt, history, personnel, shiftTypes } = (await readJsonBody(req)) as Record<string, any>;
 
     if (typeof prompt !== 'string' || prompt.trim().length === 0) {
       return jsonResponse(req, { success: false, error: 'متن پیام خالی است.' }, 400);
@@ -51,6 +53,9 @@ Respond accurately in Persian (Farsi), offering excellent feedback.
 
     return jsonResponse(req, { success: true, text });
   } catch (error: unknown) {
+    if (error instanceof PayloadTooLargeError) {
+      return jsonResponse(req, { success: false, error: PAYLOAD_TOO_LARGE_MESSAGE }, 413);
+    }
     const message = error instanceof Error ? error.message : 'Could not retrieve answer from AI assistant';
     console.error('Edge Function chat error:', error);
     return jsonResponse(req, { success: false, error: message }, 500);

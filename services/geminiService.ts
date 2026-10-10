@@ -12,6 +12,35 @@ function buildEndpoint(name: 'generate-schedule' | 'get-chat-response'): string 
     return API_BASE_URL ? `${API_BASE_URL}/${name}` : `/api/${name}`;
 }
 
+/**
+ * فقط فیلدهای مورد نیاز موتور شیفت‌بندی ارسال می‌شود.
+ * علاوه بر کاهش شدید حجم بدنه (سقف ۴.۵ مگابایتی سرور)،
+ * اطلاعات حساس (کد ملی، تلفن، آدرس، عکس) به سرویس AI نمی‌رود.
+ */
+function toSolverPersonnel(personnel: Personnel[]) {
+    return personnel.map((p) => ({
+        id: p.id,
+        role: p.role,
+        employmentStatus: p.employmentStatus,
+        employmentDate: p.employmentDate,
+        baseDutyHours: p.baseDutyHours,
+    }));
+}
+
+/**
+ * برای دستیار چت: فیلدهای سنگین و حساس حذف می‌شوند.
+ */
+function toChatPersonnel(personnel: Personnel[]) {
+    return personnel.map((p) => ({
+        id: p.id,
+        name: p.name,
+        role: p.role,
+        departmentId: p.departmentId,
+        employmentStatus: p.employmentStatus,
+        seniorityLevel: p.seniorityLevel,
+    }));
+}
+
 async function resolveErrorMessage(response: Response, defaultMessage: string): Promise<string> {
     try {
         const errorData = await response.json();
@@ -49,7 +78,7 @@ export async function completeScheduleAI(
                 "Content-Type": "application/json",
             },
             body: JSON.stringify({
-                personnel,
+                personnel: toSolverPersonnel(personnel),
                 shiftTypes,
                 currentSchedule,
                 requests,
@@ -96,7 +125,7 @@ export async function getAiChatResponse(
             body: JSON.stringify({
                 prompt,
                 history,
-                personnel,
+                personnel: toChatPersonnel(personnel),
                 shiftTypes,
             }),
         });

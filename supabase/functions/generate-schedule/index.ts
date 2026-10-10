@@ -1,9 +1,11 @@
 import { handlePreflight, jsonResponse } from '../_shared/cors.ts';
+import { PayloadTooLargeError, readJsonBody } from '../_shared/http.ts';
 import { enforceAiQuota, identifyCaller } from '../_shared/supabaseAdmin.ts';
 import { generateScheduleDeterministic } from '../_shared/scheduler/schedulerSolver.ts';
 
 const MAX_PERSONNEL = 400;
 const MAX_BODY_ARRAY = 5000;
+const PAYLOAD_TOO_LARGE_MESSAGE = 'حجم داده‌های درخواست بیش از حد مجاز (۴.۵ مگابایت) است.';
 
 Deno.serve(async (req: Request) => {
   const preflight = handlePreflight(req);
@@ -24,7 +26,7 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
-    const body = await req.json();
+    const body = (await readJsonBody(req)) as Record<string, any>;
 
     const { personnel, shiftTypes, currentSchedule, requests, jMonth, jYear, rules, aiSettings, dailyReqs, globalSettings, manualBalances } = body ?? {};
 
@@ -74,6 +76,9 @@ Deno.serve(async (req: Request) => {
 
     return jsonResponse(req, { success: true, schedule });
   } catch (error: unknown) {
+    if (error instanceof PayloadTooLargeError) {
+      return jsonResponse(req, { success: false, error: PAYLOAD_TOO_LARGE_MESSAGE }, 413);
+    }
     const message = error instanceof Error ? error.message : 'internal solver error';
     console.error('Edge Function scheduling error:', error);
     return jsonResponse(req, { success: false, error: message }, 500);
