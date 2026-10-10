@@ -33,3 +33,4 @@ graphify-out/
 *.db
 *.db-journal
 .supabase/
+.vercel/
