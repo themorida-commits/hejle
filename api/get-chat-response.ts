@@ -4,7 +4,7 @@ import {
   isBodyTooLarge,
   type ApiRequestLike,
   type ApiResponseLike,
-} from "../services/apiCore";
+} from "../services/apiCore.js";
 
 const BODY_TOO_LARGE_MESSAGE = 'حجم داده‌های درخواست بیش از حد مجاز (۴.۵ مگابایت) است.';
 

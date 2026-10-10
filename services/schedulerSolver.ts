@@ -1,6 +1,6 @@
 import type { ScheduleEntry, Personnel, ShiftType, StaffRequest, CustomRule, AiGenerationSettings, GlobalDutySettings } from '../types';
-import { jalaliToGregorian, getDaysInJalaliMonth, getPersianDayOfWeek, calculateDutyHours } from '../utils';
-import { NATIONAL_HOLIDAYS } from '../constants';
+import { jalaliToGregorian, getDaysInJalaliMonth, getPersianDayOfWeek, calculateDutyHours } from '../utils.js';
+import { NATIONAL_HOLIDAYS } from '../constants.js';
 
 // Seedable Pseudo-Random Number Generator (Linear Congruential Generator)
 // This ensures that for a given seed, the generated sequence of numbers is completely deterministic.

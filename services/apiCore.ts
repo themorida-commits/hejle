@@ -1,4 +1,4 @@
-import { generateScheduleDeterministic } from './schedulerSolver';
+import { generateScheduleDeterministic } from './schedulerSolver.js';
 import type { ScheduleEntry } from '../types';
 
 /**

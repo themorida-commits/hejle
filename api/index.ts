@@ -1,4 +1,4 @@
-import { applyApiHeaders, type ApiRequestLike, type ApiResponseLike } from "../services/apiCore";
+import { applyApiHeaders, type ApiRequestLike, type ApiResponseLike } from "../services/apiCore.js";
 
 /**
  * /api — مسیر نامعتبر: پاسخ JSON ۴۰۴ (به‌جای HTML پیش‌فرض SPA).

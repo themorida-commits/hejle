@@ -1,4 +1,4 @@
-import { applyApiHeaders, handleHealth, type ApiRequestLike, type ApiResponseLike } from "../services/apiCore";
+import { applyApiHeaders, handleHealth, type ApiRequestLike, type ApiResponseLike } from "../services/apiCore.js";
 
 /**
  * GET /api/health
