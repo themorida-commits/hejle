@@ -11,9 +11,17 @@
     {
       "src": "api/index.ts",
       "use": "@vercel/node"
+    },
+    {
+      "src": "api/_diag2.ts",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
+    {
+      "src": "/api/_diag2",
+      "dest": "/api/_diag2.ts"
+    },
     {
       "src": "/api/(.*)",
       "dest": "/api/index.ts"
