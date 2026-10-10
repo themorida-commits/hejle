@@ -160,7 +160,7 @@ Respond accurately in Persian (Farsi), offering excellent feedback.
   }
 });
 
-const distPath = path.join(process.cwd(), "..", "dist");
+const distPath = path.join(process.cwd(), "dist");
 if (fs.existsSync(distPath)) {
   app.use(express.static(distPath));
 }
