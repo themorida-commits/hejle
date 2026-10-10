@@ -3,7 +3,7 @@
   "framework": "vite",
   "outputDirectory": "dist",
   "functions": {
-    "api/[...path].ts": {
+    "api/*.ts": {
       "maxDuration": 30
     }
   }
