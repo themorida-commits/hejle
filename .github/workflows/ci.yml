@@ -1,0 +1,19 @@
+# Minimal CI — Phase 8 prerequisite (unlocks mergegate's CI condition).
+# Steps mirror the project's own scripts. Rehearsed green 2026-11-02 (lint fixed).
+name: CI
+on:
+  push:
+    branches: [master]
+  pull_request:
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
