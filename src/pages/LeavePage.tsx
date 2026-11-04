@@ -1,0 +1,122 @@
+import { useMemo, useState } from 'react';
+import { useAppStore, J_YEAR, J_MONTH } from '../store/appStore';
+import {
+  LEAVE_TYPES, approveLeave, rejectLeave, simulateLeaveCoverage,
+  isoFromJalali, leaveDaysInRange, type LeaveRequest, type CoverageSimulation,
+} from '../features/leave/leaveService';
+
+const MINIMUMS = { morning: 3, evening: 2, night: 1 };
+const STATUS_FA: Record<LeaveRequest['status'], string> = {
+  pending: 'در انتظار', approved: 'تأییدشده', rejected: 'ردشده', cancelled: 'لغوشده',
+};
+
+export default function LeavePage() {
+  const st = useAppStore();
+  const [type, setType] = useState('annual');
+  const [fromDay, setFromDay] = useState(10);
+  const [toDay, setToDay] = useState(12);
+  const [reason, setReason] = useState('');
+  const [sim, setSim] = useState<CoverageSimulation | null>(null);
+
+  const deptPeople = st.personnel.filter(p => p.departmentId === st.departmentId);
+  const deptIds = useMemo(() => new Set(deptPeople.map(p => p.id)), [deptPeople]);
+  const deptEntries = st.entries.filter(e => deptIds.has(e.personnelId));
+  const nameOf = (id: string) => st.personnel.find(p => p.id === id)?.name ?? id;
+  const myLeaves = st.leaves.filter(l => deptIds.has(l.employeeId));
+
+  const submit = () => {
+    const req: LeaveRequest = {
+      id: `lv-${Date.now()}`,
+      employeeId: st.currentEmployeeId,
+      leaveTypeCode: type,
+      startISO: isoFromJalali(J_YEAR, J_MONTH, fromDay),
+      endISO: isoFromJalali(J_YEAR, J_MONTH, toDay),
+      reason: reason || undefined,
+      status: 'pending',
+    };
+    st.addLeave(req);
+    setReason('');
+  };
+
+  const runSim = (req: LeaveRequest) => {
+    setSim(simulateLeaveCoverage({
+      request: req, entries: deptEntries, shiftTypes: st.shiftTypes, personnel: deptPeople,
+      jYear: J_YEAR, jMonth: J_MONTH, dutyHoursByEmployee: st.dutyByEmployee,
+      minimums: MINIMUMS, balance: st.leaveBalances[req.employeeId],
+    }));
+  };
+
+  const approve = (req: LeaveRequest) => {
+    const res = approveLeave({ request: req, approverEmployeeId: st.currentEmployeeId, entries: st.entries, shiftTypes: st.shiftTypes });
+    if (!res.ok) { alert(res.error); return; }
+    st.updateLeave(res.request);
+    st.setEntries(res.entryPatch);
+    st.adjustBalance(req.employeeId, leaveDaysInRange(req.startISO, req.endISO).length);
+  };
+
+  const reject = (req: LeaveRequest) => {
+    const res = rejectLeave({ request: req, approverEmployeeId: st.currentEmployeeId });
+    if (!res.ok) { alert(res.error); return; }
+    st.updateLeave(res.request);
+  };
+
+  return (
+    <div>
+      <h1>مرخصی‌ها — مهر ۱۴۰۵</h1>
+      <section style={{ background: '#fff', border: '1px solid #e3ddd2', borderRadius: 12, padding: 16, marginBottom: 20 }}>
+        <h2 style={{ marginTop: 0 }}>ثبت درخواست تازه (به نام {nameOf(st.currentEmployeeId)})</h2>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+          <select value={type} onChange={e => setType(e.target.value)}>
+            {LEAVE_TYPES.map(t => <option key={t.code} value={t.code}>{t.name}</option>)}
+          </select>
+          از روز <input type="number" min={1} max={30} value={fromDay} onChange={e => setFromDay(Number(e.target.value))} style={{ width: 60 }} />
+          تا روز <input type="number" min={1} max={30} value={toDay} onChange={e => setToDay(Number(e.target.value))} style={{ width: 60 }} />
+          <input placeholder="دلیل (اختیاری)" value={reason} onChange={e => setReason(e.target.value)} style={{ minWidth: 200 }} />
+          <button onClick={submit}>ثبت درخواست</button>
+        </div>
+        <p style={{ fontSize: 12, color: '#68707a' }}>
+          ماندهٔ فعلی شما: {((st.leaveBalances[st.currentEmployeeId]?.entitled ?? 26) - (st.leaveBalances[st.currentEmployeeId]?.used ?? 0)).toLocaleString('fa-IR')} روز
+        </p>
+      </section>
+
+      <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff', border: '1px solid #e3ddd2' }}>
+        <thead><tr style={{ background: '#f3efe7' }}>
+          <th style={{ padding: 8, textAlign: 'right' }}>نام</th><th>نوع</th><th>بازه</th><th>وضعیت</th><th>عملیات</th>
+        </tr></thead>
+        <tbody>
+          {myLeaves.map(l => (
+            <tr key={l.id} style={{ borderTop: '1px solid #eee' }}>
+              <td style={{ padding: 8 }}>{nameOf(l.employeeId)}</td>
+              <td>{LEAVE_TYPES.find(t => t.code === l.leaveTypeCode)?.name}</td>
+              <td>{l.startISO} تا {l.endISO}</td>
+              <td>{STATUS_FA[l.status]}</td>
+              <td style={{ display: 'flex', gap: 6, padding: 8 }}>
+                {l.status === 'pending' && <>
+                  <button onClick={() => runSim(l)}>شبیه‌سازی پوشش</button>
+                  {st.viewRole === 'ward_manager' && <>
+                    <button onClick={() => approve(l)}>تأیید</button>
+                    <button onClick={() => reject(l)}>رد</button>
+                  </>}
+                </>}
+              </td>
+            </tr>
+          ))}
+          {myLeaves.length === 0 && <tr><td colSpan={5} style={{ padding: 12 }}>هنوز درخواستی ثبت نشده است.</td></tr>}
+        </tbody>
+      </table>
+
+      {sim && (
+        <section style={{ background: sim.ok ? '#eefbf0' : '#fdf3e7', border: '1px solid #e3ddd2', borderRadius: 12, padding: 16, marginTop: 16 }}>
+          <h3 style={{ marginTop: 0 }}>نتیجهٔ شبیه‌سازی پوشش</h3>
+          <p>{sim.summary}</p>
+          <p style={{ fontSize: 13 }}>{sim.balanceMessage}</p>
+          {sim.shortfalls.length > 0 && (
+            <ul>{sim.shortfalls.map((s, i) => (
+              <li key={i}>{s.dateISO}: شیفت {s.category === 'night' ? 'شب' : s.category === 'evening' ? 'عصر' : 'صبح'} فقط {s.count.toLocaleString('fa-IR')} نفر می‌ماند (حداقل {s.minimum.toLocaleString('fa-IR')})</li>
+            ))}</ul>
+          )}
+        </section>
+      )}
+    </div>
+  );
+}
