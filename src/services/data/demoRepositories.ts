@@ -7,7 +7,7 @@ import { LEAVE_TYPES } from '../../features/leave/leaveService';
 import { isoFromJalali } from '../../features/leave/leaveService';
 import { getDaysInJalaliMonth } from '../../core/jalali';
 import type {
-  DataRepositories, EntryRecord, HospitalSnapshot, LeaveRecord, NursingPackageRecord,
+  DataRepositories, EntryRecord, HospitalSnapshot, LeaveRecord,
   NursingServiceDbRecord, ScheduleRecord, WorkRecordRecord,
 } from './types';
 import { DEFAULT_NURSING_PACKAGES } from '../../features/nursingServices/nursingService';
