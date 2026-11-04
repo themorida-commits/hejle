@@ -12,6 +12,7 @@ const links = [
   { to: '/attendance', label: 'حضور و غیاب' },
   { to: '/personnel', label: 'پرونده پرسنلی' },
   { to: '/karaneh', label: 'کارانه' },
+  { to: '/nursing-services', label: 'خدمات پرستاری' },
   { to: '/ai', label: 'دستیار AI' },
   { to: '/self-service', label: 'سلف‌سرویس پرستار' },
 ];

@@ -8,6 +8,7 @@ import { type SwapRequest } from '../features/swaps/swapService';
 import { type WorkRecord } from '../features/workRecords/workRecordService';
 import { type AttendanceEvent } from '../features/attendance/attendanceService';
 import { seedDemoCredentials, type Credential } from '../features/credentials/credentialService';
+import type { NursingServiceRecord } from '../features/nursingServices/nursingService';
 import { isoFromJalali } from '../features/leave/leaveService';
 import { buildDemoSnapshot } from '../services/data/demoRepositories';
 import { createRepositories, currentDataSource, loadHospitalSnapshot } from '../services/data/index';
@@ -104,6 +105,9 @@ interface AppState {
   addAttendanceEvent: (e: AttendanceEvent) => void;
   setAttendanceEvents: (e: AttendanceEvent[]) => void;
   addCredential: (c: Credential) => void;
+  nursingRecords: NursingServiceRecord[];
+  addNursingRecord: (r: NursingServiceRecord) => void;
+  confirmNursingRecord: (id: string, by: string) => void;
 }
 
 /** رویدادهای دمو حضور برای ۱۲ روز اول ماه (شامل یک تأخیر و یک غیبت نمایشی). */
@@ -123,6 +127,41 @@ function seedAttendance(entries: ScheduleEntry[]): AttendanceEvent[] {
       ? new Date(new Date(e.date + 'T00:00:00Z').getTime() + 86400000).toISOString().slice(0, 10)
       : e.date;
     out.push({ id: `att-${++seq}`, employeeId: e.personnelId, dateISO: outDate, type: 'out', time: t[1], source: 'device' });
+  }
+  return out;
+}
+
+/**
+ * ثبت‌های دمو خدمات پرستاری برای بخش داخلی (گروه مراقبتی ۴) در ۱۲ روز اول ماه —
+ * عمداً چند شیفت بدون ثبت می‌ماند تا داشبورد کسورات نشت واقعی نشان دهد،
+ * و یک ثبت هم در وضعیت «ثبت‌شده/در انتظار تأیید» می‌ماند.
+ */
+function seedNursingRecords(entries: ScheduleEntry[], personnel: Personnel[]): NursingServiceRecord[] {
+  const wardOf = new Map(personnel.map(p => [p.id, p.departmentId]));
+  const firstDays = new Set(Array.from({ length: 12 }, (_, i) => isoFromJalali(J_YEAR, J_MONTH, i + 1)));
+  const shiftMap: Record<string, 'morning' | 'evening' | 'night'> = { 's-m': 'morning', 's-e': 'evening', 's-n': 'night' };
+  const out: NursingServiceRecord[] = [];
+  let seq = 0;
+  for (const e of entries) {
+    if (wardOf.get(e.personnelId) !== 'dep1' || !firstDays.has(e.date)) continue;
+    const shift = shiftMap[e.shiftTypeId];
+    if (!shift) continue;
+    // دو روز آخر عمداً بدون ثبت (نشت نمایشی برای داشبورد کسورات)
+    if (e.date >= isoFromJalali(J_YEAR, J_MONTH, 11)) continue;
+    const pending = seq === 3; // یک ثبت در انتظار تأیید سرپرستار
+    out.push({
+      id: `nsr-${++seq}`,
+      wardId: 'dep1',
+      employeeId: e.personnelId,
+      patientRef: `P-${1000 + ((seq * 37) % 60)}`,
+      packageId: 'pkg-g4',
+      count: 2,
+      dateISO: e.date,
+      shift,
+      status: pending ? 'recorded' : 'confirmed',
+      recordedAtISO: `${e.date}T08:00:00.000Z`,
+      ...(pending ? {} : { confirmedBy: 'p1', confirmedAtISO: `${e.date}T12:00:00.000Z` }),
+    });
   }
   return out;
 }
@@ -211,6 +250,14 @@ export const useAppStore = create<AppState>((set, get) => ({
   addAttendanceEvent: (e) => set((st) => ({ attendanceEvents: [...st.attendanceEvents, e] })),
   setAttendanceEvents: (e) => set({ attendanceEvents: e }),
   addCredential: (c) => set((st) => ({ credentials: [...st.credentials, c] })),
+  nursingRecords: seedNursingRecords(demoState.entries, demoState.personnel),
+  addNursingRecord: (r) => set((st) => ({ nursingRecords: [...st.nursingRecords, r] })),
+  confirmNursingRecord: (id, by) =>
+    set((st) => ({
+      nursingRecords: st.nursingRecords.map(r =>
+        r.id === id ? { ...r, status: 'confirmed' as const, confirmedBy: by, confirmedAtISO: new Date().toISOString() } : r,
+      ),
+    })),
   adjustBalance: (employeeId, deltaUsed) =>
     set((st) => ({
       leaveBalances: {

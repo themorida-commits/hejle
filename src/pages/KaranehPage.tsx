@@ -1,7 +1,97 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useAppStore, J_YEAR, J_MONTH } from '../store/appStore';
 import { buildKaranehSheet, karanehToCsv } from '../features/performance/performanceService';
 import { reconcileAttendance, summarizeAttendance } from '../features/attendance/attendanceService';
+import {
+  MOH_KARANEH_1404, computeGroupPools, computeNursingKaraneh, nursingSlips, slipsToCsv,
+} from '../features/performance/karanehEngine';
+import {
+  DEFAULT_NURSING_PACKAGES, recordedTariffRevenue, quantitativePointsByNurse,
+} from '../features/nursingServices/nursingService';
+
+function MohKaranehSection() {
+  const st = useAppStore();
+  const nowISO = useMemo(() => new Date().toISOString(), []);
+  const [profMillion, setProfMillion] = useState(120000);       // میلیون ریال — ورودی نمایشی واحد مالی
+  const [nursingPkgMillion, setNursingPkgMillion] = useState(40000);
+  const [kRial, setKRial] = useState(201_000);
+  const deptPeople = st.personnel.filter(p => p.departmentId === st.departmentId);
+  const names = useMemo(() => new Map(st.personnel.map(p => [p.id, p.name])), [st.personnel]);
+  const pools = useMemo(() => computeGroupPools(profMillion * 1e6, nursingPkgMillion * 1e6, 0), [profMillion, nursingPkgMillion]);
+
+  // زنجیرهٔ واقعی این بخش: ثبت خدمت ← درآمد تعرفه‌ای ← استخر ۸۵٪ ← تسهیم امتیازی
+  const wardRecords = st.nursingRecords.filter(r => r.wardId === st.departmentId);
+  const revenue = useMemo(() => recordedTariffRevenue(wardRecords, DEFAULT_NURSING_PACKAGES, kRial, nowISO), [wardRecords, kRial, nowISO]);
+  const wardPool = revenue.revenueRials * MOH_KARANEH_1404.shares.nursingOfNursingPackages;
+  const quant = useMemo(() => quantitativePointsByNurse(wardRecords, DEFAULT_NURSING_PACKAGES, nowISO), [wardRecords, nowISO]);
+  const distribution = useMemo(() => computeNursingKaraneh(
+    deptPeople.map(p => p.personnelCode.startsWith('HN-')
+      ? { employeeId: p.id, indirectRole: 'headNurse' as const, qualityScore: 1, presenceFactor: 1 }
+      : { employeeId: p.id, rawQuantitative: quant.get(p.id) ?? 0, qualityScore: 1 }),
+    wardPool,
+  ), [deptPeople, quant, wardPool]);
+  const slips = useMemo(() => nursingSlips(distribution, names), [distribution, names]);
+  const faM = (n: number) => Math.round(n).toLocaleString('fa-IR');
+
+  const exportSlips = () => {
+    const url = URL.createObjectURL(new Blob([slipsToCsv(slips)], { type: 'text/csv;charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = `karaneh-slips-${J_YEAR}-${J_MONTH}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  };
+  const input = { padding: 6, borderRadius: 8, border: '1px solid #ddd', width: 130, marginInlineStart: 6 } as const;
+
+  return (
+    <div style={{ background: '#fff', border: '1px solid #cfe0da', borderRadius: 12, padding: 16, marginBottom: 20 }}>
+      <h2 style={{ marginTop: 0, fontSize: 17 }}>محاسبه با قالب وزارت بهداشت — ویرایش ۱۴۰۴</h2>
+      <p style={{ color: '#68707a', fontSize: 13, maxWidth: 780 }}>
+        قالب پیش‌فرض اسناد جاری وزارت بهداشت (سهم‌ها و ضرایب عین دستورالعمل)؛ هر بیمارستان پروفایل پارامتر خودش را دارد و می‌تواند اعداد را با مصوبهٔ داخلی‌اش جایگزین کند.
+        تسهیم پرستاری این بخش از روی <strong>ثبت‌های واقعی خدمات همین بخش</strong> محاسبه می‌شود: ثبت خدمت ← درآمد تعرفه‌ای ← استخر ۸۵٪ گروه پرستاری ← امتیاز کمی/کیفی.
+      </p>
+      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 12, fontSize: 13 }}>
+        <label>درآمد وصولی جزء حرفه‌ای (میلیون ریال)<input type="number" style={input} value={profMillion} onChange={e => setProfMillion(Number(e.target.value) || 0)} /></label>
+        <label>درآمد وصولی بسته‌های پرستاری (میلیون ریال)<input type="number" style={input} value={nursingPkgMillion} onChange={e => setNursingPkgMillion(Number(e.target.value) || 0)} /></label>
+        <label>ضریب ریالی K<input type="number" style={input} value={kRial} onChange={e => setKRial(Number(e.target.value) || 0)} /></label>
+      </div>
+      <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', fontSize: 13, marginBottom: 14 }}>
+        <span>سقف پزشکان (۶۳٪): <strong>{faM(pools.physiciansCap / 1e6)}</strong> میلیون ریال</span>
+        <span>دستیاران (۴٪): <strong>{faM(pools.assistants / 1e6)}</strong></span>
+        <span>غیرپزشکان (۱۰٫۵٪ + ۴٪): <strong>{faM(pools.nonPhysician / 1e6)}</strong></span>
+        <span>گروه پرستاری (۸۵٪): <strong>{faM(pools.nursing / 1e6)}</strong></span>
+      </div>
+      <div style={{ borderTop: '1px dashed #ddd', paddingTop: 12 }}>
+        <div style={{ fontSize: 13, marginBottom: 8 }}>
+          این بخش: درآمد تعرفه‌ای ثبت‌شده <strong>{faM(revenue.revenueRials)}</strong> ریال (K کل: {revenue.totalK.toLocaleString('fa-IR')}) ←
+          استخر قابل توزیع پرستاری <strong>{faM(wardPool)}</strong> ریال
+          <button onClick={exportSlips} disabled={!slips.length} style={{ marginInlineStart: 12 }}>خروجی CSV فیش‌های کارانه</button>
+        </div>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ borderCollapse: 'collapse', fontSize: 13, minWidth: 640, width: '100%' }}>
+            <thead><tr style={{ background: '#eef4f1' }}>
+              {['پرستار', 'امتیاز کمی (پس از سقف)', 'ضریب کیفی', 'امتیاز نهایی', 'سهم ٪', 'مبلغ کارانه (ریال)'].map(h => <th key={h} style={{ padding: 7 }}>{h}</th>)}
+            </tr></thead>
+            <tbody>
+              {distribution.map(r => (
+                <tr key={r.employeeId} style={{ borderTop: '1px solid #eee', textAlign: 'center' }}>
+                  <td style={{ padding: 7, textAlign: 'right', fontWeight: 600 }}>{names.get(r.employeeId) ?? r.employeeId}</td>
+                  <td>{r.cappedQuantitative.toLocaleString('fa-IR', { maximumFractionDigits: 1 })}</td>
+                  <td>{r.qualityFactor.toLocaleString('fa-IR')}</td>
+                  <td>{r.points.toLocaleString('fa-IR', { maximumFractionDigits: 1 })}</td>
+                  <td>{(r.share * 100).toLocaleString('fa-IR', { maximumFractionDigits: 1 })}</td>
+                  <td><strong>{faM(r.amount)}</strong></td>
+                </tr>
+              ))}
+              {distribution.length === 0 && <tr><td colSpan={6} style={{ padding: 10 }}>پرسنلی در این بخش نیست.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+        <p style={{ fontSize: 12, color: '#68707a', marginBottom: 0 }}>
+          فیش هر پرستار اجزای امتیازش را شفاف نشان می‌دهد و اضافه‌کار جدا از کارانه می‌آید — همان شفافیتی که سند بازتوزیع الزام می‌کند. امتیاز کیفی این نما ۱٫۰ است؛ در بهره‌برداری، از ارزیابی دوره‌ای بیمارستان می‌آید.
+        </p>
+      </div>
+    </div>
+  );
+}
 
 export default function KaranehPage() {
   const st = useAppStore();
@@ -39,6 +129,7 @@ export default function KaranehPage() {
 
   return (
     <div>
+      <MohKaranehSection />
       <h1>برگهٔ کارانه — مهر ۱۴۰۵</h1>
       <p style={{ color: '#68707a', fontSize: 13 }}>
         مؤلفه‌های شفاف کارانه از کارکرد و حضور — فرمول نهایی کارانه سیاست بیمارستان است و این برگه «ورودی» آن است، نه خود فرمول.
