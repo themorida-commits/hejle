@@ -7,6 +7,7 @@ const links = [
   { to: '/scheduler', label: 'برنامهٔ شیفت' },
   { to: '/leave', label: 'مرخصی‌ها' },
   { to: '/work-records', label: 'کارکرد ماهانه' },
+  { to: '/attendance', label: 'حضور و غیاب' },
   { to: '/self-service', label: 'سلف‌سرویس پرستار' },
 ];
 
