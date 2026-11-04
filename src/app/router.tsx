@@ -11,6 +11,10 @@ import PersonnelPage from '../pages/PersonnelPage';
 import KaranehPage from '../pages/KaranehPage';
 import AiAssistantPage from '../pages/AiAssistantPage';
 
+// basename از BASE_URL وایت می‌آید: در بیلد عادی «/» و در بیلد زیرمسیر
+// (مثل دیپلوی موقت Azure زیر /hejleh/) همان زیرمسیر — بدون نیاز به تغییر کد.
+const basename = import.meta.env.BASE_URL.replace(/\/$/, '') || '/';
+
 export const router = createBrowserRouter([
   {
     element: (
@@ -30,4 +34,4 @@ export const router = createBrowserRouter([
       { path: '/self-service', element: <SelfServicePage /> },
     ],
   },
-]);
+], { basename });
