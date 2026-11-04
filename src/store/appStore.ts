@@ -15,6 +15,7 @@ import {
   employeeToPersonnel, shiftTypeToDomain, entryToDomain, leaveToDomain, workRecordToDomain,
 } from '../services/data/mappers';
 import type { HospitalSnapshot } from '../services/data/types';
+import { useSessionStore } from './session';
 
 // استور فاز ۱ — از لایهٔ داده تغذیه می‌شود: حالت دمو از DemoRepositories و
 // حالت supabase از loadHospitalSnapshot؛ هر دو از همان مپرها رد می‌شوند.
@@ -138,8 +139,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   loadedWards: currentDataSource() === 'demo' ? demoState.departments.map(d => d.id) : [],
   hydrateFromSupabase: async () => {
     if (get().hydrated || get().dataSource !== 'supabase') return;
-    const hospitalId = import.meta.env.VITE_HOSPITAL_ID as string | undefined;
-    const wardId = import.meta.env.VITE_WARD_ID as string | undefined;
+    // زمینهٔ سازمانی اول از نشست واقعی می‌آید (AuthGate آن را از عضویت‌های
+    // کاربر پر کرده)؛ env فقط پشتیبانِ پایلوت/بدون‌نشست است.
+    const session = useSessionStore.getState();
+    const hospitalId = session.hospitalId ?? (import.meta.env.VITE_HOSPITAL_ID as string | undefined);
+    const wardId = session.wardId ?? (import.meta.env.VITE_WARD_ID as string | undefined);
     if (!hospitalId || !wardId) { set({ hydrated: true }); return; }
     const snap = await loadHospitalSnapshot(createRepositories('supabase'), {
       hospitalId, wardId, jYear: J_YEAR, jMonth: J_MONTH,
@@ -148,7 +152,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({
       ...mapped,
       departmentId: wardId,
-      currentEmployeeId: mapped.personnel[1]?.id ?? mapped.personnel[0]?.id ?? get().currentEmployeeId,
+      // اگر AuthGate هویت واقعی کاربر را ست کرده و در دادهٔ این بخش هست، همان می‌ماند.
+      currentEmployeeId: mapped.personnel.some(p => p.id === get().currentEmployeeId)
+        ? get().currentEmployeeId
+        : mapped.personnel[1]?.id ?? mapped.personnel[0]?.id ?? get().currentEmployeeId,
       hydrated: true,
       loadedWards: [wardId],
     });

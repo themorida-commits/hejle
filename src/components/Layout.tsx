@@ -1,6 +1,8 @@
 import { useEffect } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAppStore } from '../store/appStore';
+import { useSessionStore } from '../store/session';
+import { signOut } from '../services/auth';
 
 const links = [
   { to: '/', label: 'داشبورد سرپرستار' },
@@ -15,7 +17,8 @@ const links = [
 ];
 
 export default function Layout() {
-  const { viewRole, setViewRole, currentEmployeeId, setCurrentEmployee, personnel, departmentId, hydrated, hydrateFromSupabase } = useAppStore();
+  const { viewRole, setViewRole, currentEmployeeId, setCurrentEmployee, personnel, departmentId, hydrated, hydrateFromSupabase, dataSource } = useAppStore();
+  const sessionEmail = useSessionStore(s => s.email);
   useEffect(() => { void hydrateFromSupabase(); }, [hydrateFromSupabase]);
   if (!hydrated) {
     return <div dir="rtl" style={{ fontFamily: 'Vazirmatn, system-ui', padding: 40 }}>در حال بارگذاری داده‌ها…</div>;
@@ -32,17 +35,24 @@ export default function Layout() {
             </NavLink>
           ))}
         </nav>
-        <span style={{ marginInlineStart: 'auto', display: 'flex', gap: 8, alignItems: 'center', fontSize: 13 }}>
-          نقش نمایشی:
-          <select value={viewRole} onChange={e => setViewRole(e.target.value as 'ward_manager' | 'staff')}>
-            <option value="ward_manager">سرپرستار</option>
-            <option value="staff">پرستار</option>
-          </select>
-          هویت:
-          <select value={currentEmployeeId} onChange={e => setCurrentEmployee(e.target.value)}>
-            {deptPeople.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
-        </span>
+        {dataSource === 'supabase' ? (
+          <span style={{ marginInlineStart: 'auto', display: 'flex', gap: 10, alignItems: 'center', fontSize: 13 }}>
+            <span style={{ direction: 'ltr' }}>{sessionEmail ?? ''}</span>
+            <button onClick={() => void signOut()} style={{ background: 'transparent', color: '#ffd9a0', border: '1px solid #ffd9a0', borderRadius: 6, padding: '3px 12px', cursor: 'pointer', fontSize: 13 }}>خروج</button>
+          </span>
+        ) : (
+          <span style={{ marginInlineStart: 'auto', display: 'flex', gap: 8, alignItems: 'center', fontSize: 13 }}>
+            نقش نمایشی:
+            <select value={viewRole} onChange={e => setViewRole(e.target.value as 'ward_manager' | 'staff')}>
+              <option value="ward_manager">سرپرستار</option>
+              <option value="staff">پرستار</option>
+            </select>
+            هویت:
+            <select value={currentEmployeeId} onChange={e => setCurrentEmployee(e.target.value)}>
+              {deptPeople.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </span>
+        )}
       </header>
       <main style={{ padding: 20, maxWidth: 1400, margin: '0 auto' }}>
         <Outlet />

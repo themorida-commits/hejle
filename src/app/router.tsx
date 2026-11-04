@@ -1,5 +1,6 @@
 import { createBrowserRouter } from 'react-router-dom';
 import Layout from '../components/Layout';
+import AuthGate from '../components/AuthGate';
 import DashboardPage from '../pages/DashboardPage';
 import SchedulerPage from '../pages/SchedulerPage';
 import LeavePage from '../pages/LeavePage';
@@ -12,7 +13,11 @@ import AiAssistantPage from '../pages/AiAssistantPage';
 
 export const router = createBrowserRouter([
   {
-    element: <Layout />,
+    element: (
+      <AuthGate>
+        <Layout />
+      </AuthGate>
+    ),
     children: [
       { path: '/', element: <DashboardPage /> },
       { path: '/scheduler', element: <SchedulerPage /> },
