@@ -108,6 +108,7 @@ interface AppState {
   nursingRecords: NursingServiceRecord[];
   addNursingRecord: (r: NursingServiceRecord) => void;
   confirmNursingRecord: (id: string, by: string) => void;
+  addPersonnelBulk: (list: Personnel[]) => void;
 }
 
 /** رویدادهای دمو حضور برای ۱۲ روز اول ماه (شامل یک تأخیر و یک غیبت نمایشی). */
@@ -258,6 +259,13 @@ export const useAppStore = create<AppState>((set, get) => ({
         r.id === id ? { ...r, status: 'confirmed' as const, confirmedBy: by, confirmedAtISO: new Date().toISOString() } : r,
       ),
     })),
+  addPersonnelBulk: (list) =>
+    set((st) => {
+      const codes = new Set(st.personnel.map(p => p.personnelCode));
+      const ids = new Set(st.personnel.map(p => p.id));
+      const fresh = list.filter(p => !codes.has(p.personnelCode) && !ids.has(p.id));
+      return { personnel: [...st.personnel, ...fresh] };
+    }),
   adjustBalance: (employeeId, deltaUsed) =>
     set((st) => ({
       leaveBalances: {

@@ -3,6 +3,87 @@ import { useAppStore } from '../store/appStore';
 import {
   credentialStatus, summarizeCompliance, KIND_FA, STATUS_FA, type CredentialKind,
 } from '../features/credentials/credentialService';
+import { parsePersonnelCsv, personnelTemplateCsv, type ImportResult } from '../features/import/personnelImport';
+
+function PersonnelImportCard() {
+  const st = useAppStore();
+  const [preview, setPreview] = useState<ImportResult | null>(null);
+  const [fileName, setFileName] = useState('');
+  const [applied, setApplied] = useState(0);
+  const deptName = st.departments.find(d => d.id === st.departmentId)?.name ?? '';
+
+  const onFile = async (f: File | undefined) => {
+    if (!f) return;
+    setApplied(0);
+    setFileName(f.name);
+    let text: string;
+    if (/\.csv$/i.test(f.name)) {
+      text = await f.text();
+    } else {
+      // اکسل: کتابخانه فقط هنگام نیاز بار می‌شود تا باندل اصلی سبک بماند
+      const XLSX = await import('xlsx');
+      const wb = XLSX.read(await f.arrayBuffer());
+      const sheet = wb.Sheets[wb.SheetNames[0]!]!;
+      text = XLSX.utils.sheet_to_csv(sheet);
+    }
+    const existing = new Set(st.personnel.map(p => p.personnelCode));
+    setPreview(parsePersonnelCsv(text, st.departmentId, existing));
+  };
+  const downloadTemplate = () => {
+    const url = URL.createObjectURL(new Blob([personnelTemplateCsv()], { type: 'text/csv;charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = 'personnel-template.csv'; a.click();
+    URL.revokeObjectURL(url);
+  };
+  const apply = () => {
+    if (!preview) return;
+    st.addPersonnelBulk(preview.personnel);
+    setApplied(preview.personnel.length);
+    setPreview(null);
+  };
+  const fa = (n: number) => n.toLocaleString('fa-IR');
+
+  return (
+    <section style={{ background: '#fff', border: '1px solid #cfe0da', borderRadius: 12, padding: 14, marginBottom: 16 }}>
+      <strong style={{ fontSize: 14 }}>ورود لیست پرسنل بخش {deptName} از فایل</strong>
+      <p style={{ fontSize: 12, color: '#68707a', margin: '6px 0 10px' }}>
+        فایل اکسل یا CSV لیست پرسنل را انتخاب کنید؛ پیش‌نمایش و خطاها قبل از اعمال نشان داده می‌شود و هیچ ردیفی بی‌صدا حذف نمی‌شود.
+        قالب آماده را می‌توانید به بیمارستان بدهید تا همان را پر کند.
+      </p>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+        <button onClick={downloadTemplate}>دانلود قالب CSV</button>
+        <label style={{ border: '1px solid #ccc', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontSize: 13, background: '#f8f6f1' }}>
+          انتخاب فایل (Excel / CSV)
+          <input type="file" accept=".csv,.xlsx,.xls" style={{ display: 'none' }} onChange={e => void onFile(e.target.files?.[0])} />
+        </label>
+        {fileName && <span style={{ fontSize: 12 }}>{fileName}</span>}
+      </div>
+      {preview && (
+        <div style={{ marginTop: 10, fontSize: 13 }}>
+          <div>
+            آمادهٔ ورود: <strong>{fa(preview.personnel.length)}</strong> نفر
+            {preview.duplicateCodes.length > 0 && <> · تکراری و ردشده: <strong>{preview.duplicateCodes.join('، ')}</strong></>}
+            {preview.errors.length > 0 && <> · خطادار: <strong>{fa(preview.errors.length)}</strong> ردیف</>}
+          </div>
+          {preview.errors.length > 0 && (
+            <ul style={{ color: '#b3402f', margin: '6px 0' }}>
+              {preview.errors.slice(0, 8).map((e, i) => <li key={i}>ردیف {fa(e.row)}: {e.message}</li>)}
+            </ul>
+          )}
+          {preview.personnel.length > 0 && (
+            <>
+              <div style={{ fontSize: 12, color: '#68707a', margin: '6px 0' }}>
+                نمونه: {preview.personnel.slice(0, 3).map(p => `${p.name} (${p.personnelCode})`).join(' · ')}
+              </div>
+              <button onClick={apply} style={{ padding: '7px 16px' }}>اعمال ورود به بخش</button>
+            </>
+          )}
+        </div>
+      )}
+      {applied > 0 && <div style={{ marginTop: 8, fontSize: 13, color: '#1e6b3a' }}>{fa(applied)} نفر به بخش اضافه شدند.</div>}
+    </section>
+  );
+}
 
 const TODAY = new Date().toISOString().slice(0, 10);
 
@@ -40,6 +121,7 @@ export default function PersonnelPage() {
   return (
     <div>
       <h1>پروندهٔ پرسنلی و اعتبارنامه‌ها</h1>
+      <PersonnelImportCard />
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
         {[
           ['کل مدارک بخش', compliance.total],

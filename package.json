@@ -11,13 +11,14 @@
     "test:golden": "node --import tsx --test tests/golden/solver.golden.test.ts",
     "test:rls": "bash supabase/tests/run_rls_tests.sh",
     "test": "node --import tsx --test tests/golden/solver.golden.test.ts tests/solverClient.test.ts tests/rules/engine.test.ts tests/aiProxy.test.ts tests/phase1/services.test.ts tests/data/repositories.test.ts tests/phase2/attendance.test.ts tests/phase3/modules.test.ts tests/auth/context.test.ts",
-    "test:unit": "npx vitest run tests/phase4/karanehEngine.test.ts tests/phase4/credentialGate.test.ts"
+    "test:unit": "npx vitest run tests/phase4/karanehEngine.test.ts tests/phase4/credentialGate.test.ts tests/phase4/personnelImport.test.ts"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.118.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-router-dom": "^7.18.5",
+    "xlsx": "^0.18.5",
     "zustand": "^5.0.16"
   },
   "devDependencies": {
