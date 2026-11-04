@@ -34,37 +34,105 @@ function getScheduleEntryId(entry: ScheduleEntry): string {
   return `${entry.personnelId}_${entry.date}`;
 }
 
+// PostgREST caps every response at 1000 rows by default and truncates the
+// rest silently. A single month of `schedule` for a mid-size ward is already
+// larger than that, so every collection read must page explicitly.
+const PAGE_SIZE = 1000;
+
+async function fetchPagedColumn<T>(
+  userId: string,
+  collectionName: string,
+  column: 'payload' | 'document_id',
+): Promise<T[]> {
+  const values: T[] = [];
+  let from = 0;
+  for (;;) {
+    const { data, error } = await supabase
+      .from('app_data')
+      .select(column)
+      .eq('user_id', userId)
+      .eq('collection_name', collectionName)
+      .order('id')
+      .range(from, from + PAGE_SIZE - 1);
+
+    if (error) {
+      throw error;
+    }
+
+    const page = data ?? [];
+    for (const row of page) {
+      values.push(row[column] as T);
+    }
+    if (page.length < PAGE_SIZE) {
+      return values;
+    }
+    from += PAGE_SIZE;
+  }
+}
+
+// The save path is whole-state: the payload handed in IS the full current
+// state of the collection. Rows stored for this user+collection whose
+// document_id is no longer present locally were deleted in the app and must
+// be deleted remotely too — an upsert-only sync resurrects them on the next
+// load.
+async function deleteStaleCollectionItems(
+  userId: string,
+  collectionName: string,
+  keepDocumentIds: Set<string>,
+) {
+  const existingIds = await fetchPagedColumn<string>(userId, collectionName, 'document_id');
+  const staleIds = existingIds.filter((id) => !keepDocumentIds.has(id));
+  const DELETE_CHUNK = 200;
+  for (let i = 0; i < staleIds.length; i += DELETE_CHUNK) {
+    const chunk = staleIds.slice(i, i + DELETE_CHUNK);
+    const { error } = await supabase
+      .from('app_data')
+      .delete()
+      .eq('user_id', userId)
+      .eq('collection_name', collectionName)
+      .in('document_id', chunk);
+
+    if (error) {
+      throw error;
+    }
+  }
+}
+
 async function upsertCollectionItems<T extends object>(
   userId: string,
   collectionName: string,
   items: T[],
   documentIdResolver: (item: T, index: number) => string,
 ) {
-  if (!items.length) {
-    return;
-  }
-
   const rows: AppDataRow[] = items.map((item, index) => ({
     collection_name: collectionName,
     document_id: documentIdResolver(item, index),
     payload: item,
   }));
 
-  const { error } = await supabase
-    .from('app_data')
-    .upsert(
-      rows.map((row) => ({
-        user_id: userId,
-        collection_name: row.collection_name,
-        document_id: row.document_id,
-        payload: row.payload,
-      })),
-      { onConflict: 'user_id,collection_name,document_id' },
-    );
+  if (rows.length) {
+    const { error } = await supabase
+      .from('app_data')
+      .upsert(
+        rows.map((row) => ({
+          user_id: userId,
+          collection_name: row.collection_name,
+          document_id: row.document_id,
+          payload: row.payload,
+        })),
+        { onConflict: 'user_id,collection_name,document_id' },
+      );
 
-  if (error) {
-    throw error;
+    if (error) {
+      throw error;
+    }
   }
+
+  await deleteStaleCollectionItems(
+    userId,
+    collectionName,
+    new Set(rows.map((row) => row.document_id)),
+  );
 }
 
 async function upsertSingletonItem<T extends object>(
@@ -91,17 +159,7 @@ async function upsertSingletonItem<T extends object>(
 }
 
 async function fetchCollectionItems<T>(userId: string, collectionName: string): Promise<T[]> {
-  const { data, error } = await supabase
-    .from('app_data')
-    .select('payload')
-    .eq('user_id', userId)
-    .eq('collection_name', collectionName);
-
-  if (error) {
-    throw error;
-  }
-
-  return (data ?? []).map((row) => row.payload as T);
+  return fetchPagedColumn<T>(userId, collectionName, 'payload');
 }
 
 async function fetchSingletonItem<T>(userId: string, collectionName: string, documentId: string): Promise<T | null> {
