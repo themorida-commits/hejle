@@ -4,23 +4,21 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx server.ts",
-    "build": "vite build && esbuild server.ts --bundle --platform=node --format=cjs --packages=external --sourcemap --outfile=dist/server.cjs",
-    "start": "node dist/server.cjs",
+    "dev": "vite",
+    "build": "vite build",
+    "start": "vite preview",
     "lint": "tsc --noEmit",
     "check:supabase": "tsx scripts/check-supabase.ts",
-    "tunnel": "bash scripts/tunnel.sh"
+    "tunnel": "bash scripts/tunnel.sh",
+    "test:golden": "node --import tsx --test tests/golden/solver.golden.test.ts"
   },
   "dependencies": {
     "@google/genai": "^1.28.0",
     "@supabase/supabase-js": "^2.110.9",
-    "express": "^5.2.1",
-    "firebase": "^12.14.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },
   "devDependencies": {
-    "@types/express": "^5.0.6",
     "@types/node": "^22.14.0",
     "@vitejs/plugin-react": "^5.0.0",
     "esbuild": "^0.28.0",

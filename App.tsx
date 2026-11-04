@@ -13,8 +13,6 @@ import { AiAssistant } from './components/AiAssistant';
 import { DepartmentManager } from './components/DepartmentManager';
 import { SettingsManager } from './components/SettingsManager';
 
-import { auth, db, handleFirestoreError, OperationType } from './services/firebase';
-import { collection, getDocs, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { supabase, isSupabaseConfigured } from './services/supabase';
 import { loadUserDataFromSupabase, saveUserDataToSupabase } from './services/supabaseData';
 
@@ -129,7 +127,7 @@ function Sidebar({
                     ))}
                 </ul>
             </nav>
-            {/* Firebase Auth Section */}
+            {/* Supabase Auth Section */}
             <div className="px-3 py-4 border-t border-slate-800/70 bg-slate-950/20">
                 {user ? (
                     <div className="flex flex-col gap-2">
@@ -267,7 +265,7 @@ function App() {
     // Cloud Supabase Auth State
     const [user, setUser] = useState<SupabaseUser | null>(null);
     const [loadingUserData, setLoadingUserData] = useState(false);
-    const isSyncingFromFirestore = useRef(false);
+    const isSyncingFromSupabase = useRef(false);
 
     const buildSupabasePayload = () => ({
         departments,
@@ -293,7 +291,7 @@ function App() {
 
     const fetchAllFromSupabase = async (uid: string) => {
         setLoadingUserData(true);
-        isSyncingFromFirestore.current = true;
+        isSyncingFromSupabase.current = true;
         try {
             const payload = await loadUserDataFromSupabase(uid);
             const hasStoredData = Boolean(payload.departments.length || payload.personnel.length || payload.shiftTypes.length || payload.rules.length || payload.globalSettings);
@@ -317,120 +315,7 @@ function App() {
         } catch (e) {
             console.warn('Unable to load data from Supabase yet, using local state.', e);
         } finally {
-            isSyncingFromFirestore.current = false;
-            setLoadingUserData(false);
-        }
-    };
-
-    // Seed local storage values to Firestore
-    const seedLocalToFirestore = async (uid: string) => {
-        try {
-            const batchWrites: Promise<any>[] = [];
-            
-            departments.forEach(dept => {
-                batchWrites.push(setDoc(doc(db, 'users', uid, 'departments', dept.id), dept));
-            });
-            personnel.forEach(p => {
-                batchWrites.push(setDoc(doc(db, 'users', uid, 'personnel', p.id), p));
-            });
-            shiftTypes.forEach(st => {
-                batchWrites.push(setDoc(doc(db, 'users', uid, 'shiftTypes', st.id), st));
-            });
-            schedule.forEach(se => {
-                const docId = `${se.personnelId}_${se.date}`;
-                batchWrites.push(setDoc(doc(db, 'users', uid, 'schedule', docId), se));
-            });
-            requests.forEach(req => {
-                batchWrites.push(setDoc(doc(db, 'users', uid, 'requests', req.id), req));
-            });
-            rules.forEach(rule => {
-                batchWrites.push(setDoc(doc(db, 'users', uid, 'rules', rule.id), rule));
-            });
-            archives.forEach(arc => {
-                batchWrites.push(setDoc(doc(db, 'users', uid, 'archives', arc.id), arc));
-            });
-            events.forEach(ev => {
-                batchWrites.push(setDoc(doc(db, 'users', uid, 'calendarEvents', ev.id), ev));
-            });
-            batchWrites.push(setDoc(doc(db, 'users', uid, 'globalSettings', 'default'), globalSettings));
-            batchWrites.push(setDoc(doc(db, 'users', uid, 'manualBalances', 'all'), manualBalances));
-
-            await Promise.all(batchWrites);
-            console.log('Seeded current local data to Firestore successfully.');
-        } catch (e) {
-            console.error('Error seeding data to Firestore:', e);
-            handleFirestoreError(e, OperationType.WRITE, `users/${uid}`);
-        }
-    };
-
-    // Load user data from Firestore on login
-    const fetchAllFromFirestore = async (uid: string) => {
-        setLoadingUserData(true);
-        isSyncingFromFirestore.current = true;
-        try {
-            const [
-                deptsSnap,
-                persSnap,
-                shiftsSnap,
-                schedSnap,
-                reqSnap,
-                rulesSnap,
-                archSnap,
-                calSnap,
-                globalSnap,
-                manualSnap
-            ] = await Promise.all([
-                getDocs(collection(db, 'users', uid, 'departments')),
-                getDocs(collection(db, 'users', uid, 'personnel')),
-                getDocs(collection(db, 'users', uid, 'shiftTypes')),
-                getDocs(collection(db, 'users', uid, 'schedule')),
-                getDocs(collection(db, 'users', uid, 'requests')),
-                getDocs(collection(db, 'users', uid, 'rules')),
-                getDocs(collection(db, 'users', uid, 'archives')),
-                getDocs(collection(db, 'users', uid, 'calendarEvents')),
-                getDocs(collection(db, 'users', uid, 'globalSettings')),
-                getDocs(collection(db, 'users', uid, 'manualBalances'))
-            ]);
-
-            const fetchedDepts = deptsSnap.docs.map(d => d.data() as Department);
-            const fetchedPers = persSnap.docs.map(d => d.data() as Personnel);
-            const fetchedShifts = shiftsSnap.docs.map(d => d.data() as ShiftType);
-            const fetchedSchedule = schedSnap.docs.map(d => d.data() as ScheduleEntry);
-            const fetchedRequests = reqSnap.docs.map(d => d.data() as StaffRequest);
-            const fetchedRules = rulesSnap.docs.map(d => d.data() as CustomRule);
-            const fetchedArchives = archSnap.docs.map(d => d.data() as ArchivedSchedule);
-            const fetchedEvents = calSnap.docs.map(d => d.data() as CalendarEvent);
-            
-            let fetchedGlobal = fetchedDepts.length > 0 ? DEFAULT_GLOBAL_SETTINGS : null;
-            if (!globalSnap.empty) {
-                fetchedGlobal = globalSnap.docs[0].data() as GlobalDutySettings;
-            }
-
-            let fetchedManual = {};
-            if (!manualSnap.empty) {
-                fetchedManual = manualSnap.docs[0].data() as Record<string, number>;
-            }
-
-            if (fetchedDepts.length > 0 || fetchedPers.length > 0 || fetchedShifts.length > 0) {
-                setDepartments(fetchedDepts);
-                setPersonnel(fetchedPers);
-                setShiftTypes(fetchedShifts);
-                setSchedule(fetchedSchedule);
-                setRequests(fetchedRequests);
-                setRules(fetchedRules.length > 0 ? fetchedRules : DEFAULT_RULES);
-                setArchives(fetchedArchives);
-                setEvents(fetchedEvents);
-                if (fetchedGlobal) setGlobalSettings(fetchedGlobal);
-                setManualBalances(fetchedManual);
-            } else {
-                // First-time signup check: upload local mock data as starter database contents
-                await seedLocalToFirestore(uid);
-            }
-        } catch (e) {
-            console.error('Error fetching user data from Firestore:', e);
-            handleFirestoreError(e, OperationType.GET, `users/${uid}`);
-        } finally {
-            isSyncingFromFirestore.current = false;
+            isSyncingFromSupabase.current = false;
             setLoadingUserData(false);
         }
     };
@@ -592,7 +477,7 @@ function App() {
 
     // High performance debounced automatic Cloud mirroring via Supabase
     useEffect(() => {
-        if (!user || isSyncingFromFirestore.current) return;
+        if (!user || isSyncingFromSupabase.current) return;
 
         const timeoutId = setTimeout(async () => {
             try {
