@@ -3,6 +3,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type {
   DataRepositories, EmployeeRecord, EntryRecord, LeaveRecord, LeaveTypeRecord,
+  NursingPackageRecord, NursingServiceDbRecord,
   ScheduleRecord, ShiftTypeRecord, WardRecord, WorkRecordRecord,
 } from './types';
 
@@ -59,6 +60,16 @@ const workRecord = (r: any): WorkRecordRecord => ({
   id: r.id, hospitalId: r.hospital_id, wardId: r.ward_id, employeeId: r.employee_id,
   jYear: r.j_year, jMonth: r.j_month, totals: r.totals ?? {}, status: r.status,
 });
+const nursingPackage = (r: any): NursingPackageRecord => ({
+  id: r.id, hospitalId: r.hospital_id, code: r.code, title: r.title,
+  kValue: Number(r.k_value), unit: r.unit, careGroup: r.care_group, isActive: r.active,
+});
+const nursingRecord = (r: any): NursingServiceDbRecord => ({
+  id: r.id, hospitalId: r.hospital_id, wardId: r.ward_id, employeeId: r.employee_id,
+  patientRef: r.patient_ref, packageId: r.package_id, count: r.service_count,
+  serviceDate: r.service_date, shift: r.shift, status: r.status,
+  confirmedBy: r.confirmed_by, confirmedAt: r.confirmed_at, createdAt: r.created_at,
+});
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
 export function createSupabaseRepositories(client: SupabaseClient): DataRepositories {
@@ -83,6 +94,23 @@ export function createSupabaseRepositories(client: SupabaseClient): DataReposito
         const rows = await fetchAllPages((f, t) =>
           client.from('leave_types').select('*').eq('hospital_id', hospitalId).order('code').range(f, t));
         return rows.map(leaveType);
+      },
+      async createEmployees(records) {
+        if (records.length === 0) return [];
+        const hospitalId = records[0]!.hospitalId;
+        const existing = await fetchAllPages((f, t) =>
+          client.from('employees').select('personnel_code').eq('hospital_id', hospitalId).range(f, t));
+        const have = new Set(existing.map((r: { personnel_code: string }) => r.personnel_code));
+        const fresh = records.filter(r => !have.has(r.personnelCode));
+        if (fresh.length === 0) return [];
+        const { data, error } = await client.from('employees').insert(fresh.map(r => ({
+          hospital_id: r.hospitalId, ward_id: r.wardId, full_name: r.fullName,
+          personnel_code: r.personnelCode, employment_status: r.employmentStatus,
+          employment_start_jalali: r.employmentStartJalali,
+          base_duty_hours_override: r.baseDutyHoursOverride, is_active: true,
+        }))).select('*, positions(title)');
+        if (error) throw new Error(`supabase write failed: ${error.message}`);
+        return (data ?? []).map(employee);
       },
     },
     roster: {
@@ -139,6 +167,34 @@ export function createSupabaseRepositories(client: SupabaseClient): DataReposito
         if (error) throw new Error(`supabase write failed: ${error.message}`);
       },
     },
+    nursing: {
+      async listPackages(hospitalId) {
+        const rows = await fetchAllPages((f, t) =>
+          client.from('nursing_packages').select('*').eq('hospital_id', hospitalId).eq('active', true).order('code').range(f, t));
+        return rows.map(nursingPackage);
+      },
+      async listRecords(wardId) {
+        const rows = await fetchAllPages((f, t) =>
+          client.from('nursing_service_records').select('*').eq('ward_id', wardId).order('service_date').range(f, t));
+        return rows.map(nursingRecord);
+      },
+      async createRecord(rec) {
+        const { data, error } = await client.from('nursing_service_records').insert({
+          hospital_id: rec.hospitalId, ward_id: rec.wardId, employee_id: rec.employeeId,
+          patient_ref: rec.patientRef, package_id: rec.packageId, service_count: rec.count,
+          service_date: rec.serviceDate, shift: rec.shift, status: rec.status,
+          confirmed_by: rec.confirmedBy, confirmed_at: rec.confirmedAt,
+        }).select('*').single();
+        if (error) throw new Error(`supabase write failed: ${error.message}`);
+        return nursingRecord(data);
+      },
+      async confirmRecord(id, confirmedByEmployeeId) {
+        const { error } = await client.from('nursing_service_records')
+          .update({ status: 'confirmed', confirmed_by: confirmedByEmployeeId, confirmed_at: new Date().toISOString() })
+          .eq('id', id);
+        if (error) throw new Error(`supabase write failed: ${error.message}`);
+      },
+    },
     workRecords: {
       async listWorkRecords(wardId, jYear, jMonth) {
         const rows = await fetchAllPages((f, t) =>
@@ -164,7 +220,7 @@ export async function loadHospitalSnapshot(
   repos: DataRepositories,
   args: { hospitalId: string; wardId: string; jYear: number; jMonth: number },
 ) {
-  const [wards, employees, shiftTypes, leaveTypes, schedule, leaves, workRecords] = await Promise.all([
+  const [wards, employees, shiftTypes, leaveTypes, schedule, leaves, workRecords, nursingPackages, nursingRecords] = await Promise.all([
     repos.org.listWards(args.hospitalId),
     repos.org.listEmployees(args.wardId),
     repos.org.listShiftTypes(args.hospitalId),
@@ -172,7 +228,9 @@ export async function loadHospitalSnapshot(
     repos.roster.getSchedule(args.wardId, args.jYear, args.jMonth),
     repos.leave.listLeaveRequests(args.wardId),
     repos.workRecords.listWorkRecords(args.wardId, args.jYear, args.jMonth),
+    repos.nursing.listPackages(args.hospitalId),
+    repos.nursing.listRecords(args.wardId),
   ]);
   const entries = schedule ? await repos.roster.listEntries(schedule.id) : [];
-  return { wards, employees, shiftTypes, leaveTypes, schedule, entries, leaves, workRecords };
+  return { wards, employees, shiftTypes, leaveTypes, schedule, entries, leaves, workRecords, nursingPackages, nursingRecords };
 }

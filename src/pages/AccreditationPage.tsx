@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { useAppStore, J_YEAR, J_MONTH } from '../store/appStore';
 import { buildAccreditationReport, reportToMarkdown, type MetricStatus } from '../features/accreditation/accreditationReport';
 import { buildEmployeeFacts, evaluateRules, DEFAULT_RULE_CONFIGS } from '../core/rules/engine';
-import { wardRecordingHealth, DEFAULT_NURSING_PACKAGES } from '../features/nursingServices/nursingService';
+import { wardRecordingHealth } from '../features/nursingServices/nursingService';
 
 const STATUS_STYLE: Record<MetricStatus, { bg: string; color: string; label: string }> = {
   ok: { bg: '#e7f4ec', color: '#1e6b3a', label: 'مطلوب' },
@@ -30,7 +30,7 @@ export default function AccreditationPage() {
     const expected = st.entries
       .filter(e => deptIds.has(e.personnelId) && shiftMap[e.shiftTypeId])
       .map(e => ({ employeeId: e.personnelId, dateISO: e.date, shift: shiftMap[e.shiftTypeId]! }));
-    const recording = wardRecordingHealth(st.departmentId, expected, st.nursingRecords, DEFAULT_NURSING_PACKAGES, 201_000, 7.4, nowISO);
+    const recording = wardRecordingHealth(st.departmentId, expected, st.nursingRecords, st.nursingPackages, 201_000, 7.4, nowISO);
     const deptRecords = st.workRecords.filter(r => deptIds.has(r.employeeId));
     return buildAccreditationReport({
       personnelIds: deptPeople.map(p => p.id),

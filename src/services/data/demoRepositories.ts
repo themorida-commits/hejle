@@ -7,8 +7,10 @@ import { LEAVE_TYPES } from '../../features/leave/leaveService';
 import { isoFromJalali } from '../../features/leave/leaveService';
 import { getDaysInJalaliMonth } from '../../core/jalali';
 import type {
-  DataRepositories, EntryRecord, HospitalSnapshot, LeaveRecord, ScheduleRecord, WorkRecordRecord,
+  DataRepositories, EntryRecord, HospitalSnapshot, LeaveRecord, NursingPackageRecord,
+  NursingServiceDbRecord, ScheduleRecord, WorkRecordRecord,
 } from './types';
+import { DEFAULT_NURSING_PACKAGES } from '../../features/nursingServices/nursingService';
 
 export const DEMO_HOSPITAL_ID = 'demo-hospital';
 export const DEMO_SCHEDULE_ID = 'demo-schedule-dep1-1405-7';
@@ -63,7 +65,34 @@ export function buildDemoSnapshot(jYear = 1405, jMonth = 7): HospitalSnapshot {
     entries,
     leaves: [],
     workRecords: [],
+    nursingPackages: DEFAULT_NURSING_PACKAGES.map(p => ({
+      id: p.id, hospitalId: DEMO_HOSPITAL_ID, code: p.code, title: p.title,
+      kValue: p.kValue, unit: p.unit, careGroup: p.careGroup ?? null, isActive: true,
+    })),
+    nursingRecords: buildDemoNursingRecords(entries),
   };
+}
+
+/** ثبت‌های دمو خدمات پرستاری از روی مدخل‌های روس‌تر داخلی — چند شیفت آخرِ بازه عمداً بدون ثبت می‌ماند تا داشبورد کسورات نشت نشان دهد. */
+function buildDemoNursingRecords(entries: EntryRecord[]): NursingServiceDbRecord[] {
+  const shiftMap: Record<string, NursingServiceDbRecord['shift']> = { 's-m': 'morning', 's-e': 'evening', 's-n': 'night' };
+  const out: NursingServiceDbRecord[] = [];
+  let seq = 0;
+  for (const e of entries) {
+    if (e.wardId !== 'dep1') continue;
+    const shift = shiftMap[e.shiftTypeId];
+    if (!shift || e.jDay < 1 || e.jDay > 10) continue; // روزهای ۱۱ و ۱۲ بدون ثبت (نشت نمایشی)
+    seq++;
+    const pending = seq === 4;
+    out.push({
+      id: `nsr-${seq}`, hospitalId: DEMO_HOSPITAL_ID, wardId: e.wardId, employeeId: e.employeeId,
+      patientRef: `P-${1000 + ((seq * 37) % 60)}`, packageId: 'pkg-g4', count: 2,
+      serviceDate: e.entryDate, shift, status: pending ? 'recorded' : 'confirmed',
+      confirmedBy: pending ? null : 'p1', confirmedAt: pending ? null : `${e.entryDate}T12:00:00.000Z`,
+      createdAt: `${e.entryDate}T08:00:00.000Z`,
+    });
+  }
+  return out;
 }
 
 export function createDemoRepositories(seed: HospitalSnapshot = buildDemoSnapshot()): DataRepositories & { snapshot: () => HospitalSnapshot } {
@@ -76,6 +105,25 @@ export function createDemoRepositories(seed: HospitalSnapshot = buildDemoSnapsho
       async listEmployees(wardId) { return state.employees.filter(e => e.wardId === wardId && e.isActive); },
       async listShiftTypes(hospitalId) { return state.shiftTypes.filter(s => s.hospitalId === hospitalId); },
       async listLeaveTypes(hospitalId) { return state.leaveTypes.filter(l => l.hospitalId === hospitalId); },
+      async createEmployees(records) {
+        const have = new Set(state.employees.map(e => e.personnelCode));
+        const fresh = records.filter(r => !have.has(r.personnelCode));
+        state.employees.push(...fresh);
+        return structuredClone(fresh);
+      },
+    },
+    nursing: {
+      async listPackages(hospitalId) { return state.nursingPackages.filter(p => p.hospitalId === hospitalId && p.isActive); },
+      async listRecords(wardId) { return state.nursingRecords.filter(r => r.wardId === wardId); },
+      async createRecord(rec) {
+        const created: NursingServiceDbRecord = { ...rec, id: `demo-nsr-${++seq}`, createdAt: new Date().toISOString() };
+        state.nursingRecords.push(created);
+        return structuredClone(created);
+      },
+      async confirmRecord(id, confirmedByEmployeeId) {
+        const r = state.nursingRecords.find(x => x.id === id);
+        if (r) { r.status = 'confirmed'; r.confirmedBy = confirmedByEmployeeId; r.confirmedAt = new Date().toISOString(); }
+      },
     },
     roster: {
       async getSchedule(wardId, jYear, jMonth) {

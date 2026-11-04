@@ -93,3 +93,52 @@ test('D-6 نگاشت عکس به وضعیت استور: پرسنل و ردیف�
   assert.equal(p1.role, 'سرپرستار');
   assert.equal(p1.departmentId, 'dep1');
 });
+
+test('D-N1 ریپازیتوری دمو پرستاری: سید بسته‌ها و ثبت‌ها از اسنپ‌شات می‌آید', async () => {
+  const repos = createDemoRepositories();
+  const packages = await repos.nursing.listPackages('demo-hospital');
+  assert.ok(packages.length >= 10);
+  const records = await repos.nursing.listRecords('dep1');
+  assert.ok(records.length > 0);
+  assert.ok(records.every(r => r.wardId === 'dep1'));
+});
+
+test('D-N2 چرخهٔ ثبت و تأیید خدمت پرستاری در ریپازیتوری', async () => {
+  const repos = createDemoRepositories();
+  const created = await repos.nursing.createRecord({
+    hospitalId: 'demo-hospital', wardId: 'dep1', employeeId: 'p2', patientRef: 'P-77',
+    packageId: 'pkg-g4', count: 3, serviceDate: '2026-09-25', shift: 'night',
+    status: 'recorded', confirmedBy: null, confirmedAt: null,
+  });
+  assert.equal(created.status, 'recorded');
+  await repos.nursing.confirmRecord(created.id, 'p1');
+  const after = (await repos.nursing.listRecords('dep1')).find(r => r.id === created.id);
+  assert.equal(after?.status, 'confirmed');
+  assert.equal(after?.confirmedBy, 'p1');
+});
+
+test('D-N3 ورود گروهی پرسنل: کد تکراری رد می‌شود', async () => {
+  const repos = createDemoRepositories();
+  const before = await repos.org.listEmployees('dep1');
+  const created = await repos.org.createEmployees([
+    {
+      id: 'imp-T-1', hospitalId: 'demo-hospital', wardId: 'dep1', profileId: null,
+      fullName: 'تست ورود', personnelCode: 'T-1', roleTitle: 'پرستار',
+      employmentStatus: 'رسمی', employmentStartJalali: null, baseDutyHoursOverride: null, isActive: true,
+    },
+    {
+      id: 'imp-dup', hospitalId: 'demo-hospital', wardId: 'dep1', profileId: null,
+      fullName: 'تکراری', personnelCode: before[0]!.personnelCode, roleTitle: 'پرستار',
+      employmentStatus: 'رسمی', employmentStartJalali: null, baseDutyHoursOverride: null, isActive: true,
+    },
+  ]);
+  assert.equal(created.length, 1);
+  assert.equal(created[0]!.personnelCode, 'T-1');
+});
+
+test('D-N4 اسنپ‌شات به وضعیت استور: بسته‌ها و ثبت‌های پرستاری نگاشت می‌شوند', () => {
+  const state = snapshotToState(buildDemoSnapshot());
+  assert.ok(state.nursingPackages.length >= 10);
+  assert.ok(state.nursingRecords.length > 0);
+  assert.ok(state.nursingRecords.every(r => typeof r.packageId === 'string' && r.packageId.length > 0));
+});

@@ -42,11 +42,30 @@ export interface WorkRecordRecord {
   status: 'draft' | 'approved' | 'exported';
 }
 
+export interface NursingPackageRecord {
+  id: string; hospitalId: string; code: string; title: string;
+  kValue: number; unit: string; careGroup: number | null; isActive: boolean;
+}
+export interface NursingServiceDbRecord {
+  id: string; hospitalId: string; wardId: string; employeeId: string;
+  patientRef: string; packageId: string; count: number; serviceDate: string;
+  shift: 'morning' | 'evening' | 'night'; status: 'recorded' | 'confirmed';
+  confirmedBy: string | null; confirmedAt: string | null; createdAt: string;
+}
+
 export interface OrgRepository {
   listWards(hospitalId: string): Promise<WardRecord[]>;
   listEmployees(wardId: string): Promise<EmployeeRecord[]>;
   listShiftTypes(hospitalId: string): Promise<ShiftTypeRecord[]>;
   listLeaveTypes(hospitalId: string): Promise<LeaveTypeRecord[]>;
+  /** ورود گروهی پرسنل (ایمپورتر) — کد پرسنلی موجود رد می‌شود، تازه‌ها برمی‌گردند. */
+  createEmployees(records: EmployeeRecord[]): Promise<EmployeeRecord[]>;
+}
+export interface NursingRepository {
+  listPackages(hospitalId: string): Promise<NursingPackageRecord[]>;
+  listRecords(wardId: string): Promise<NursingServiceDbRecord[]>;
+  createRecord(rec: Omit<NursingServiceDbRecord, 'id' | 'createdAt'>): Promise<NursingServiceDbRecord>;
+  confirmRecord(id: string, confirmedByEmployeeId: string): Promise<void>;
 }
 export interface RosterRepository {
   getSchedule(wardId: string, jYear: number, jMonth: number): Promise<ScheduleRecord | null>;
@@ -69,6 +88,7 @@ export interface DataRepositories {
   roster: RosterRepository;
   leave: LeaveRepository;
   workRecords: WorkRecordRepository;
+  nursing: NursingRepository;
 }
 
 /** عکس کامل دادهٔ یک بیمارستان برای هیدراته‌کردن استور. */
@@ -81,4 +101,6 @@ export interface HospitalSnapshot {
   entries: EntryRecord[];
   leaves: LeaveRecord[];
   workRecords: WorkRecordRecord[];
+  nursingPackages: NursingPackageRecord[];
+  nursingRecords: NursingServiceDbRecord[];
 }

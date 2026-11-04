@@ -93,6 +93,7 @@ test('A-5 مرج تنبل بخش: بارگذاری بخش دوم پرسنل را
   const base = snapshotToState(dep1Only);
   const cur = {
     personnel: base.personnel, entries: base.entries, leaves: [], workRecords: [],
+    nursingRecords: base.nursingRecords,
     dutyByEmployee: new Map<string, number>(), leaveBalances: {},
   };
   const dep2Snap = { ...full, employees: full.employees.filter(e => e.wardId === 'dep2'), entries: [], leaves: [], workRecords: [], schedule: null };

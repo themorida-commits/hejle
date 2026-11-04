@@ -8,12 +8,13 @@ import { type SwapRequest } from '../features/swaps/swapService';
 import { type WorkRecord } from '../features/workRecords/workRecordService';
 import { type AttendanceEvent } from '../features/attendance/attendanceService';
 import { seedDemoCredentials, type Credential } from '../features/credentials/credentialService';
-import type { NursingServiceRecord } from '../features/nursingServices/nursingService';
+import type { NursingPackage, NursingServiceRecord } from '../features/nursingServices/nursingService';
 import { isoFromJalali } from '../features/leave/leaveService';
 import { buildDemoSnapshot } from '../services/data/demoRepositories';
 import { createRepositories, currentDataSource, loadHospitalSnapshot } from '../services/data/index';
 import {
   employeeToPersonnel, shiftTypeToDomain, entryToDomain, leaveToDomain, workRecordToDomain,
+  nursingPackageToDomain, nursingRecordToDomain, nursingRecordToDb, personnelToEmployeeRecord,
 } from '../services/data/mappers';
 import type { HospitalSnapshot } from '../services/data/types';
 import { useSessionStore } from './session';
@@ -39,6 +40,8 @@ export function snapshotToState(snap: HospitalSnapshot) {
     leaves: snap.leaves.map(leaveToDomain),
     workRecords: snap.workRecords.map(w => workRecordToDomain(w, nameOf)),
     scheduleStatus: (snap.schedule?.status ?? 'draft') as 'draft' | 'published',
+    nursingPackages: snap.nursingPackages.map(nursingPackageToDomain),
+    nursingRecords: snap.nursingRecords.map(nursingRecordToDomain),
   };
 }
 
@@ -46,6 +49,7 @@ export function snapshotToState(snap: HospitalSnapshot) {
 export function mergeWardIntoState(
   cur: {
     personnel: Personnel[]; entries: ScheduleEntry[]; leaves: LeaveRequest[]; workRecords: WorkRecord[];
+    nursingRecords: NursingServiceRecord[];
     dutyByEmployee: Map<string, number>; leaveBalances: Record<string, { entitled: number; used: number }>;
   },
   snap: HospitalSnapshot,
@@ -63,6 +67,7 @@ export function mergeWardIntoState(
     entries: [...cur.entries.filter(e => !newIds.has(e.personnelId)), ...mapped.entries],
     leaves: [...cur.leaves.filter(l => !newIds.has(l.employeeId)), ...mapped.leaves],
     workRecords: [...cur.workRecords.filter(w => !newIds.has(w.employeeId)), ...mapped.workRecords],
+    nursingRecords: [...cur.nursingRecords.filter(r => !newIds.has(r.employeeId)), ...mapped.nursingRecords],
     dutyByEmployee: duty,
     leaveBalances: balances,
   };
@@ -106,6 +111,7 @@ interface AppState {
   setAttendanceEvents: (e: AttendanceEvent[]) => void;
   addCredential: (c: Credential) => void;
   nursingRecords: NursingServiceRecord[];
+  nursingPackages: NursingPackage[];
   addNursingRecord: (r: NursingServiceRecord) => void;
   confirmNursingRecord: (id: string, by: string) => void;
   addPersonnelBulk: (list: Personnel[]) => void;
@@ -128,41 +134,6 @@ function seedAttendance(entries: ScheduleEntry[]): AttendanceEvent[] {
       ? new Date(new Date(e.date + 'T00:00:00Z').getTime() + 86400000).toISOString().slice(0, 10)
       : e.date;
     out.push({ id: `att-${++seq}`, employeeId: e.personnelId, dateISO: outDate, type: 'out', time: t[1], source: 'device' });
-  }
-  return out;
-}
-
-/**
- * ثبت‌های دمو خدمات پرستاری برای بخش داخلی (گروه مراقبتی ۴) در ۱۲ روز اول ماه —
- * عمداً چند شیفت بدون ثبت می‌ماند تا داشبورد کسورات نشت واقعی نشان دهد،
- * و یک ثبت هم در وضعیت «ثبت‌شده/در انتظار تأیید» می‌ماند.
- */
-function seedNursingRecords(entries: ScheduleEntry[], personnel: Personnel[]): NursingServiceRecord[] {
-  const wardOf = new Map(personnel.map(p => [p.id, p.departmentId]));
-  const firstDays = new Set(Array.from({ length: 12 }, (_, i) => isoFromJalali(J_YEAR, J_MONTH, i + 1)));
-  const shiftMap: Record<string, 'morning' | 'evening' | 'night'> = { 's-m': 'morning', 's-e': 'evening', 's-n': 'night' };
-  const out: NursingServiceRecord[] = [];
-  let seq = 0;
-  for (const e of entries) {
-    if (wardOf.get(e.personnelId) !== 'dep1' || !firstDays.has(e.date)) continue;
-    const shift = shiftMap[e.shiftTypeId];
-    if (!shift) continue;
-    // دو روز آخر عمداً بدون ثبت (نشت نمایشی برای داشبورد کسورات)
-    if (e.date >= isoFromJalali(J_YEAR, J_MONTH, 11)) continue;
-    const pending = seq === 3; // یک ثبت در انتظار تأیید سرپرستار
-    out.push({
-      id: `nsr-${++seq}`,
-      wardId: 'dep1',
-      employeeId: e.personnelId,
-      patientRef: `P-${1000 + ((seq * 37) % 60)}`,
-      packageId: 'pkg-g4',
-      count: 2,
-      dateISO: e.date,
-      shift,
-      status: pending ? 'recorded' : 'confirmed',
-      recordedAtISO: `${e.date}T08:00:00.000Z`,
-      ...(pending ? {} : { confirmedBy: 'p1', confirmedAtISO: `${e.date}T12:00:00.000Z` }),
-    });
   }
   return out;
 }
@@ -205,18 +176,26 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (st.dataSource !== 'supabase' || st.loadedWards.includes(wardId)) return;
     set({ loadedWards: [...st.loadedWards, wardId] });
     const repos = createRepositories('supabase');
-    const [employees, schedule, leaves, workRecords] = await Promise.all([
+    const hospitalId = useSessionStore.getState().hospitalId ?? undefined;
+    const [employees, schedule, leaves, workRecords, nursingRecords, nursingPackages] = await Promise.all([
       repos.org.listEmployees(wardId),
       repos.roster.getSchedule(wardId, J_YEAR, J_MONTH),
       repos.leave.listLeaveRequests(wardId),
       repos.workRecords.listWorkRecords(wardId, J_YEAR, J_MONTH),
+      repos.nursing.listRecords(wardId),
+      hospitalId ? repos.nursing.listPackages(hospitalId) : Promise.resolve([]),
     ]);
     const entries = schedule ? await repos.roster.listEntries(schedule.id) : [];
     const partial: HospitalSnapshot = {
       wards: [], employees, shiftTypes: [], leaveTypes: [], schedule, entries, leaves, workRecords,
+      nursingPackages, nursingRecords,
     };
     const cur = get();
-    set(mergeWardIntoState(cur, partial));
+    const merged = mergeWardIntoState(cur, partial);
+    set({
+      ...merged,
+      ...(nursingPackages.length ? { nursingPackages: nursingPackages.map(nursingPackageToDomain) } : {}),
+    });
   },
   departments: demoState.departments,
   personnel: demoState.personnel,
@@ -251,21 +230,49 @@ export const useAppStore = create<AppState>((set, get) => ({
   addAttendanceEvent: (e) => set((st) => ({ attendanceEvents: [...st.attendanceEvents, e] })),
   setAttendanceEvents: (e) => set({ attendanceEvents: e }),
   addCredential: (c) => set((st) => ({ credentials: [...st.credentials, c] })),
-  nursingRecords: seedNursingRecords(demoState.entries, demoState.personnel),
-  addNursingRecord: (r) => set((st) => ({ nursingRecords: [...st.nursingRecords, r] })),
-  confirmNursingRecord: (id, by) =>
+  nursingRecords: demoState.nursingRecords,
+  nursingPackages: demoState.nursingPackages,
+  addNursingRecord: (r) => {
+    set((st) => ({ nursingRecords: [...st.nursingRecords, r] }));
+    // ماندگاری سمت سرور در حالت supabase — خطا فقط لاگ می‌شود؛ وضعیت UI منبع حقیقت نمایشی است.
+    if (get().dataSource === 'supabase') {
+      const hospitalId = useSessionStore.getState().hospitalId;
+      if (hospitalId) {
+        void createRepositories('supabase').nursing.createRecord(nursingRecordToDb(r, hospitalId))
+          .then(saved => {
+            const domain = nursingRecordToDomain(saved);
+            set((st) => ({ nursingRecords: st.nursingRecords.map(x => (x.id === r.id ? domain : x)) }));
+          })
+          .catch(err => console.error('nursing record persist failed', err));
+      }
+    }
+  },
+  confirmNursingRecord: (id, by) => {
     set((st) => ({
       nursingRecords: st.nursingRecords.map(r =>
         r.id === id ? { ...r, status: 'confirmed' as const, confirmedBy: by, confirmedAtISO: new Date().toISOString() } : r,
       ),
-    })),
-  addPersonnelBulk: (list) =>
+    }));
+    if (get().dataSource === 'supabase') {
+      void createRepositories('supabase').nursing.confirmRecord(id, by)
+        .catch(err => console.error('nursing confirm persist failed', err));
+    }
+  },
+  addPersonnelBulk: (list) => {
     set((st) => {
       const codes = new Set(st.personnel.map(p => p.personnelCode));
       const ids = new Set(st.personnel.map(p => p.id));
       const fresh = list.filter(p => !codes.has(p.personnelCode) && !ids.has(p.id));
       return { personnel: [...st.personnel, ...fresh] };
-    }),
+    });
+    if (get().dataSource === 'supabase' && list.length > 0) {
+      const hospitalId = useSessionStore.getState().hospitalId;
+      if (hospitalId) {
+        void createRepositories('supabase').org.createEmployees(list.map(p => personnelToEmployeeRecord(p, hospitalId)))
+          .catch(err => console.error('personnel import persist failed', err));
+      }
+    }
+  },
   adjustBalance: (employeeId, deltaUsed) =>
     set((st) => ({
       leaveBalances: {

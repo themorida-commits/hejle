@@ -2,9 +2,43 @@
 import type { Personnel, ShiftType, ScheduleEntry } from '../../core/types';
 import type { LeaveRequest } from '../../features/leave/leaveService';
 import type { WorkRecord } from '../../features/workRecords/workRecordService';
+import type { NursingPackage, NursingServiceRecord } from '../../features/nursingServices/nursingService';
 import type {
   EmployeeRecord, ShiftTypeRecord, EntryRecord, LeaveRecord, WorkRecordRecord,
+  NursingPackageRecord, NursingServiceDbRecord,
 } from './types';
+
+export function nursingPackageToDomain(r: NursingPackageRecord): NursingPackage {
+  return { id: r.id, code: r.code, title: r.title, kValue: r.kValue, unit: r.unit, careGroup: r.careGroup ?? undefined };
+}
+
+export function nursingRecordToDomain(r: NursingServiceDbRecord): NursingServiceRecord {
+  return {
+    id: r.id, wardId: r.wardId, employeeId: r.employeeId, patientRef: r.patientRef,
+    packageId: r.packageId, count: r.count, dateISO: r.serviceDate, shift: r.shift,
+    status: r.status, recordedAtISO: r.createdAt,
+    ...(r.confirmedBy ? { confirmedBy: r.confirmedBy } : {}),
+    ...(r.confirmedAt ? { confirmedAtISO: r.confirmedAt } : {}),
+  };
+}
+
+export function nursingRecordToDb(r: NursingServiceRecord, hospitalId: string): Omit<NursingServiceDbRecord, 'id' | 'createdAt'> {
+  return {
+    hospitalId, wardId: r.wardId, employeeId: r.employeeId, patientRef: r.patientRef,
+    packageId: r.packageId, count: r.count, serviceDate: r.dateISO, shift: r.shift,
+    status: r.status === 'confirmed' ? 'confirmed' : 'recorded',
+    confirmedBy: r.confirmedBy ?? null, confirmedAt: r.confirmedAtISO ?? null,
+  };
+}
+
+export function personnelToEmployeeRecord(p: Personnel, hospitalId: string): EmployeeRecord {
+  return {
+    id: p.id, hospitalId, wardId: p.departmentId, profileId: null,
+    fullName: p.name, personnelCode: p.personnelCode, roleTitle: p.role,
+    employmentStatus: p.employmentStatus, employmentStartJalali: p.employmentDate ?? null,
+    baseDutyHoursOverride: p.baseDutyHours ?? null, isActive: true,
+  };
+}
 
 export function employeeToPersonnel(e: EmployeeRecord): Personnel {
   return {

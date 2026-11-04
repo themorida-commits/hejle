@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useAppStore } from '../store/appStore';
 import {
-  DEFAULT_NURSING_PACKAGES, effectiveStatus, recordedTariffRevenue,
+  effectiveStatus, recordedTariffRevenue,
   wardRecordingHealth, nursingRecordsToCsv, type NursingServiceRecord,
 } from '../features/nursingServices/nursingService';
 import { isoFromJalali } from '../features/leave/leaveService';
@@ -16,9 +16,10 @@ export default function NursingServicesPage() {
   const nowISO = useMemo(() => new Date().toISOString(), []);
   const deptPeople = st.personnel.filter(p => p.departmentId === st.departmentId);
   const deptIds = useMemo(() => new Set(deptPeople.map(p => p.id)), [deptPeople]);
+  const packages = st.nursingPackages;
   const records = st.nursingRecords.filter(r => r.wardId === st.departmentId);
   const names = useMemo(() => new Map(st.personnel.map(p => [p.id, p.name])), [st.personnel]);
-  const pkgOf = useMemo(() => new Map(DEFAULT_NURSING_PACKAGES.map(p => [p.id, p])), []);
+  const pkgOf = useMemo(() => new Map(packages.map(p => [p.id, p])), [packages]);
 
   const [kRial, setKRial] = useState(K_RIAL_DEFAULT);
   const [form, setForm] = useState({ packageId: 'pkg-g4', patientRef: '', count: 1, dateISO: isoFromJalali(J_YEAR, J_MONTH, 13), shift: 'morning' as const, employeeId: '' });
@@ -26,25 +27,28 @@ export default function NursingServicesPage() {
   const expected = useMemo(() => st.entries
     .filter(e => deptIds.has(e.personnelId) && shiftMap[e.shiftTypeId])
     .map(e => ({ employeeId: e.personnelId, dateISO: e.date, shift: shiftMap[e.shiftTypeId]! })), [st.entries, deptIds]);
-  const health = useMemo(() => wardRecordingHealth(st.departmentId, expected, st.nursingRecords, DEFAULT_NURSING_PACKAGES, kRial, 7.4, nowISO),
+  const health = useMemo(() => wardRecordingHealth(st.departmentId, expected, st.nursingRecords, packages, kRial, 7.4, nowISO),
     [st.departmentId, expected, st.nursingRecords, kRial, nowISO]);
-  const revenue = useMemo(() => recordedTariffRevenue(records, DEFAULT_NURSING_PACKAGES, kRial, nowISO), [records, kRial, nowISO]);
+  const revenue = useMemo(() => recordedTariffRevenue(records, packages, kRial, nowISO), [records, packages, kRial, nowISO]);
   const isManager = st.viewRole === 'ward_manager';
 
   const faNum = (n: number) => n.toLocaleString('fa-IR');
+  const effectivePackageId = packages.some(p => p.id === form.packageId)
+    ? form.packageId
+    : (packages.find(p => p.careGroup === 4)?.id ?? packages[0]?.id ?? '');
   const addRecord = () => {
     const employeeId = form.employeeId || (isManager ? deptPeople[0]?.id : st.currentEmployeeId) || '';
     if (!employeeId || !form.patientRef.trim()) return;
     const rec: NursingServiceRecord = {
       id: `nsr-${Date.now()}`, wardId: st.departmentId, employeeId,
-      patientRef: form.patientRef.trim(), packageId: form.packageId, count: form.count,
+      patientRef: form.patientRef.trim(), packageId: effectivePackageId, count: form.count,
       dateISO: form.dateISO, shift: form.shift, status: 'recorded', recordedAtISO: new Date().toISOString(),
     };
     st.addNursingRecord(rec);
     setForm(f => ({ ...f, patientRef: '' }));
   };
   const exportCsv = () => {
-    const url = URL.createObjectURL(new Blob([nursingRecordsToCsv(records, DEFAULT_NURSING_PACKAGES, names, nowISO)], { type: 'text/csv;charset=utf-8' }));
+    const url = URL.createObjectURL(new Blob([nursingRecordsToCsv(records, packages, names, nowISO)], { type: 'text/csv;charset=utf-8' }));
     const a = document.createElement('a');
     a.href = url; a.download = `nursing-services-${J_YEAR}-${J_MONTH}.csv`; a.click();
     URL.revokeObjectURL(url);
@@ -85,8 +89,8 @@ export default function NursingServicesPage() {
         <strong style={{ fontSize: 14 }}>ثبت خدمت تازه</strong>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10, alignItems: 'end' }}>
           <label style={{ fontSize: 12 }}>بستهٔ خدمت
-            <select value={form.packageId} onChange={e => setForm(f => ({ ...f, packageId: e.target.value }))} style={{ display: 'block', padding: 7, borderRadius: 8, border: '1px solid #ddd', minWidth: 260 }}>
-              {DEFAULT_NURSING_PACKAGES.map(p => <option key={p.id} value={p.id}>{p.title} — K={p.kValue}</option>)}
+            <select value={effectivePackageId} onChange={e => setForm(f => ({ ...f, packageId: e.target.value }))} style={{ display: 'block', padding: 7, borderRadius: 8, border: '1px solid #ddd', minWidth: 260 }}>
+              {packages.map(p => <option key={p.id} value={p.id}>{p.title} — K={p.kValue}</option>)}
             </select></label>
           <label style={{ fontSize: 12 }}>شناسهٔ بیمار (کد پذیرش)
             <input value={form.patientRef} onChange={e => setForm(f => ({ ...f, patientRef: e.target.value }))} placeholder="P-1024" style={{ display: 'block', padding: 7, borderRadius: 8, border: '1px solid #ddd', width: 110 }} /></label>

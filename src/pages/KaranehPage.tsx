@@ -59,7 +59,7 @@ function PhysicianCalculator() {
   );
 }
 import {
-  DEFAULT_NURSING_PACKAGES, recordedTariffRevenue, quantitativePointsByNurse,
+  recordedTariffRevenue, quantitativePointsByNurse,
 } from '../features/nursingServices/nursingService';
 
 function MohKaranehSection() {
@@ -82,9 +82,9 @@ function MohKaranehSection() {
 
   // زنجیرهٔ واقعی این بخش: ثبت خدمت ← درآمد تعرفه‌ای ← استخر ۸۵٪ ← تسهیم امتیازی
   const wardRecords = st.nursingRecords.filter(r => r.wardId === st.departmentId);
-  const revenue = useMemo(() => recordedTariffRevenue(wardRecords, DEFAULT_NURSING_PACKAGES, kRial, nowISO), [wardRecords, kRial, nowISO]);
+  const revenue = useMemo(() => recordedTariffRevenue(wardRecords, st.nursingPackages, kRial, nowISO), [wardRecords, st.nursingPackages, kRial, nowISO]);
   const wardPool = revenue.revenueRials * params.shares.nursingOfNursingPackages;
-  const quant = useMemo(() => quantitativePointsByNurse(wardRecords, DEFAULT_NURSING_PACKAGES, nowISO), [wardRecords, nowISO]);
+  const quant = useMemo(() => quantitativePointsByNurse(wardRecords, st.nursingPackages, nowISO), [wardRecords, st.nursingPackages, nowISO]);
   const distribution = useMemo(() => computeNursingKaraneh(
     deptPeople.map(p => p.personnelCode.startsWith('HN-')
       ? { employeeId: p.id, indirectRole: 'headNurse' as const, qualityScore: 1, presenceFactor: 1 }
