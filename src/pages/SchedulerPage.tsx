@@ -6,6 +6,7 @@ import { DEFAULT_RULES } from '../core/defaults';
 import { buildEmployeeFacts, evaluateRules, DEFAULT_RULE_CONFIGS } from '../core/rules/engine';
 import { scheduleSolver } from '../services/scheduleSolverClient';
 import { DEFAULT_AI_SETTINGS, DEFAULT_GLOBAL_SETTINGS } from '../core/defaults';
+import { credentialGate } from '../features/credentials/credentialService';
 
 export default function SchedulerPage() {
   const st = useAppStore();
@@ -36,8 +37,18 @@ export default function SchedulerPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [st.entries, st.departmentId]);
 
+  // قفل صلاحیت: پروانهٔ منقضی = کنارگذاری از تولید + منع ویرایش دستی
+  const gate = useMemo(
+    () => credentialGate(deptPeople.map(p => p.id), st.credentials, new Date().toISOString().slice(0, 10)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [st.credentials, st.departmentId],
+  );
+  const blockedIds = useMemo(() => new Set(gate.blocked.map(b => b.employeeId)), [gate]);
+  const nameOf = (id: string) => deptPeople.find(p => p.id === id)?.name ?? id;
+
   const cycleShift = (personnelId: string, dateISO: string, currentId: string | undefined) => {
     if (st.scheduleStatus === 'published') return;
+    if (blockedIds.has(personnelId)) return; // قفل صلاحیت
     const order = ['s-m', 's-e', 's-n', 's-off'];
     const next = order[(order.indexOf(currentId ?? 's-off') + 1) % order.length]!;
     const others = st.entries.filter(e => !deptIds.has(e.personnelId));
@@ -48,7 +59,7 @@ export default function SchedulerPage() {
     setBusy(true);
     try {
       const fresh = await scheduleSolver.solve({
-        personnel: deptPeople, shiftTypes: st.shiftTypes, currentSchedule: [], requests: st.requests,
+        personnel: deptPeople.filter(p => !blockedIds.has(p.id)), shiftTypes: st.shiftTypes, currentSchedule: [], requests: st.requests,
         rules: DEFAULT_RULES, aiSettings: DEFAULT_AI_SETTINGS, globalSettings: DEFAULT_GLOBAL_SETTINGS,
         jYear: J_YEAR, jMonth: J_MONTH,
       });
@@ -75,6 +86,21 @@ export default function SchedulerPage() {
         <span>تعارض‌ها: <strong>{fa(conflicts)}</strong> · نقض سخت قواعد: <strong>{fa(violations.filter(v => v.severity === 'hard').length)}</strong></span>
       </div>
       <p style={{ fontSize: 12, color: '#68707a' }}>برای ویرایش دستی روی هر سلول کلیک کنید (چرخش صبح ← عصر ← شب ← آف). در وضعیت منتشرشده ویرایش قفل است.</p>
+      {(gate.blocked.length > 0 || gate.warnings.length > 0) && (
+        <div style={{ background: '#fdf6ec', border: '1px solid #ecd9ae', borderRadius: 12, padding: '10px 14px', marginBottom: 12, fontSize: 13 }}>
+          {gate.blocked.length > 0 && (
+            <div style={{ color: '#8a5a00' }}>
+              <strong>قفل صلاحیت — از برنامه کنار گذاشته شدند:</strong>{' '}
+              {gate.blocked.map(b => `${nameOf(b.employeeId)} (${b.reasons.join('؛ ')})`).join(' · ')}
+            </div>
+          )}
+          {gate.warnings.length > 0 && (
+            <div style={{ color: '#68707a', marginTop: gate.blocked.length ? 6 : 0 }}>
+              هشدار مدارک: {gate.warnings.map(w => `${nameOf(w.employeeId)}: ${w.reasons.join('؛ ')}`).join(' · ')}
+            </div>
+          )}
+        </div>
+      )}
       <div style={{ overflowX: 'auto', background: '#fff', border: '1px solid #e3ddd2', borderRadius: 12 }}>
         <table style={{ borderCollapse: 'collapse', fontSize: 12, minWidth: 1100 }}>
           <thead>
@@ -88,7 +114,9 @@ export default function SchedulerPage() {
           <tbody>
             {deptPeople.map(p => (
               <tr key={p.id}>
-                <td style={{ position: 'sticky', right: 0, background: '#fff', padding: 6, whiteSpace: 'nowrap', fontWeight: 600 }}>{p.name}</td>
+                <td style={{ position: 'sticky', right: 0, background: '#fff', padding: 6, whiteSpace: 'nowrap', fontWeight: 600 }}>
+                  {p.name}{blockedIds.has(p.id) && <span style={{ color: '#b3402f', fontSize: 11 }}> · قفل صلاحیت</span>}
+                </td>
                 {(grid.get(p.id) ?? []).map(cell => (
                   <td
                     key={cell.jDay}

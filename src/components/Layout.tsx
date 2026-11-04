@@ -13,6 +13,7 @@ const links = [
   { to: '/personnel', label: 'پرونده پرسنلی' },
   { to: '/karaneh', label: 'کارانه' },
   { to: '/nursing-services', label: 'خدمات پرستاری' },
+  { to: '/accreditation', label: 'اعتباربخشی' },
   { to: '/ai', label: 'دستیار AI' },
   { to: '/self-service', label: 'سلف‌سرویس پرستار' },
 ];

@@ -4,7 +4,60 @@ import { buildKaranehSheet, karanehToCsv } from '../features/performance/perform
 import { reconcileAttendance, summarizeAttendance } from '../features/attendance/attendanceService';
 import {
   MOH_KARANEH_1404, computeGroupPools, computeNursingKaraneh, nursingSlips, slipsToCsv,
+  physicianShareM, physicianQ, type KaranehParams,
 } from '../features/performance/karanehEngine';
+
+interface HospitalKaranehProfile { nursingShare: number; onCallCoef: number; kRial: number }
+const PROFILE_KEY = 'hejleh-karaneh-profile';
+function loadProfile(): HospitalKaranehProfile {
+  try {
+    const raw = localStorage.getItem(PROFILE_KEY);
+    if (raw) return { nursingShare: 0.85, onCallCoef: 4, kRial: 201_000, ...JSON.parse(raw) };
+  } catch { /* ignore */ }
+  return { nursingShare: 0.85, onCallCoef: 4, kRial: 201_000 };
+}
+
+function PhysicianCalculator() {
+  const [worked, setWorked] = useState(800);           // میلیون ریال کارکرد جزء حرفه‌ای
+  const [region, setRegion] = useState<'developed' | 'deprived'>('developed');
+  const [quality, setQuality] = useState(75);
+  const m = physicianShareM(worked, region);
+  const q = physicianQ(quality);
+  const p = m * q;
+  const fa = (n: number) => Math.round(n).toLocaleString('fa-IR');
+  const input = { padding: 6, borderRadius: 8, border: '1px solid #ddd', width: 110, marginInlineStart: 6 } as const;
+  // ریز پلکان برای شفافیت محاسبه
+  const slices: string[] = [];
+  let rem = worked; let lower = 0;
+  for (const b of MOH_KARANEH_1404.physicianBrackets) {
+    if (rem <= 0) break;
+    const width = b.upToMillionRials == null ? rem : Math.min(rem, b.upToMillionRials - lower);
+    const rate = region === 'deprived' ? b.deprived : b.developed;
+    slices.push(`${fa(width)} × ${(rate * 100).toLocaleString('fa-IR')}٪`);
+    rem -= width;
+    if (b.upToMillionRials != null) lower = b.upToMillionRials;
+  }
+  return (
+    <div style={{ borderTop: '1px dashed #ddd', paddingTop: 12, marginTop: 12 }}>
+      <strong style={{ fontSize: 14 }}>محاسبه‌گر کارانهٔ پزشک (P = M × Q)</strong>
+      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', margin: '10px 0', fontSize: 13 }}>
+        <label>کارکرد ماهانه جزء حرفه‌ای (میلیون ریال)<input type="number" style={input} value={worked} onChange={e => setWorked(Number(e.target.value) || 0)} /></label>
+        <label>منطقه
+          <select style={{ ...input, width: 130 }} value={region} onChange={e => setRegion(e.target.value as typeof region)}>
+            <option value="developed">برخوردار</option><option value="deprived">محروم (الف و ب)</option>
+          </select></label>
+        <label>امتیاز کیفی (۰ تا ۱۰۰)<input type="number" style={input} value={quality} onChange={e => setQuality(Number(e.target.value) || 0)} /></label>
+      </div>
+      <div style={{ fontSize: 13, display: 'flex', gap: 18, flexWrap: 'wrap' }}>
+        <span>ریز پلکان M: {slices.join(' + ') || '—'}</span>
+        <span>M = <strong>{fa(m)}</strong> میلیون ریال</span>
+        <span>Q = <strong>{(q * 100).toLocaleString('fa-IR')}٪</strong></span>
+        <span>کارانهٔ پزشک P = <strong>{fa(p)} میلیون ریال</strong> ({fa(p * 1e6)} ریال)</span>
+      </div>
+      <p style={{ fontSize: 12, color: '#68707a', marginBottom: 0 }}>در نسخهٔ جاری دستورالعمل سقف ریالی فردی حذف شده است؛ ترمزها سقف جمعی ۶۳٪ و پلکان نزولی‌اند.</p>
+    </div>
+  );
+}
 import {
   DEFAULT_NURSING_PACKAGES, recordedTariffRevenue, quantitativePointsByNurse,
 } from '../features/nursingServices/nursingService';
@@ -14,22 +67,30 @@ function MohKaranehSection() {
   const nowISO = useMemo(() => new Date().toISOString(), []);
   const [profMillion, setProfMillion] = useState(120000);       // میلیون ریال — ورودی نمایشی واحد مالی
   const [nursingPkgMillion, setNursingPkgMillion] = useState(40000);
-  const [kRial, setKRial] = useState(201_000);
+  const [profile, setProfile] = useState<HospitalKaranehProfile>(loadProfile);
+  const kRial = profile.kRial;
+  const setKRial = (v: number) => setProfile(p => { const next = { ...p, kRial: v }; try { localStorage.setItem(PROFILE_KEY, JSON.stringify(next)); } catch { /* ignore */ } return next; });
+  const updateProfile = (patch: Partial<HospitalKaranehProfile>) => setProfile(p => { const next = { ...p, ...patch }; try { localStorage.setItem(PROFILE_KEY, JSON.stringify(next)); } catch { /* ignore */ } return next; });
+  const params: KaranehParams = useMemo(() => ({
+    ...MOH_KARANEH_1404,
+    shares: { ...MOH_KARANEH_1404.shares, nursingOfNursingPackages: profile.nursingShare },
+    onCallCoef: profile.onCallCoef,
+  }), [profile]);
   const deptPeople = st.personnel.filter(p => p.departmentId === st.departmentId);
   const names = useMemo(() => new Map(st.personnel.map(p => [p.id, p.name])), [st.personnel]);
-  const pools = useMemo(() => computeGroupPools(profMillion * 1e6, nursingPkgMillion * 1e6, 0), [profMillion, nursingPkgMillion]);
+  const pools = useMemo(() => computeGroupPools(profMillion * 1e6, nursingPkgMillion * 1e6, 0, params), [profMillion, nursingPkgMillion, params]);
 
   // زنجیرهٔ واقعی این بخش: ثبت خدمت ← درآمد تعرفه‌ای ← استخر ۸۵٪ ← تسهیم امتیازی
   const wardRecords = st.nursingRecords.filter(r => r.wardId === st.departmentId);
   const revenue = useMemo(() => recordedTariffRevenue(wardRecords, DEFAULT_NURSING_PACKAGES, kRial, nowISO), [wardRecords, kRial, nowISO]);
-  const wardPool = revenue.revenueRials * MOH_KARANEH_1404.shares.nursingOfNursingPackages;
+  const wardPool = revenue.revenueRials * params.shares.nursingOfNursingPackages;
   const quant = useMemo(() => quantitativePointsByNurse(wardRecords, DEFAULT_NURSING_PACKAGES, nowISO), [wardRecords, nowISO]);
   const distribution = useMemo(() => computeNursingKaraneh(
     deptPeople.map(p => p.personnelCode.startsWith('HN-')
       ? { employeeId: p.id, indirectRole: 'headNurse' as const, qualityScore: 1, presenceFactor: 1 }
       : { employeeId: p.id, rawQuantitative: quant.get(p.id) ?? 0, qualityScore: 1 }),
-    wardPool,
-  ), [deptPeople, quant, wardPool]);
+    wardPool, params,
+  ), [deptPeople, quant, wardPool, params]);
   const slips = useMemo(() => nursingSlips(distribution, names), [distribution, names]);
   const faM = (n: number) => Math.round(n).toLocaleString('fa-IR');
 
@@ -57,7 +118,7 @@ function MohKaranehSection() {
         <span>سقف پزشکان (۶۳٪): <strong>{faM(pools.physiciansCap / 1e6)}</strong> میلیون ریال</span>
         <span>دستیاران (۴٪): <strong>{faM(pools.assistants / 1e6)}</strong></span>
         <span>غیرپزشکان (۱۰٫۵٪ + ۴٪): <strong>{faM(pools.nonPhysician / 1e6)}</strong></span>
-        <span>گروه پرستاری (۸۵٪): <strong>{faM(pools.nursing / 1e6)}</strong></span>
+        <span>گروه پرستاری ({(profile.nursingShare * 100).toLocaleString('fa-IR')}٪): <strong>{faM(pools.nursing / 1e6)}</strong></span>
       </div>
       <div style={{ borderTop: '1px dashed #ddd', paddingTop: 12 }}>
         <div style={{ fontSize: 13, marginBottom: 8 }}>
@@ -89,6 +150,19 @@ function MohKaranehSection() {
           فیش هر پرستار اجزای امتیازش را شفاف نشان می‌دهد و اضافه‌کار جدا از کارانه می‌آید — همان شفافیتی که سند بازتوزیع الزام می‌کند. امتیاز کیفی این نما ۱٫۰ است؛ در بهره‌برداری، از ارزیابی دوره‌ای بیمارستان می‌آید.
         </p>
       </div>
+      <div style={{ borderTop: '1px dashed #ddd', paddingTop: 12, marginTop: 12 }}>
+        <strong style={{ fontSize: 14 }}>پروفایل پارامتر این بیمارستان</strong>
+        <span style={{ fontSize: 12, color: '#68707a', marginInlineStart: 8 }}>مقادیر پیش‌فرض عین دستورالعمل است؛ هر مرکز فقط مصوبهٔ داخلی خودش را جایگزین می‌کند. روی همین دستگاه ذخیره می‌شود.</span>
+        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 10, fontSize: 13 }}>
+          <label>سهم گروه پرستاری از درآمد بسته‌ها (٪)
+            <input type="number" min={0} max={100} style={input} value={Math.round(profile.nursingShare * 100)} onChange={e => updateProfile({ nursingShare: Math.min(1, Math.max(0, (Number(e.target.value) || 0) / 100)) })} /></label>
+          <label>ضریب آنکالی غیرپزشکان (۳ تا ۵)
+            <input type="number" min={3} max={5} step={0.5} style={input} value={profile.onCallCoef} onChange={e => updateProfile({ onCallCoef: Math.min(5, Math.max(3, Number(e.target.value) || 4)) })} /></label>
+          <label>ضریب ریالی K (ریال)
+            <input type="number" style={input} value={profile.kRial} onChange={e => updateProfile({ kRial: Number(e.target.value) || 0 })} /></label>
+        </div>
+      </div>
+      <PhysicianCalculator />
     </div>
   );
 }

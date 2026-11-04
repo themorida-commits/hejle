@@ -58,6 +58,46 @@ export function summarizeCompliance(
   return s;
 }
 
+// ── قفل صلاحیت در روس‌تر (P1 نسخهٔ خصوصی) ───────────────────────────────────
+// قاعده: پروانهٔ اشتغال منقضی (بدون پروانهٔ معتبرِ جایگزین) = منع قانونیِ کار
+// بالینی → فرد از تولید برنامه کنار گذاشته می‌شود. نزدیک‌انقضا و مدارک دیگرِ
+// منقضی فقط هشدارند؛ نبودِ هیچ سابقه‌ای هم هشدار است، نه منع (داده ممکن است
+// هنوز کامل وارد نشده باشد) — تصمیم نهایی همیشه با سرپرستار است.
+export interface CredentialGateEntry { employeeId: string; reasons: string[] }
+export interface CredentialGate {
+  eligibleIds: string[];
+  blocked: CredentialGateEntry[];
+  warnings: CredentialGateEntry[];
+}
+
+export function credentialGate(employeeIds: string[], credentials: Credential[], todayISO: string): CredentialGate {
+  const blocked: CredentialGateEntry[] = [];
+  const warnings: CredentialGateEntry[] = [];
+  const eligibleIds: string[] = [];
+  for (const id of employeeIds) {
+    const mine = credentials.filter(c => c.employeeId === id);
+    const licenses = mine.filter(c => c.kind === 'license');
+    const reasons: string[] = [];
+    const warn: string[] = [];
+    const hasLiveLicense = licenses.some(c => credentialStatus(c, todayISO) !== 'expired');
+    if (licenses.length > 0 && !hasLiveLicense) {
+      reasons.push('پروانهٔ اشتغال منقضی است و پروانهٔ معتبر جایگزین ثبت نشده');
+    }
+    if (licenses.length === 0) warn.push('پروانهٔ اشتغالی در پرونده ثبت نشده است');
+    for (const c of licenses) {
+      if (credentialStatus(c, todayISO) === 'expiring') warn.push(`پروانهٔ اشتغال تا ${c.expiresOnISO} منقضی می‌شود`);
+    }
+    for (const c of mine) {
+      if (c.kind !== 'license' && credentialStatus(c, todayISO) === 'expired') warn.push(`مدرک منقضی: ${c.title}`);
+      if (c.kind !== 'license' && credentialStatus(c, todayISO) === 'expiring') warn.push(`مدرک در آستانهٔ انقضا: ${c.title}`);
+    }
+    if (reasons.length) blocked.push({ employeeId: id, reasons });
+    else eligibleIds.push(id);
+    if (warn.length) warnings.push({ employeeId: id, reasons: warn });
+  }
+  return { eligibleIds, blocked, warnings };
+}
+
 /** سید دمو مدارک برای پرسنل بخش داخلی — شامل یک منقضی و یک در آستانهٔ انقضا. */
 export function seedDemoCredentials(employeeIds: string[], todayISO: string): Credential[] {
   const out: Credential[] = [];
@@ -67,7 +107,7 @@ export function seedDemoCredentials(employeeIds: string[], todayISO: string): Cr
     out.push({
       id: `cred-${++seq}`, employeeId: emp, kind: 'license',
       title: 'پروانهٔ اشتغال به حرفهٔ پرستاری', issuer: 'سازمان نظام پرستاری',
-      issuedOnISO: addDays(todayISO, -700), expiresOnISO: addDays(todayISO, 300 + i * 10),
+      issuedOnISO: addDays(todayISO, -700), expiresOnISO: addDays(todayISO, i === 2 ? -15 : 300 + i * 10), // نفر سوم: پروانهٔ منقضی نمایشی برای قفل صلاحیت
     });
     out.push({
       id: `cred-${++seq}`, employeeId: emp, kind: 'training',

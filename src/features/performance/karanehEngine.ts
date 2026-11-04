@@ -40,6 +40,8 @@ export interface KaranehParams {
   /** ضرایب میانه برای نقش‌های غیرمستقیم (سند د جدول ۳) */
   indirectMultiples: Record<'matron' | 'supervisor' | 'headNurse' | 'deputy' | 'unitExpert' | 'behyar' | 'sterilization' | 'aide', number>;
   nursingQualityFloor: number;                // 0.8 — «در هر صورت کمتر از ۸۰٪ نمی‌باشد»
+  /** ضریب آنکالی غیرپزشکان — بازهٔ سند ۳ تا ۵، مقدار را کارگروه بیمارستان تصویب می‌کند. */
+  onCallCoef: number;
 }
 
 export const MOH_KARANEH_1404: KaranehParams = {
@@ -74,6 +76,7 @@ export const MOH_KARANEH_1404: KaranehParams = {
   nursingMedianCapMultiple: 2.5,
   indirectMultiples: { matron: 1.9, supervisor: 1.6, headNurse: 1.3, deputy: 1.1, unitExpert: 0.85, behyar: 0.65, sterilization: 0.6, aide: 0.45 },
   nursingQualityFloor: 0.8,
+  onCallCoef: 4,
 };
 
 // ── استخرهای گروهی (سند الف) ────────────────────────────────────────────────
