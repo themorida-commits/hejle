@@ -1,0 +1,9 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[functions]
+  directory = "netlify/functions"
+
+# کلید AI فقط در env سرور Netlify تنظیم می‌شود (GEMINI_API_KEY) — بدون پیشوند VITE_
+# تا وارد باندل کلاینت نشود.
