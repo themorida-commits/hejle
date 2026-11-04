@@ -1,0 +1,95 @@
+// تست لایهٔ داده: صفحه‌بندی خواندن (درس سقف PostgREST)، نگاشت‌ها، و قرارداد دمو.
+import { test } from 'node:test';
+import assert from 'node:assert/strict';
+
+import { fetchAllPages, createSupabaseRepositories } from '../../src/services/data/supabaseRepositories';
+import { createDemoRepositories, buildDemoSnapshot } from '../../src/services/data/demoRepositories';
+import { snapshotToState } from '../../src/store/appStore';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+test('D-1 fetchAllPages تا صفحهٔ کوتاه ادامه می‌دهد (۳ صفحه: ۵۰۰+۵۰۰+۲۰۰)', async () => {
+  const pages = [500, 500, 200];
+  let call = 0;
+  const rows = await fetchAllPages(async (from: number) => {
+    const size = pages[call++]!;
+    return { data: Array.from({ length: size }, (_, i) => from + i), error: null };
+  });
+  assert.equal(rows.length, 1200);
+  assert.equal(call, 3);
+});
+
+test('D-2 fetchAllPages خطای سرور را پرتاب می‌کند', async () => {
+  await assert.rejects(
+    fetchAllPages(async () => ({ data: null, error: { message: 'boom' } })),
+    /boom/,
+  );
+});
+
+// کلاینت جعلی زنجیره‌ای برای اثبات شکل کوئری‌ها و نگاشت ردیف‌ها
+function fakeClient(tables: Record<string, unknown[]>) {
+  const calls: { table: string; method: string }[] = [];
+  const makeBuilder = (table: string) => {
+    const builder: Record<string, unknown> = {};
+    const rows = tables[table] ?? [];
+    let result: unknown[] = rows;
+    const chain = (name: string) => (..._args: unknown[]) => { calls.push({ table, method: name }); return builder; };
+    builder.select = chain('select');
+    builder.eq = chain('eq');
+    builder.order = chain('order');
+    builder.range = (from: number, to: number) => { calls.push({ table, method: 'range' }); result = rows.slice(from, to + 1); return Promise.resolve({ data: result, error: null }); };
+    builder.maybeSingle = () => Promise.resolve({ data: rows[0] ?? null, error: null });
+    builder.single = () => Promise.resolve({ data: rows[0] ?? null, error: null });
+    builder.insert = () => builder;
+    builder.update = () => builder;
+    builder.upsert = () => Promise.resolve({ error: null });
+    return builder;
+  };
+  return { client: { from: (t: string) => makeBuilder(t) } as unknown as SupabaseClient, calls };
+}
+
+test('D-3 ریپازیتوری سوپابیس: خواندن کارمندان با نگاشت سمت و فیلدها', async () => {
+  const { client } = fakeClient({
+    employees: [{
+      id: 'e1', hospital_id: 'h1', ward_id: 'w1', profile_id: null, full_name: 'سارا رضایی',
+      personnel_code: 'P-1', positions: { title: 'سرپرستار' }, employment_status: 'رسمی',
+      employment_start_jalali: '1395/02/01', base_duty_hours_override: null, is_active: true,
+    }],
+  });
+  const repos = createSupabaseRepositories(client);
+  const emps = await repos.org.listEmployees('w1');
+  assert.equal(emps.length, 1);
+  assert.equal(emps[0]!.fullName, 'سارا رضایی');
+  assert.equal(emps[0]!.roleTitle, 'سرپرستار');
+});
+
+test('D-4 دمو: عکس اولیه ۴۲ کارمند، ۳ بخش و ۴۲۰ ردیف برنامهٔ بخش داخلی دارد', () => {
+  const snap = buildDemoSnapshot();
+  assert.equal(snap.wards.length, 3);
+  assert.equal(snap.employees.length, 42);
+  assert.equal(snap.entries.length, 420);
+  assert.ok(snap.entries.every(e => e.jDay >= 1 && e.jDay <= 30));
+});
+
+test('D-5 دمو: چرخهٔ مرخصی روی اینترفیس ریپازیتوری (ساخت ← لیست ← تأیید)', async () => {
+  const repos = createDemoRepositories();
+  const created = await repos.leave.createLeaveRequest({
+    hospitalId: 'demo-hospital', wardId: 'dep1', employeeId: 'p2', leaveTypeCode: 'annual',
+    startDate: '2026-10-01', endDate: '2026-10-02', isHourly: false, hours: null, reason: null,
+  });
+  assert.equal(created.status, 'pending');
+  await repos.leave.updateLeaveStatus(created.id, 'approved', 'p1');
+  const list = await repos.leave.listLeaveRequests('dep1');
+  assert.equal(list.length, 1);
+  assert.equal(list[0]!.status, 'approved');
+  assert.equal(list[0]!.reviewedBy, 'p1');
+});
+
+test('D-6 نگاشت عکس به وضعیت استور: پرسنل و ردیف‌ها سالم می‌رسند', () => {
+  const state = snapshotToState(buildDemoSnapshot());
+  assert.equal(state.personnel.length, 42);
+  assert.equal(state.entries.length, 420);
+  assert.equal(state.departments.length, 3);
+  const p1 = state.personnel.find(p => p.id === 'p1')!;
+  assert.equal(p1.role, 'سرپرستار');
+  assert.equal(p1.departmentId, 'dep1');
+});

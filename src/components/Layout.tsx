@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useAppStore } from '../store/appStore';
 
@@ -10,7 +11,11 @@ const links = [
 ];
 
 export default function Layout() {
-  const { viewRole, setViewRole, currentEmployeeId, setCurrentEmployee, personnel, departmentId } = useAppStore();
+  const { viewRole, setViewRole, currentEmployeeId, setCurrentEmployee, personnel, departmentId, hydrated, hydrateFromSupabase } = useAppStore();
+  useEffect(() => { void hydrateFromSupabase(); }, [hydrateFromSupabase]);
+  if (!hydrated) {
+    return <div dir="rtl" style={{ fontFamily: 'Vazirmatn, system-ui', padding: 40 }}>در حال بارگذاری داده‌ها…</div>;
+  }
   const deptPeople = personnel.filter(p => p.departmentId === departmentId);
   return (
     <div dir="rtl" style={{ fontFamily: 'Vazirmatn, system-ui, sans-serif', minHeight: '100vh', background: '#faf7f2', color: '#1d2733' }}>

@@ -1,21 +1,46 @@
 import { create } from 'zustand';
-import { MOCK_DEPARTMENTS, MOCK_PERSONNEL, MOCK_SHIFT_TYPES } from '../fixtures/sampleData';
-import { DEFAULT_GLOBAL_SETTINGS, DEFAULT_RULES, DEFAULT_AI_SETTINGS } from '../core/defaults';
-import { generateScheduleDeterministic } from '../core/scheduling/schedulerSolver';
+import { MOCK_PERSONNEL } from '../fixtures/sampleData';
+import { DEFAULT_GLOBAL_SETTINGS } from '../core/defaults';
 import { calculateDutyHours } from '../core/duty';
 import type { Department, Personnel, ScheduleEntry, ShiftType, StaffRequest } from '../core/types';
 import { type LeaveRequest } from '../features/leave/leaveService';
 import { type SwapRequest } from '../features/swaps/swapService';
 import { type WorkRecord } from '../features/workRecords/workRecordService';
+import { buildDemoSnapshot } from '../services/data/demoRepositories';
+import { createRepositories, currentDataSource, loadHospitalSnapshot } from '../services/data/index';
+import {
+  employeeToPersonnel, shiftTypeToDomain, entryToDomain, leaveToDomain, workRecordToDomain,
+} from '../services/data/mappers';
+import type { HospitalSnapshot } from '../services/data/types';
 
-// استور دمو/پایلوت فاز ۱ — داده از نمونهٔ پروژه سید می‌شود و لایهٔ سرویس‌ها
-// (features/*) روی همین شکل داده کار می‌کنند؛ اتصال Supabase همین اینترفیس‌ها را پر می‌کند.
+// استور فاز ۱ — از لایهٔ داده تغذیه می‌شود: حالت دمو از DemoRepositories و
+// حالت supabase از loadHospitalSnapshot؛ هر دو از همان مپرها رد می‌شوند.
 export const J_YEAR = 1405;
 export const J_MONTH = 7;
 
 export type ViewRole = 'ward_manager' | 'staff';
 
+export function snapshotToState(snap: HospitalSnapshot) {
+  const personnel = snap.employees.map(employeeToPersonnel);
+  const nameOf = (id: string) => {
+    const p = personnel.find(x => x.id === id);
+    return { name: p?.name ?? id, code: p?.personnelCode ?? '' };
+  };
+  return {
+    departments: snap.wards.map(w => ({ id: w.id, name: w.name, themeColor: '' })),
+    personnel,
+    shiftTypes: snap.shiftTypes.map(shiftTypeToDomain),
+    entries: snap.entries.map(entryToDomain),
+    leaves: snap.leaves.map(leaveToDomain),
+    workRecords: snap.workRecords.map(w => workRecordToDomain(w, nameOf)),
+    scheduleStatus: (snap.schedule?.status ?? 'draft') as 'draft' | 'published',
+  };
+}
+
 interface AppState {
+  dataSource: 'demo' | 'supabase';
+  hydrated: boolean;
+  hydrateFromSupabase: () => Promise<void>;
   departments: Department[];
   personnel: Personnel[];
   shiftTypes: ShiftType[];
@@ -44,36 +69,41 @@ interface AppState {
   adjustBalance: (employeeId: string, deltaUsed: number) => void;
 }
 
-function seedEntries(): ScheduleEntry[] {
-  const dep1 = MOCK_PERSONNEL.filter(p => p.departmentId === 'dep1');
-  return generateScheduleDeterministic({
-    personnel: dep1,
-    shiftTypes: MOCK_SHIFT_TYPES,
-    currentSchedule: [],
-    requests: [],
-    rules: DEFAULT_RULES,
-    aiSettings: DEFAULT_AI_SETTINGS,
-    globalSettings: DEFAULT_GLOBAL_SETTINGS,
-    jYear: J_YEAR,
-    jMonth: J_MONTH,
-  });
-}
-
 function seedDuty(): Map<string, number> {
   return new Map(MOCK_PERSONNEL.map(p => [p.id, calculateDutyHours(p, DEFAULT_GLOBAL_SETTINGS, 0, J_YEAR, J_MONTH)]));
 }
 
-export const useAppStore = create<AppState>((set) => ({
-  departments: MOCK_DEPARTMENTS,
-  personnel: MOCK_PERSONNEL,
-  shiftTypes: MOCK_SHIFT_TYPES,
-  entries: seedEntries(),
+const demoState = snapshotToState(buildDemoSnapshot());
+
+export const useAppStore = create<AppState>((set, get) => ({
+  dataSource: currentDataSource(),
+  hydrated: currentDataSource() === 'demo',
+  hydrateFromSupabase: async () => {
+    if (get().hydrated || get().dataSource !== 'supabase') return;
+    const hospitalId = import.meta.env.VITE_HOSPITAL_ID as string | undefined;
+    const wardId = import.meta.env.VITE_WARD_ID as string | undefined;
+    if (!hospitalId || !wardId) { set({ hydrated: true }); return; }
+    const snap = await loadHospitalSnapshot(createRepositories('supabase'), {
+      hospitalId, wardId, jYear: J_YEAR, jMonth: J_MONTH,
+    });
+    const mapped = snapshotToState(snap);
+    set({
+      ...mapped,
+      departmentId: wardId,
+      currentEmployeeId: mapped.personnel[1]?.id ?? mapped.personnel[0]?.id ?? get().currentEmployeeId,
+      hydrated: true,
+    });
+  },
+  departments: demoState.departments,
+  personnel: demoState.personnel,
+  shiftTypes: demoState.shiftTypes,
+  entries: demoState.entries,
   requests: [],
-  leaves: [],
+  leaves: demoState.leaves,
   swaps: [],
-  workRecords: [],
+  workRecords: demoState.workRecords,
   departmentId: 'dep1',
-  scheduleStatus: 'draft',
+  scheduleStatus: demoState.scheduleStatus,
   viewRole: 'ward_manager',
   currentEmployeeId: 'p2',
   leaveBalances: Object.fromEntries(MOCK_PERSONNEL.map(p => [p.id, { entitled: 26, used: 4 }])),
