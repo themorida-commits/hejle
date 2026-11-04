@@ -72,6 +72,10 @@ export function workRecordToDomain(w: WorkRecordRecord, nameOf: (id: string) => 
     eveningPaid: t.eveningPaid ?? 0,
     totalPaidHours: t.totalPaidHours ?? 0,
     status: w.status,
+    actualWorkedHours: t.actualWorkedHours,
+    actualOvertimeHours: t.actualOvertimeHours,
+    absentDays: t.absentDays,
+    lateMinutes: t.lateMinutes,
   };
 }
 
@@ -88,6 +92,10 @@ export function workRecordToRecord(w: WorkRecord, ctx: { id: string; hospitalId:
       eveningHours: w.eveningHours, nightHours: w.nightHours, holidayHours: w.holidayHours,
       leaveDays: w.leaveDays, overtimeHours: w.overtimeHours, nightPaid: w.nightPaid,
       eveningPaid: w.eveningPaid, totalPaidHours: w.totalPaidHours,
+      ...(w.actualWorkedHours != null ? { actualWorkedHours: w.actualWorkedHours } : {}),
+      ...(w.actualOvertimeHours != null ? { actualOvertimeHours: w.actualOvertimeHours } : {}),
+      ...(w.absentDays != null ? { absentDays: w.absentDays } : {}),
+      ...(w.lateMinutes != null ? { lateMinutes: w.lateMinutes } : {}),
     },
     status: w.status,
   };

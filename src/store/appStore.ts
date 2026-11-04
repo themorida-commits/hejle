@@ -7,6 +7,7 @@ import { type LeaveRequest } from '../features/leave/leaveService';
 import { type SwapRequest } from '../features/swaps/swapService';
 import { type WorkRecord } from '../features/workRecords/workRecordService';
 import { type AttendanceEvent } from '../features/attendance/attendanceService';
+import { seedDemoCredentials, type Credential } from '../features/credentials/credentialService';
 import { isoFromJalali } from '../features/leave/leaveService';
 import { buildDemoSnapshot } from '../services/data/demoRepositories';
 import { createRepositories, currentDataSource, loadHospitalSnapshot } from '../services/data/index';
@@ -80,6 +81,7 @@ interface AppState {
   swaps: SwapRequest[];
   workRecords: WorkRecord[];
   attendanceEvents: AttendanceEvent[];
+  credentials: Credential[];
   departmentId: string;
   scheduleStatus: 'draft' | 'published';
   viewRole: ViewRole;
@@ -100,6 +102,7 @@ interface AppState {
   adjustBalance: (employeeId: string, deltaUsed: number) => void;
   addAttendanceEvent: (e: AttendanceEvent) => void;
   setAttendanceEvents: (e: AttendanceEvent[]) => void;
+  addCredential: (c: Credential) => void;
 }
 
 /** رویدادهای دمو حضور برای ۱۲ روز اول ماه (شامل یک تأخیر و یک غیبت نمایشی). */
@@ -177,6 +180,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   swaps: [],
   workRecords: demoState.workRecords,
   attendanceEvents: seedAttendance(demoState.entries),
+  credentials: seedDemoCredentials(
+    demoState.personnel.filter(p => p.departmentId === 'dep1').map(p => p.id),
+    new Date().toISOString().slice(0, 10),
+  ),
   departmentId: 'dep1',
   scheduleStatus: demoState.scheduleStatus,
   viewRole: 'ward_manager',
@@ -196,6 +203,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   setWorkRecords: (w) => set({ workRecords: w }),
   addAttendanceEvent: (e) => set((st) => ({ attendanceEvents: [...st.attendanceEvents, e] })),
   setAttendanceEvents: (e) => set({ attendanceEvents: e }),
+  addCredential: (c) => set((st) => ({ credentials: [...st.credentials, c] })),
   adjustBalance: (employeeId, deltaUsed) =>
     set((st) => ({
       leaveBalances: {

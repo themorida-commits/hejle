@@ -1,5 +1,6 @@
 import { useAppStore, J_YEAR, J_MONTH } from '../store/appStore';
 import { computeWorkRecords, workRecordsToCsv } from '../features/workRecords/workRecordService';
+import { reconcileAttendance, summarizeAttendance } from '../features/attendance/attendanceService';
 import { DEFAULT_GLOBAL_SETTINGS } from '../core/defaults';
 import { useMemo } from 'react';
 
@@ -11,7 +12,7 @@ export default function WorkRecordsPage() {
   const records = st.workRecords.filter(r => deptIds.has(r.employeeId));
   const fa = (n: number) => n.toLocaleString('fa-IR', { maximumFractionDigits: 1 });
 
-  const compute = () => {
+  const buildLeaveMap = () => {
     const leaveMap = new Map<string, Set<string>>();
     for (const l of st.leaves) {
       if (l.status !== 'approved') continue;
@@ -21,12 +22,24 @@ export default function WorkRecordsPage() {
       while (cur <= end) { set.add(cur.toISOString().slice(0, 10)); cur.setDate(cur.getDate() + 1); }
       leaveMap.set(l.employeeId, set);
     }
+    return leaveMap;
+  };
+
+  const compute = (withActuals = false) => {
+    const leaveMap = buildLeaveMap();
+    const attendanceSummaries = withActuals
+      ? summarizeAttendance(reconcileAttendance({
+          personnel: deptPeople, entries: deptEntries,
+          events: st.attendanceEvents.filter(e => deptIds.has(e.employeeId)),
+          shiftTypes: st.shiftTypes, leaveDatesByEmployee: leaveMap,
+        }))
+      : undefined;
     st.setWorkRecords([
       ...st.workRecords.filter(r => !deptIds.has(r.employeeId)),
       ...computeWorkRecords({
         personnel: deptPeople, entries: deptEntries, shiftTypes: st.shiftTypes,
         jYear: J_YEAR, jMonth: J_MONTH, globalSettings: DEFAULT_GLOBAL_SETTINGS,
-        leaveDatesByEmployee: leaveMap,
+        leaveDatesByEmployee: leaveMap, attendanceSummaries,
       }),
     ]);
   };
@@ -50,14 +63,15 @@ export default function WorkRecordsPage() {
       <h1>کارکرد ماهانه — مهر ۱۴۰۵</h1>
       <p style={{ color: '#68707a', fontSize: 13 }}>خروجی این صفحه «ورودی واحد حقوق» است (نه حقوق کامل): ساعت‌ها با ضرایب قانون بهره‌وری — شب ×۱٫۵ و عصر ×۱٫۲.</p>
       <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
-        <button onClick={compute}>محاسبهٔ کارکرد از برنامه</button>
+        <button onClick={() => compute(false)}>محاسبهٔ کارکرد از برنامه</button>
+        <button onClick={() => compute(true)}>محاسبه با حضور واقعی</button>
         <button onClick={() => setStatus('approved')} disabled={records.length === 0}>تأیید همه</button>
         <button onClick={downloadCsv} disabled={records.length === 0}>خروجی CSV برای واحد حقوق</button>
       </div>
       <div style={{ overflowX: 'auto', background: '#fff', border: '1px solid #e3ddd2', borderRadius: 12 }}>
         <table style={{ borderCollapse: 'collapse', fontSize: 13, minWidth: 1000 }}>
           <thead><tr style={{ background: '#f3efe7' }}>
-            {['نام', 'موظفی', 'کارکرد', 'صبح', 'عصر', 'شب', 'تعطیل', 'مرخصی (روز)', 'اضافه‌کار', 'جمع پرداختی', 'وضعیت'].map(h => <th key={h} style={{ padding: 8 }}>{h}</th>)}
+            {['نام', 'موظفی', 'کارکرد', 'صبح', 'عصر', 'شب', 'تعطیل', 'مرخصی (روز)', 'اضافه‌کار', 'جمع پرداختی', 'واقعی', 'اختلاف', 'غیبت', 'وضعیت'].map(h => <th key={h} style={{ padding: 8 }}>{h}</th>)}
           </tr></thead>
           <tbody>
             {records.map(r => (
@@ -66,10 +80,13 @@ export default function WorkRecordsPage() {
                 <td>{fa(r.dutyHours)}</td><td>{fa(r.workedHours)}</td><td>{fa(r.morningHours)}</td>
                 <td>{fa(r.eveningHours)}</td><td>{fa(r.nightHours)}</td><td>{fa(r.holidayHours)}</td>
                 <td>{fa(r.leaveDays)}</td><td>{fa(r.overtimeHours)}</td><td><strong>{fa(r.totalPaidHours)}</strong></td>
+                <td>{r.actualWorkedHours != null ? fa(r.actualWorkedHours) : '—'}</td>
+                <td>{r.actualWorkedHours != null ? fa(Math.round((r.actualWorkedHours - r.workedHours) * 10) / 10) : '—'}</td>
+                <td>{r.absentDays != null ? fa(r.absentDays) : '—'}</td>
                 <td>{r.status === 'draft' ? 'پیش‌نویس' : r.status === 'approved' ? 'تأییدشده' : 'صادرشده'}</td>
               </tr>
             ))}
-            {records.length === 0 && <tr><td colSpan={11} style={{ padding: 12 }}>هنوز محاسبه نشده است.</td></tr>}
+            {records.length === 0 && <tr><td colSpan={14} style={{ padding: 12 }}>هنوز محاسبه نشده است.</td></tr>}
           </tbody>
         </table>
       </div>

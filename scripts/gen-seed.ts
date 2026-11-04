@@ -4,6 +4,7 @@
 // مجموعهٔ قواعد پیش‌فرض قانون بهره‌وری و برنامهٔ مهر ۱۴۰۵ بخش داخلی.
 import { buildDemoSnapshot, DEMO_HOSPITAL_ID } from '../src/services/data/demoRepositories';
 import { DEFAULT_RULE_CONFIGS } from '../src/core/rules/engine';
+import { seedDemoCredentials } from '../src/features/credentials/credentialService';
 
 const HOSPITAL = 'aaaaaaaa-0000-4000-8000-000000000001';
 const RULE_SET = 'f0000000-0000-4000-8000-000000000001';
@@ -48,6 +49,11 @@ DEFAULT_RULE_CONFIGS.forEach((c, i) => {
 out.push(`insert into public.schedules (id, hospital_id, ward_id, j_year, j_month, status) values (${q(SCHEDULE)}, ${q(HOSPITAL)}, ${q(wardUuid('dep1'))}, 1405, 7, 'draft');`);
 snap.entries.forEach((e, i) => {
   out.push(`insert into public.schedule_entries (id, schedule_id, hospital_id, ward_id, employee_id, entry_date, j_day, shift_type_id, is_manual, is_locked) values ('90000000-0000-4000-8000-${String(i + 1).padStart(12, '0')}', ${q(SCHEDULE)}, ${q(HOSPITAL)}, ${q(wardUuid('dep1'))}, ${q(empUuid(e.employeeId))}, ${q(e.entryDate)}, ${q(e.jDay)}, ${q(shiftIdMap.get(e.shiftTypeId)!)}, ${q(e.isManual)}, false);`);
+});
+// اعتبارنامه‌های دمو برای بخش داخلی (تاریخ مرجع ثابت تا سید قطعی بماند)
+const dep1Ids = snap.employees.filter(e => e.wardId === 'dep1').map(e => e.id);
+seedDemoCredentials(dep1Ids, '2026-09-23').forEach((c, i) => {
+  out.push(`insert into public.credentials (id, hospital_id, ward_id, employee_id, kind, title, issuer, issued_on, expires_on) values ('c0000000-0000-4000-8000-${String(i + 1).padStart(12, '0')}', ${q(HOSPITAL)}, ${q(wardUuid('dep1'))}, ${q(empUuid(c.employeeId))}, ${q(c.kind)}, ${q(c.title)}, ${q(c.issuer ?? null)}, ${q(c.issuedOnISO ?? null)}, ${q(c.expiresOnISO ?? null)});`);
 });
 void DEMO_HOSPITAL_ID;
 console.log(out.join('\n'));

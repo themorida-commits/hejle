@@ -8,6 +8,9 @@ const links = [
   { to: '/leave', label: 'مرخصی‌ها' },
   { to: '/work-records', label: 'کارکرد ماهانه' },
   { to: '/attendance', label: 'حضور و غیاب' },
+  { to: '/personnel', label: 'پرونده پرسنلی' },
+  { to: '/karaneh', label: 'کارانه' },
+  { to: '/ai', label: 'دستیار AI' },
   { to: '/self-service', label: 'سلف‌سرویس پرستار' },
 ];
 

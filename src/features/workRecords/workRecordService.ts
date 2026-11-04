@@ -8,6 +8,7 @@ import { buildEmployeeFacts } from '../../core/rules/engine';
 import { calculateDutyHours } from '../../core/duty';
 import { NATIONAL_HOLIDAYS } from '../../core/defaults';
 import { getDaysInJalaliMonth } from '../../core/jalali';
+import type { AttendanceSummary } from '../attendance/attendanceService';
 
 export type WorkRecordStatus = 'draft' | 'approved' | 'exported';
 
@@ -27,6 +28,11 @@ export interface WorkRecord {
   eveningPaid: number; // عصر × ۱٫۲
   totalPaidHours: number; // معادل پرداختی ماه
   status: WorkRecordStatus;
+  // حضور واقعی (اختیاری — وقتی رویدادهای حضور و غیاب وصل‌اند پر می‌شود)
+  actualWorkedHours?: number;
+  actualOvertimeHours?: number;
+  absentDays?: number;
+  lateMinutes?: number;
 }
 
 export const NIGHT_COEFFICIENT = 1.5;
@@ -40,6 +46,7 @@ export function computeWorkRecords(args: {
   jMonth: number;
   globalSettings: GlobalDutySettings;
   leaveDatesByEmployee?: Map<string, Set<string>>;
+  attendanceSummaries?: AttendanceSummary[];
 }): WorkRecord[] {
   const daysInMonth = getDaysInJalaliMonth(args.jYear, args.jMonth);
   void daysInMonth;
@@ -68,6 +75,7 @@ export function computeWorkRecords(args: {
     const eveningPaid = f.eveningHours * EVENING_COEFFICIENT;
     const totalPaidHours = f.workedHours - f.nightHours - f.eveningHours + nightPaid + eveningPaid;
     const person = args.personnel.find(p => p.id === f.employeeId)!;
+    const att = args.attendanceSummaries?.find(a => a.employeeId === f.employeeId);
     return {
       employeeId: f.employeeId,
       employeeName: f.employeeName,
@@ -84,6 +92,12 @@ export function computeWorkRecords(args: {
       eveningPaid,
       totalPaidHours,
       status: 'draft' as WorkRecordStatus,
+      ...(att ? {
+        actualWorkedHours: Math.round(att.totalWorkedMinutes / 6) / 10,
+        actualOvertimeHours: Math.round(att.totalOvertimeMinutes / 6) / 10,
+        absentDays: att.absentDays,
+        lateMinutes: att.totalLateMinutes,
+      } : {}),
     };
   });
 }
@@ -92,6 +106,7 @@ const HEADERS = [
   'کد پرسنلی', 'نام', 'موظفی (ساعت)', 'کارکرد (ساعت)', 'صبح (ساعت)', 'عصر (ساعت)',
   'شب (ساعت)', 'تعطیل (ساعت)', 'مرخصی (روز)', 'اضافه‌کار (ساعت)',
   'شب با ضریب ۱٫۵', 'عصر با ضریب ۱٫۲', 'جمع پرداختی (ساعت)', 'وضعیت',
+  'کارکرد واقعی (ساعت)', 'اضافه‌کار واقعی (ساعت)', 'غیبت (روز)', 'تأخیر (دقیقه)',
 ];
 
 const STATUS_FA: Record<WorkRecordStatus, string> = { draft: 'پیش‌نویس', approved: 'تأییدشده', exported: 'صادرشده' };
@@ -111,6 +126,9 @@ export function workRecordsToCsv(records: WorkRecord[]): string {
       round1(r.morningHours), round1(r.eveningHours), round1(r.nightHours), round1(r.holidayHours),
       r.leaveDays, round1(r.overtimeHours), round1(r.nightPaid), round1(r.eveningPaid),
       round1(r.totalPaidHours), STATUS_FA[r.status],
+      r.actualWorkedHours != null ? round1(r.actualWorkedHours) : '',
+      r.actualOvertimeHours != null ? round1(r.actualOvertimeHours) : '',
+      r.absentDays ?? '', r.lateMinutes ?? '',
     ].map(esc).join(','));
   }
   return '\uFEFF' + lines.join('\r\n');
