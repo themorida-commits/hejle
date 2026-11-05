@@ -1,6 +1,6 @@
 import { describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { pickSessionContext, type MembershipRow } from '../../src/services/auth';
+import { pickSessionContext, pickHospitalContexts, type MembershipRow } from '../../src/services/auth';
 
 const H = 'aaaaaaaa-0000-4000-8000-000000000001';
 const W1 = 'd1111111-1111-4111-8111-111111111111';
@@ -30,5 +30,28 @@ describe('pickSessionContext', () => {
     const ctx = pickSessionContext([m('hospital_admin', null), m('ward_manager', W1)]);
     assert.equal(ctx?.role, 'ward_manager');
     assert.equal(ctx?.wardId, W1);
+  });
+});
+
+describe('pickHospitalContexts (سوییچر چندبیمارستانی)', () => {
+  const H2 = 'bbbbbbbb-0000-4000-8000-000000000002';
+  const m2 = (hospital_id: string, role: MembershipRow['role'], ward_id: string | null, is_active = true): MembershipRow => ({
+    hospital_id, ward_id, role, is_active,
+  });
+
+  it('برای هر بیمارستان یک زمینه برمی‌گرداند و غیرفعال‌ها را رد می‌کند', () => {
+    const ctxs = pickHospitalContexts([
+      m2(H, 'hospital_admin', null),
+      m2(H2, 'ward_manager', W2),
+      m2(H2, 'staff', W1, false),
+    ]);
+    assert.equal(ctxs.length, 2);
+    assert.equal(ctxs.find(c => c.hospitalId === H)?.role, 'hospital_admin');
+    assert.equal(ctxs.find(c => c.hospitalId === H2)?.wardId, W2);
+  });
+
+  it('تک‌بیمارستان → دقیقاً یک زمینه (سوییچر مخفی می‌ماند)', () => {
+    assert.equal(pickHospitalContexts([m('staff', W1)]).length, 1);
+    assert.equal(pickHospitalContexts([]).length, 0);
   });
 });

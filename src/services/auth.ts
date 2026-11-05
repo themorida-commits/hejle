@@ -47,6 +47,37 @@ export function pickSessionContext(
   return { hospitalId: top.hospital_id, wardId: top.ward_id, role: top.role };
 }
 
+/**
+ * زمینهٔ هر بیمارستان به‌صورت جدا (برای سوییچر چندبیمارستانی): برای هر
+ * بیمارستانِ دارای عضویت فعال، همان انتخاب ترجیحی pickSessionContext.
+ */
+export function pickHospitalContexts(
+  memberships: MembershipRow[],
+  preferredWardId?: string | null,
+): SessionContext[] {
+  const byHospital = new Map<string, MembershipRow[]>();
+  for (const m of memberships) {
+    if (!m.is_active) continue;
+    const list = byHospital.get(m.hospital_id) ?? [];
+    list.push(m);
+    byHospital.set(m.hospital_id, list);
+  }
+  const out: SessionContext[] = [];
+  for (const rows of byHospital.values()) {
+    const ctx = pickSessionContext(rows, preferredWardId);
+    if (ctx) out.push(ctx);
+  }
+  return out;
+}
+
+/** نام بیمارستان‌ها برای نمایش در سوییچر (RLS عضویت اجازهٔ خواندن می‌دهد). */
+export async function fetchHospitalNames(ids: string[]): Promise<Map<string, string>> {
+  if (ids.length === 0) return new Map();
+  const { data, error } = await supabase.from('hospitals').select('id, name').in('id', ids);
+  if (error) return new Map();
+  return new Map((data ?? []).map(h => [h.id as string, h.name as string]));
+}
+
 export async function fetchMyMemberships(userId: string): Promise<MembershipRow[]> {
   const { data, error } = await supabase
     .from('memberships')

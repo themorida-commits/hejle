@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { supabase } from '../services/supabaseClient';
 import { currentDataSource } from '../services/data';
-import { fetchMyEmployeeId, fetchMyMemberships, pickSessionContext, signOut } from '../services/auth';
+import { fetchHospitalNames, fetchMyEmployeeId, fetchMyMemberships, pickHospitalContexts, pickSessionContext, signOut } from '../services/auth';
 import { useSessionStore } from '../store/session';
 import { useAppStore } from '../store/appStore';
 import LoginPage from '../pages/LoginPage';
@@ -29,7 +29,18 @@ export default function AuthGate({ children }: { children: ReactNode }) {
         const ctx = pickSessionContext(memberships, preferredWard);
         if (cancelled) return;
         if (!ctx) { setGate('no_membership'); return; }
-        setContext({ userId, hospitalId: ctx.hospitalId, wardId: ctx.wardId, role: ctx.role });
+        // سوییچر چندبیمارستانی: زمینهٔ هر بیمارستان + نام نمایشی‌اش
+        const contexts = pickHospitalContexts(memberships, preferredWard);
+        const names = await fetchHospitalNames(contexts.map(c => c.hospitalId));
+        if (cancelled) return;
+        setContext({
+          userId, hospitalId: ctx.hospitalId, wardId: ctx.wardId, role: ctx.role,
+          hospitals: contexts.map(c => ({
+            hospitalId: c.hospitalId,
+            hospitalName: names.get(c.hospitalId) ?? 'بیمارستان',
+            wardId: c.wardId, role: c.role,
+          })),
+        });
         setEmail(email);
         const employeeId = await fetchMyEmployeeId(userId);
         if (employeeId && !cancelled) useAppStore.getState().setCurrentEmployee(employeeId);

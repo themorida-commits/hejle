@@ -21,6 +21,16 @@ const links = [
 export default function Layout() {
   const { viewRole, setViewRole, currentEmployeeId, setCurrentEmployee, personnel, departmentId, hydrated, hydrateFromSupabase, dataSource } = useAppStore();
   const sessionEmail = useSessionStore(s => s.email);
+  const sessionHospitals = useSessionStore(s => s.hospitals);
+  const activeHospitalId = useSessionStore(s => s.hospitalId);
+  const setSessionContext = useSessionStore(s => s.setContext);
+  const switchHospital = (hospitalId: string) => {
+    const target = sessionHospitals.find(h => h.hospitalId === hospitalId);
+    if (!target) return;
+    setSessionContext({ hospitalId: target.hospitalId, wardId: target.wardId, role: target.role });
+    useAppStore.setState({ hydrated: false });
+    void useAppStore.getState().hydrateFromSupabase();
+  };
   useEffect(() => { void hydrateFromSupabase(); }, [hydrateFromSupabase]);
   if (!hydrated) {
     return <div dir="rtl" style={{ fontFamily: 'Vazirmatn, system-ui', padding: 40 }}>در حال بارگذاری داده‌ها…</div>;
@@ -39,6 +49,16 @@ export default function Layout() {
         </nav>
         {dataSource === 'supabase' ? (
           <span style={{ marginInlineStart: 'auto', display: 'flex', gap: 10, alignItems: 'center', fontSize: 13 }}>
+            {sessionHospitals.length > 1 && (
+              <select
+                aria-label="بیمارستان فعال"
+                value={activeHospitalId ?? ''}
+                onChange={e => switchHospital(e.target.value)}
+                style={{ fontSize: 13 }}
+              >
+                {sessionHospitals.map(h => <option key={h.hospitalId} value={h.hospitalId}>{h.hospitalName}</option>)}
+              </select>
+            )}
             <span style={{ direction: 'ltr' }}>{sessionEmail ?? ''}</span>
             <button onClick={() => void signOut()} style={{ background: 'transparent', color: '#ffd9a0', border: '1px solid #ffd9a0', borderRadius: 6, padding: '3px 12px', cursor: 'pointer', fontSize: 13 }}>خروج</button>
           </span>
