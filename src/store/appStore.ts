@@ -62,7 +62,9 @@ export function mergeWardIntoState(
     if (!duty.has(p.id)) duty.set(p.id, calculateDutyHours(p, DEFAULT_GLOBAL_SETTINGS, 0, J_YEAR, J_MONTH));
   }
   const balances = { ...cur.leaveBalances };
-  for (const p of mapped.personnel) balances[p.id] ??= { entitled: 26, used: 0 };
+  // سهمیهٔ استحقاقی از خود بیمارستان می‌آید (مثلاً ۳۰ روز مادهٔ ۹۴ قانون ارتش)؛ ۲۶ فقط fallback است
+  const annualQuota = snap.leaveTypes.find(t => t.code === 'annual')?.annualQuotaDays ?? 26;
+  for (const p of mapped.personnel) balances[p.id] ??= { entitled: annualQuota, used: 0 };
   return {
     personnel: [...cur.personnel.filter(p => !newIds.has(p.id)), ...mapped.personnel],
     entries: [...cur.entries.filter(e => !newIds.has(e.personnelId)), ...mapped.entries],

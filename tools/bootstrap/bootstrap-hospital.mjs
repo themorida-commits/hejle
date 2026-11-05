@@ -42,6 +42,14 @@ const LEAVE_TYPES = [
   ['maternity', 'زایمان', true, null], ['marriage', 'ازدواج', true, null],
   ['bereavement', 'فوت بستگان', true, null], ['hajj', 'حج', true, null],
 ];
+// پروفایل‌های سقف مرخصی بر پایهٔ رژیم استخدامی — «army» از مادهٔ ۹۴ قانون ارتش
+// (استحقاقی یک ماه=۳۰ روز، استعلاجی حداکثر ۴ ماه=۱۲۰ روز) و مادهٔ ۱۷ قانون
+// جوانی جمعیت (زایمان ۹ ماه=۲۷۰ روز)؛ تحقیق تکمیلی ۲۰۲۶-۱۱-۰۶. بقیهٔ سقف‌ها
+// (ازدواج/حج/فوت) در آیین‌نامهٔ منتشرنشده است و عمداً null می‌ماند.
+const LEAVE_PROFILES = {
+  standard: {},
+  army: { annual: 30, sick: 120, maternity: 270 },
+};
 const RULES = [
   ['max_consecutive_hours', { value: 12 }, 'hard', true],
   ['overtime_cap_monthly', { value: 80 }, 'hard', true],
@@ -122,8 +130,13 @@ export function buildBootstrapSql(config, personnelCsvText) {
   for (const [name, symbol, hours, color] of SHIFT_TYPES) {
     out.push(`insert into public.shift_types (id, hospital_id, name, symbol, real_duration_hours, calculated_value, friday_value, holiday_value, color) values (${q(detUuid(`shift:${config.code}:${symbol}`))}, ${q(hospitalId)}, ${q(name)}, ${q(symbol)}, ${hours}, ${hours}, ${hours}, ${hours}, ${q(color)}) on conflict (id) do nothing;`);
   }
+  const profile = LEAVE_PROFILES[config.leaveProfile ?? 'standard'] ?? {};
+  if (config.leaveProfile === 'army') {
+    out.push('-- پروفایل سقف مرخصی: مادهٔ ۹۴ قانون ارتش + مادهٔ ۱۷ قانون جوانی جمعیت (پروفایل army)');
+  }
   for (const [code, name, paid, quota] of LEAVE_TYPES) {
-    out.push(`insert into public.leave_types (id, hospital_id, code, name, is_paid, annual_quota_days, requires_coverage) values (${q(detUuid(`leave:${config.code}:${code}`))}, ${q(hospitalId)}, ${q(code)}, ${q(name)}, ${paid}, ${quota ?? 'null'}, true) on conflict (id) do nothing;`);
+    const effectiveQuota = profile[code] ?? quota;
+    out.push(`insert into public.leave_types (id, hospital_id, code, name, is_paid, annual_quota_days, requires_coverage) values (${q(detUuid(`leave:${config.code}:${code}`))}, ${q(hospitalId)}, ${q(code)}, ${q(name)}, ${paid}, ${effectiveQuota ?? 'null'}, true) on conflict (id) do nothing;`);
   }
   const ruleSetId = detUuid(`ruleset:${config.code}`);
   out.push(`insert into public.rule_sets (id, hospital_id, name) values (${q(ruleSetId)}, ${q(hospitalId)}, 'پیش‌فرض قانون بهره‌وری') on conflict (id) do nothing;`);

@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 
 import { fetchAllPages, createSupabaseRepositories } from '../../src/services/data/supabaseRepositories';
 import { createDemoRepositories, buildDemoSnapshot } from '../../src/services/data/demoRepositories';
-import { snapshotToState } from '../../src/store/appStore';
+import { snapshotToState, mergeWardIntoState } from '../../src/store/appStore';
 import { leaveToDomain, leaveRequestToDb } from '../../src/services/data/mappers';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -152,6 +152,23 @@ test('D-K1 پروفایل کارانهٔ دمو: سید پیش‌فرض وزار
   assert.equal(profiles[0]!.nursingShare, 0.85);
   const state = snapshotToState(buildDemoSnapshot());
   assert.equal(state.karanehProfiles.length, 1);
+});
+
+test('D-Q1 ماندهٔ استحقاقی از سهمیهٔ خود بیمارستان می‌آید (دمو ۲۶، پروفایل ارتش ۳۰)', async () => {
+  const emptyCur = () => ({
+    personnel: [], entries: [], leaves: [], workRecords: [], nursingRecords: [],
+    dutyByEmployee: new Map<string, number>(), leaveBalances: {} as Record<string, { entitled: number; used: number }>,
+  });
+  const snap = buildDemoSnapshot();
+  const merged = mergeWardIntoState(emptyCur(), snap);
+  const first = Object.values(merged.leaveBalances)[0];
+  assert.equal(first?.entitled, 26);
+  const armySnap = {
+    ...snap,
+    leaveTypes: snap.leaveTypes.map(t => (t.code === 'annual' ? { ...t, annualQuotaDays: 30 } : t)),
+  };
+  const mergedArmy = mergeWardIntoState(emptyCur(), armySnap);
+  assert.equal(Object.values(mergedArmy.leaveBalances)[0]?.entitled, 30);
 });
 
 test('D-A1 پیوست مرخصی: مسیر در رکورد دیتابیس و برگشت به دامنه حفظ می‌شود', async () => {
