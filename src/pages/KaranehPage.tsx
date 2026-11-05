@@ -1,13 +1,14 @@
 import { useMemo, useState } from 'react';
 import { useAppStore, J_YEAR, J_MONTH } from '../store/appStore';
 import { buildKaranehSheet, karanehToCsv } from '../features/performance/performanceService';
+import { KARANEH_PRESETS, applyPreset } from '../features/performance/karanehPresets';
 import { reconcileAttendance, summarizeAttendance } from '../features/attendance/attendanceService';
 import {
   MOH_KARANEH_1404, computeGroupPools, computeNursingKaraneh, nursingSlips, slipsToCsv,
   physicianShareM, physicianQ, type KaranehParams,
 } from '../features/performance/karanehEngine';
 
-interface HospitalKaranehProfile { nursingShare: number; onCallCoef: number; kRial: number }
+interface HospitalKaranehProfile { nursingShare: number; onCallCoef: number; kRial: number; presetId?: string }
 const PROFILE_KEY = 'hejleh-karaneh-profile';
 function loadProfile(): HospitalKaranehProfile {
   try {
@@ -152,7 +153,25 @@ function MohKaranehSection() {
       </div>
       <div style={{ borderTop: '1px dashed #ddd', paddingTop: 12, marginTop: 12 }}>
         <strong style={{ fontSize: 14 }}>پروفایل پارامتر این بیمارستان</strong>
-        <span style={{ fontSize: 12, color: '#68707a', marginInlineStart: 8 }}>مقادیر پیش‌فرض عین دستورالعمل است؛ هر مرکز فقط مصوبهٔ داخلی خودش را جایگزین می‌کند. روی همین دستگاه ذخیره می‌شود.</span>
+        <span style={{ fontSize: 12, color: '#68707a', marginInlineStart: 8 }}>از پریست نوع مرکز شروع کنید؛ هر مرکز فقط مصوبهٔ داخلی خودش را جایگزین می‌کند. روی همین دستگاه ذخیره می‌شود.</span>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
+          {KARANEH_PRESETS.map(pr => (
+            <button
+              key={pr.id}
+              onClick={() => updateProfile(applyPreset(profile, pr))}
+              style={{
+                padding: '6px 12px', fontSize: 12, borderRadius: 999,
+                border: profile.presetId === pr.id ? '2px solid #0F4C4C' : '1px solid #ccc',
+                background: profile.presetId === pr.id ? '#eef6f3' : '#fff', cursor: 'pointer',
+              }}
+            >
+              {pr.label}
+            </button>
+          ))}
+        </div>
+        {KARANEH_PRESETS.filter(pr => pr.id === profile.presetId).map(pr => (
+          <p key={pr.id} style={{ fontSize: 12, color: '#8a5a00', background: '#fdf6ec', borderRadius: 8, padding: '6px 10px', marginTop: 8 }}>{pr.note}</p>
+        ))}
         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 10, fontSize: 13 }}>
           <label>سهم گروه پرستاری از درآمد بسته‌ها (٪)
             <input type="number" min={0} max={100} style={input} value={Math.round(profile.nursingShare * 100)} onChange={e => updateProfile({ nursingShare: Math.min(1, Math.max(0, (Number(e.target.value) || 0) / 100)) })} /></label>
