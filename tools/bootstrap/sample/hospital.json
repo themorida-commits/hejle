@@ -1,0 +1,2 @@
+{ "name": "بیمارستان نمونه پایلوت", "code": "sample-pilot",
+  "wards": [ { "name": "داخلی", "code": "int" }, { "name": "جراحی", "code": "sur" } ] }

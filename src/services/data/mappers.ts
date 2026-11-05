@@ -81,6 +81,8 @@ export function leaveToDomain(l: LeaveRecord): LeaveRequest {
     leaveTypeCode: l.leaveTypeCode,
     startISO: l.startDate,
     endISO: l.endDate,
+    isHourly: l.isHourly,
+    hours: l.hours,
     reason: l.reason ?? undefined,
     status: l.status,
     reviewedBy: l.reviewedBy ?? undefined,
