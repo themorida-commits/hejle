@@ -115,6 +115,7 @@ interface AppState {
   addNursingRecord: (r: NursingServiceRecord) => void;
   confirmNursingRecord: (id: string, by: string) => void;
   addPersonnelBulk: (list: Personnel[]) => void;
+  importEntries: (list: ScheduleEntry[]) => void;
 }
 
 /** رویدادهای دمو حضور برای ۱۲ روز اول ماه (شامل یک تأخیر و یک غیبت نمایشی). */
@@ -221,6 +222,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   setViewRole: (r) => set({ viewRole: r }),
   setCurrentEmployee: (id) => set({ currentEmployeeId: id }),
   setEntries: (e) => set({ entries: e }),
+  importEntries: (list) =>
+    set((st) => {
+      const keys = new Set(list.map(e => `${e.personnelId}|${e.date}`));
+      return { entries: [...st.entries.filter(e => !keys.has(`${e.personnelId}|${e.date}`)), ...list] };
+    }),
   setScheduleStatus: (s) => set({ scheduleStatus: s }),
   addLeave: (l) => set((st) => ({ leaves: [...st.leaves, l] })),
   updateLeave: (l) => set((st) => ({ leaves: st.leaves.map(x => (x.id === l.id ? l : x)) })),

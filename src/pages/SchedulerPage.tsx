@@ -7,6 +7,71 @@ import { buildEmployeeFacts, evaluateRules, DEFAULT_RULE_CONFIGS } from '../core
 import { scheduleSolver } from '../services/scheduleSolverClient';
 import { DEFAULT_AI_SETTINGS, DEFAULT_GLOBAL_SETTINGS } from '../core/defaults';
 import { credentialGate } from '../features/credentials/credentialService';
+import { buildSymbolResolver, parseRosterGridCsv, rosterGridTemplateCsv, type RosterImportResult } from '../features/import/rosterImport';
+
+function RosterImportCard() {
+  const st = useAppStore();
+  const [preview, setPreview] = useState<RosterImportResult | null>(null);
+  const [applied, setApplied] = useState(0);
+  const deptPeople = st.personnel.filter(p => p.departmentId === st.departmentId);
+
+  const onFile = async (f: File | undefined) => {
+    if (!f) return;
+    setApplied(0);
+    let text: string;
+    if (/\.csv$/i.test(f.name)) text = await f.text();
+    else {
+      const XLSX = await import('xlsx');
+      const wb = XLSX.read(await f.arrayBuffer());
+      text = XLSX.utils.sheet_to_csv(wb.Sheets[wb.SheetNames[0]!]!);
+    }
+    const resolve = buildSymbolResolver(st.shiftTypes);
+    setPreview(parseRosterGridCsv(text, { jYear: J_YEAR, jMonth: J_MONTH, personnel: deptPeople, resolve }));
+  };
+  const downloadTemplate = () => {
+    const url = URL.createObjectURL(new Blob([rosterGridTemplateCsv(deptPeople, J_YEAR, J_MONTH)], { type: 'text/csv;charset=utf-8' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = 'roster-grid-template.csv'; a.click();
+    URL.revokeObjectURL(url);
+  };
+  const fa = (n: number) => n.toLocaleString('fa-IR');
+  return (
+    <details style={{ background: '#fff', border: '1px solid #e3ddd2', borderRadius: 12, padding: '10px 14px', marginBottom: 12 }}>
+      <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>ورود برنامهٔ موجود بخش از فایل (برای اجرای موازی)</summary>
+      <p style={{ fontSize: 12, color: '#68707a', margin: '8px 0' }}>
+        فایل شبکه‌ای برنامه (سطر = نفر، ستون = روزهای ماه) را انتخاب کنید. نمادهای قابل قبول: نماد شیفت (M/E/N…)، نام فارسی (صبح/عصر/شب) و «آف» برای استراحت.
+        سلول‌های واردشده روی برنامهٔ فعلی این ماه می‌نشینند و دستی علامت می‌خورند.
+      </p>
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+        <button onClick={downloadTemplate}>دانلود قالب شبکه‌ای بخش</button>
+        <label style={{ border: '1px solid #ccc', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontSize: 13, background: '#f8f6f1' }}>
+          انتخاب فایل (Excel / CSV)
+          <input type="file" accept=".csv,.xlsx,.xls" style={{ display: 'none' }} onChange={e => void onFile(e.target.files?.[0])} />
+        </label>
+      </div>
+      {preview && (
+        <div style={{ marginTop: 8, fontSize: 13 }}>
+          <div>
+            {fa(preview.stats.people)} نفر · {fa(preview.stats.filledCells)} شیفت خوانده شد · {fa(preview.stats.offCells)} آف
+            {preview.warnings.length > 0 && <> · {fa(preview.warnings.length)} نماد ناشناخته</>}
+          </div>
+          {preview.errors.length > 0 && (
+            <ul style={{ color: '#b3402f', margin: '6px 0' }}>
+              {preview.errors.slice(0, 6).map((e, i) => <li key={i}>ردیف {fa(e.row)}: {e.message}</li>)}
+            </ul>
+          )}
+          {preview.warnings.length > 0 && (
+            <div style={{ color: '#8a5a00', fontSize: 12 }}>
+              نمادهای ناشناخته: {preview.warnings.slice(0, 6).map(w => `«${w.token}» (ردیف ${fa(w.row)}، روز ${fa(w.day)})`).join(' · ')}
+            </div>
+          )}
+          {preview.entries.length > 0 && <button onClick={() => { st.importEntries(preview.entries); setApplied(preview.entries.length); setPreview(null); }} style={{ marginTop: 6, padding: '7px 16px' }}>اعمال روی برنامهٔ این ماه</button>}
+        </div>
+      )}
+      {applied > 0 && <div style={{ marginTop: 6, fontSize: 13, color: '#1e6b3a' }}>{fa(applied)} شیفت از فایل روی برنامه نشست.</div>}
+    </details>
+  );
+}
 
 export default function SchedulerPage() {
   const st = useAppStore();
@@ -86,6 +151,7 @@ export default function SchedulerPage() {
         <span>تعارض‌ها: <strong>{fa(conflicts)}</strong> · نقض سخت قواعد: <strong>{fa(violations.filter(v => v.severity === 'hard').length)}</strong></span>
       </div>
       <p style={{ fontSize: 12, color: '#68707a' }}>برای ویرایش دستی روی هر سلول کلیک کنید (چرخش صبح ← عصر ← شب ← آف). در وضعیت منتشرشده ویرایش قفل است.</p>
+      <RosterImportCard />
       {(gate.blocked.length > 0 || gate.warnings.length > 0) && (
         <div style={{ background: '#fdf6ec', border: '1px solid #ecd9ae', borderRadius: 12, padding: '10px 14px', marginBottom: 12, fontSize: 13 }}>
           {gate.blocked.length > 0 && (
