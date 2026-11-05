@@ -23,6 +23,8 @@ export interface WorkRecord {
   nightHours: number;
   holidayHours: number;
   leaveDays: number;
+  /** مرخصی ساعتیِ تأییدشدهٔ کسرشده از کارکرد این ماه (ساعت) — نسخهٔ ۱٫۱. */
+  hourlyLeaveHours?: number;
   overtimeHours: number;
   nightPaid: number; // شب × ۱٫۵
   eveningPaid: number; // عصر × ۱٫۲
@@ -46,6 +48,8 @@ export function computeWorkRecords(args: {
   jMonth: number;
   globalSettings: GlobalDutySettings;
   leaveDatesByEmployee?: Map<string, Set<string>>;
+  /** مرخصی‌های ساعتی تأییدشدهٔ همین ماه: از کارکرد همان روز (با ضریب همان شیفت) کسر می‌شود. */
+  hourlyLeaves?: { employeeId: string; dateISO: string; hours: number }[];
   attendanceSummaries?: AttendanceSummary[];
 }): WorkRecord[] {
   const daysInMonth = getDaysInJalaliMonth(args.jYear, args.jMonth);
@@ -73,7 +77,20 @@ export function computeWorkRecords(args: {
     }
     const nightPaid = f.nightHours * NIGHT_COEFFICIENT;
     const eveningPaid = f.eveningHours * EVENING_COEFFICIENT;
-    const totalPaidHours = f.workedHours - f.nightHours - f.eveningHours + nightPaid + eveningPaid;
+    let totalPaidHours = f.workedHours - f.nightHours - f.eveningHours + nightPaid + eveningPaid;
+    // کسر مرخصی ساعتی: سقفش ساعت همان روز است و با ضریب دستهٔ همان شیفت از پرداختی کم می‌شود
+    let workedHours = f.workedHours;
+    let hourlyLeaveHours = 0;
+    for (const hl of args.hourlyLeaves ?? []) {
+      if (hl.employeeId !== f.employeeId) continue;
+      const day = f.days.find(d => d.dateISO === hl.dateISO);
+      if (!day || day.hours <= 0) continue;
+      const ded = Math.min(hl.hours, day.hours);
+      const coef = day.category === 'night' ? NIGHT_COEFFICIENT : day.category === 'evening' ? EVENING_COEFFICIENT : 1;
+      workedHours -= ded;
+      totalPaidHours -= ded * coef;
+      hourlyLeaveHours += ded;
+    }
     const person = args.personnel.find(p => p.id === f.employeeId)!;
     const att = args.attendanceSummaries?.find(a => a.employeeId === f.employeeId);
     return {
@@ -81,12 +98,13 @@ export function computeWorkRecords(args: {
       employeeName: f.employeeName,
       personnelCode: person.personnelCode,
       dutyHours: f.dutyHours,
-      workedHours: f.workedHours,
+      workedHours,
       morningHours: morning,
       eveningHours: f.eveningHours,
       nightHours: f.nightHours,
       holidayHours: holiday,
       leaveDays,
+      hourlyLeaveHours,
       overtimeHours: f.overtimeHours,
       nightPaid,
       eveningPaid,
@@ -104,7 +122,7 @@ export function computeWorkRecords(args: {
 
 const HEADERS = [
   'کد پرسنلی', 'نام', 'موظفی (ساعت)', 'کارکرد (ساعت)', 'صبح (ساعت)', 'عصر (ساعت)',
-  'شب (ساعت)', 'تعطیل (ساعت)', 'مرخصی (روز)', 'اضافه‌کار (ساعت)',
+  'شب (ساعت)', 'تعطیل (ساعت)', 'مرخصی (روز)', 'مرخصی ساعتی (ساعت)', 'اضافه‌کار (ساعت)',
   'شب با ضریب ۱٫۵', 'عصر با ضریب ۱٫۲', 'جمع پرداختی (ساعت)', 'وضعیت',
   'کارکرد واقعی (ساعت)', 'اضافه‌کار واقعی (ساعت)', 'غیبت (روز)', 'تأخیر (دقیقه)',
 ];
@@ -124,7 +142,7 @@ export function workRecordsToCsv(records: WorkRecord[]): string {
     lines.push([
       r.personnelCode, r.employeeName, round1(r.dutyHours), round1(r.workedHours),
       round1(r.morningHours), round1(r.eveningHours), round1(r.nightHours), round1(r.holidayHours),
-      r.leaveDays, round1(r.overtimeHours), round1(r.nightPaid), round1(r.eveningPaid),
+      r.leaveDays, round1(r.hourlyLeaveHours ?? 0), round1(r.overtimeHours), round1(r.nightPaid), round1(r.eveningPaid),
       round1(r.totalPaidHours), STATUS_FA[r.status],
       r.actualWorkedHours != null ? round1(r.actualWorkedHours) : '',
       r.actualOvertimeHours != null ? round1(r.actualOvertimeHours) : '',

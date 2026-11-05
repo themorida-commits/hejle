@@ -16,6 +16,7 @@ export default function WorkRecordsPage() {
     const leaveMap = new Map<string, Set<string>>();
     for (const l of st.leaves) {
       if (l.status !== 'approved') continue;
+      if (l.isHourly) continue; // ساعتی روز را کامل نمی‌بندد؛ کسرش جدا و ساعتی اعمال می‌شود
       const set = leaveMap.get(l.employeeId) ?? new Set<string>();
       const cur = new Date(l.startISO + 'T00:00:00');
       const end = new Date(l.endISO + 'T00:00:00');
@@ -40,6 +41,9 @@ export default function WorkRecordsPage() {
         personnel: deptPeople, entries: deptEntries, shiftTypes: st.shiftTypes,
         jYear: J_YEAR, jMonth: J_MONTH, globalSettings: DEFAULT_GLOBAL_SETTINGS,
         leaveDatesByEmployee: leaveMap, attendanceSummaries,
+        hourlyLeaves: st.leaves
+          .filter(l => l.status === 'approved' && l.isHourly && deptIds.has(l.employeeId))
+          .map(l => ({ employeeId: l.employeeId, dateISO: l.startISO, hours: l.hours ?? 0 })),
       }),
     ]);
   };

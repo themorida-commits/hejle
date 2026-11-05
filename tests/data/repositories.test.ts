@@ -142,3 +142,31 @@ test('D-N4 اسنپ‌شات به وضعیت استور: بسته‌ها و ثب
   assert.ok(state.nursingRecords.length > 0);
   assert.ok(state.nursingRecords.every(r => typeof r.packageId === 'string' && r.packageId.length > 0));
 });
+
+test('D-K1 پروفایل کارانهٔ دمو: سید پیش‌فرض وزارت بهداشت در اسنپ‌شات هست', async () => {
+  const repos = createDemoRepositories();
+  const profiles = await repos.profiles.listProfiles('demo-hospital');
+  assert.equal(profiles.length, 1);
+  assert.equal(profiles[0]!.isDefault, true);
+  assert.equal(profiles[0]!.nursingShare, 0.85);
+  const state = snapshotToState(buildDemoSnapshot());
+  assert.equal(state.karanehProfiles.length, 1);
+});
+
+test('D-K2 پروفایل کارانه: ذخیره و جابه‌جایی پیش‌فرض — دقیقاً یک پیش‌فرض می‌ماند', async () => {
+  const repos = createDemoRepositories();
+  const saved = await repos.profiles.saveProfile({
+    id: 'kp-test-1', hospitalId: 'demo-hospital', name: 'پروفایل خصوصی',
+    presetId: 'private', nursingShare: 0.8, onCallCoef: 3.5, kRial: 250000, isDefault: false,
+  });
+  assert.equal(saved.name, 'پروفایل خصوصی');
+  await repos.profiles.setDefaultProfile('demo-hospital', 'kp-test-1');
+  const profiles = await repos.profiles.listProfiles('demo-hospital');
+  assert.equal(profiles.filter(p => p.isDefault).length, 1);
+  assert.equal(profiles.find(p => p.isDefault)!.id, 'kp-test-1');
+  // ذخیرهٔ ویرایش همان پروفایل، رکورد تازه نمی‌سازد
+  await repos.profiles.saveProfile({ ...saved, kRial: 260000 });
+  const after = await repos.profiles.listProfiles('demo-hospital');
+  assert.equal(after.length, 2);
+  assert.equal(after.find(p => p.id === 'kp-test-1')!.kRial, 260000);
+});

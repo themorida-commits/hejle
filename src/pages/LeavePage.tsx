@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useAppStore, J_YEAR, J_MONTH } from '../store/appStore';
 import {
   LEAVE_TYPES, approveLeave, rejectLeave, simulateLeaveCoverage,
-  isoFromJalali, leaveDaysInRange, type LeaveRequest, type CoverageSimulation,
+  isoFromJalali, leaveDurationDays, type LeaveRequest, type CoverageSimulation,
 } from '../features/leave/leaveService';
 
 const MINIMUMS = { morning: 3, evening: 2, night: 1 };
@@ -17,6 +17,14 @@ export default function LeavePage() {
   const [toDay, setToDay] = useState(12);
   const [reason, setReason] = useState('');
   const [sim, setSim] = useState<CoverageSimulation | null>(null);
+  const [mode, setMode] = useState<'daily' | 'hourly'>('daily');
+  const [fromTime, setFromTime] = useState('08:00');
+  const [toTime, setToTime] = useState('11:00');
+  const hourlyHours = (() => {
+    const [fh = 0, fm = 0] = fromTime.split(':').map(Number);
+    const [th = 0, tm = 0] = toTime.split(':').map(Number);
+    return ((th * 60 + tm) - (fh * 60 + fm)) / 60;
+  })();
 
   const deptPeople = st.personnel.filter(p => p.departmentId === st.departmentId);
   const deptIds = useMemo(() => new Set(deptPeople.map(p => p.id)), [deptPeople]);
@@ -25,12 +33,20 @@ export default function LeavePage() {
   const myLeaves = st.leaves.filter(l => deptIds.has(l.employeeId));
 
   const submit = () => {
+    if (mode === 'hourly' && !(hourlyHours > 0 && hourlyHours <= 16)) {
+      alert('بازهٔ ساعتی معتبر نیست: ساعت پایان باید بعد از شروع و مجموع حداکثر ۱۶ ساعت باشد.');
+      return;
+    }
     const req: LeaveRequest = {
       id: `lv-${Date.now()}`,
       employeeId: st.currentEmployeeId,
       leaveTypeCode: type,
       startISO: isoFromJalali(J_YEAR, J_MONTH, fromDay),
-      endISO: isoFromJalali(J_YEAR, J_MONTH, toDay),
+      endISO: mode === 'hourly'
+        ? isoFromJalali(J_YEAR, J_MONTH, fromDay)
+        : isoFromJalali(J_YEAR, J_MONTH, toDay),
+      isHourly: mode === 'hourly',
+      hours: mode === 'hourly' ? hourlyHours : null,
       reason: reason || undefined,
       status: 'pending',
     };
@@ -51,7 +67,7 @@ export default function LeavePage() {
     if (!res.ok) { alert(res.error); return; }
     st.updateLeave(res.request);
     st.setEntries(res.entryPatch);
-    st.adjustBalance(req.employeeId, leaveDaysInRange(req.startISO, req.endISO).length);
+    st.adjustBalance(req.employeeId, leaveDurationDays(req));
   };
 
   const reject = (req: LeaveRequest) => {
@@ -69,8 +85,20 @@ export default function LeavePage() {
           <select value={type} onChange={e => setType(e.target.value)}>
             {LEAVE_TYPES.map(t => <option key={t.code} value={t.code}>{t.name}</option>)}
           </select>
+          <select value={mode} onChange={e => setMode(e.target.value as 'daily' | 'hourly')}>
+            <option value="daily">روزانه</option>
+            <option value="hourly">ساعتی</option>
+          </select>
           از روز <input type="number" min={1} max={30} value={fromDay} onChange={e => setFromDay(Number(e.target.value))} style={{ width: 60 }} />
-          تا روز <input type="number" min={1} max={30} value={toDay} onChange={e => setToDay(Number(e.target.value))} style={{ width: 60 }} />
+          {mode === 'daily' ? (
+            <>تا روز <input type="number" min={1} max={30} value={toDay} onChange={e => setToDay(Number(e.target.value))} style={{ width: 60 }} /></>
+          ) : (
+            <>
+              از ساعت <input type="time" value={fromTime} onChange={e => setFromTime(e.target.value)} />
+              تا ساعت <input type="time" value={toTime} onChange={e => setToTime(e.target.value)} />
+              <span style={{ fontSize: 12, color: '#68707a' }}>({hourlyHours > 0 ? hourlyHours.toLocaleString('fa-IR') : '—'} ساعت)</span>
+            </>
+          )}
           <input placeholder="دلیل (اختیاری)" value={reason} onChange={e => setReason(e.target.value)} style={{ minWidth: 200 }} />
           <button onClick={submit}>ثبت درخواست</button>
         </div>
@@ -88,7 +116,7 @@ export default function LeavePage() {
             <tr key={l.id} style={{ borderTop: '1px solid #eee' }}>
               <td style={{ padding: 8 }}>{nameOf(l.employeeId)}</td>
               <td>{LEAVE_TYPES.find(t => t.code === l.leaveTypeCode)?.name}</td>
-              <td>{l.startISO} تا {l.endISO}</td>
+              <td>{l.isHourly ? `ساعتی — ${(l.hours ?? 0).toLocaleString('fa-IR')} ساعت در ${l.startISO}` : `${l.startISO} تا ${l.endISO}`}</td>
               <td>{STATUS_FA[l.status]}</td>
               <td style={{ display: 'flex', gap: 6, padding: 8 }}>
                 {l.status === 'pending' && <>

@@ -15,9 +15,12 @@ export type LeaveStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 export interface LeaveRequest {
   id: string;
   employeeId: string;
-  leaveTypeCode: string; // annual | sick | unpaid | mission
+  leaveTypeCode: string; // annual | sick | unpaid | mission | maternity | marriage | bereavement | hajj
   startISO: string;
   endISO: string;
+  /** مرخصی ساعتی (نسخهٔ ۱٫۱ اسپک): تک‌روزه، با تعداد ساعت؛ شیفت روز دست‌نخورده می‌ماند مگر ساعت‌ها کل شیفت را بپوشاند. */
+  isHourly?: boolean;
+  hours?: number | null;
   reason?: string;
   status: LeaveStatus;
   reviewedBy?: string;
@@ -29,7 +32,34 @@ export const LEAVE_TYPES = [
   { code: 'sick', name: 'استعلاجی', isPaid: true },
   { code: 'unpaid', name: 'بدون حقوق', isPaid: false },
   { code: 'mission', name: 'مأموریت', isPaid: true },
+  { code: 'maternity', name: 'زایمان', isPaid: true },
+  { code: 'marriage', name: 'ازدواج', isPaid: true },
+  { code: 'bereavement', name: 'فوت بستگان', isPaid: true },
+  { code: 'hajj', name: 'حج', isPaid: true },
 ] as const;
+
+/** ساعت موظفی یک روز — مبنای تبدیل مرخصی ساعتی به روز (۴۴ ساعت هفته ÷ ۶ روز کاری). */
+export const HOURS_PER_DAY = 44 / 6;
+
+/** طول مرخصی به «روز» — روزانه: تعداد روزهای بازه؛ ساعتی: ساعت ÷ موظفی روزانه. */
+export function leaveDurationDays(request: Pick<LeaveRequest, 'isHourly' | 'hours' | 'startISO' | 'endISO'>): number {
+  if (request.isHourly) return (request.hours ?? 0) / HOURS_PER_DAY;
+  return leaveDaysInRange(request.startISO, request.endISO).length;
+}
+
+/** آیا مرخصی ساعتی کل شیفت آن روز فرد را می‌پوشاند؟ (آن‌وقت مثل مرخصی روزانه با برنامه برخورد می‌شود) */
+export function hourlyCoversWholeShift(
+  request: LeaveRequest,
+  entries: ScheduleEntry[],
+  shiftTypes: ShiftType[],
+): boolean {
+  if (!request.isHourly) return false;
+  const entry = entries.find(e => e.personnelId === request.employeeId && e.date === request.startISO);
+  if (!entry) return false;
+  const st = shiftTypes.find(s => s.id === entry.shiftTypeId);
+  if (!st || categorizeShift(st) === 'off') return false;
+  return (request.hours ?? 0) >= st.calculatedValue;
+}
 
 export function leaveDaysInRange(startISO: string, endISO: string): string[] {
   const out: string[] = [];
@@ -89,7 +119,11 @@ export function simulateLeaveCoverage(args: {
 }): CoverageSimulation {
   const { request } = args;
   const configs = args.configs ?? DEFAULT_RULE_CONFIGS;
-  const simulated = applyLeaveToEntries(args.entries, args.shiftTypes, request.employeeId, request.startISO, request.endISO);
+  // مرخصی ساعتیِ جزئی شیفت را حذف نمی‌کند؛ فقط وقتی کل شیفت پوشانده شود مثل روزانه عمل می‌کند
+  const coversWhole = !request.isHourly || hourlyCoversWholeShift(request, args.entries, args.shiftTypes);
+  const simulated = coversWhole
+    ? applyLeaveToEntries(args.entries, args.shiftTypes, request.employeeId, request.startISO, request.endISO)
+    : args.entries;
 
   // کمبود نیرو در روزهای مرخصی نسبت به حداقل‌ها
   const ward = buildWardFacts({ entries: simulated, shiftTypes: args.shiftTypes, jYear: args.jYear, jMonth: args.jMonth });
@@ -118,21 +152,25 @@ export function simulateLeaveCoverage(args: {
   const beforeKeys = new Set(evaluateRules({ facts: factsBefore, configs }).map(key));
   const newViolations = evaluateRules({ facts: factsAfter, configs }).filter(v => !beforeKeys.has(key(v)));
 
-  // ماندهٔ مرخصی
-  const requestedDays = days.size;
+  // ماندهٔ مرخصی — ساعتی با تبدیل ساعت به روز سنجیده می‌شود
+  const requestedDays = leaveDurationDays(request);
+  const fmtD = (n: number) => n.toLocaleString('fa-IR', { maximumFractionDigits: 2 });
   let balanceOk = true;
   let balanceMessage = 'ماندهٔ مرخصی بررسی نشده است.';
   if (args.balance) {
     const remaining = args.balance.entitled - args.balance.used;
     balanceOk = requestedDays <= remaining;
     balanceMessage = balanceOk
-      ? `ماندهٔ مرخصی کافی است: ${remaining.toLocaleString('fa-IR')} روز از ${args.balance.entitled.toLocaleString('fa-IR')} روز باقی مانده و این درخواست ${requestedDays.toLocaleString('fa-IR')} روز است.`
-      : `ماندهٔ مرخصی کافی نیست: فقط ${remaining.toLocaleString('fa-IR')} روز باقی مانده ولی درخواست ${requestedDays.toLocaleString('fa-IR')} روز است.`;
+      ? `ماندهٔ مرخصی کافی است: ${fmtD(remaining)} روز از ${fmtD(args.balance.entitled)} روز باقی مانده و این درخواست ${fmtD(requestedDays)} روز است.`
+      : `ماندهٔ مرخصی کافی نیست: فقط ${fmtD(remaining)} روز باقی مانده ولی درخواست ${fmtD(requestedDays)} روز است.`;
   }
 
   const ok = shortfalls.length === 0 && balanceOk;
+  const hourlyNote = request.isHourly && !coversWhole
+    ? ' این مرخصی ساعتی است و شیفت آن روز سر جایش می‌ماند؛ ساعت‌ها از کارکرد همان روز کسر می‌شود.'
+    : '';
   const summary = ok
-    ? 'پوشش بخش در روزهای مرخصی کامل می‌ماند و مانده کافی است؛ تأیید این مرخصی از نظر پوشش امن است.'
+    ? `پوشش بخش در روزهای مرخصی کامل می‌ماند و مانده کافی است؛ تأیید این مرخصی از نظر پوشش امن است.${hourlyNote}`
     : `این مرخصی ${shortfalls.length.toLocaleString('fa-IR')} کمبود نیرو در شیفت‌ها می‌سازد${balanceOk ? '' : ' و ماندهٔ مرخصی هم کافی نیست'}؛ پیش از تأیید باید جایگزین مشخص شود.`;
 
   return { requestId: request.id, shortfalls, newViolations, balanceOk, balanceMessage, ok, summary };
@@ -152,7 +190,10 @@ export function approveLeave(args: {
   const { request } = args;
   if (request.status !== 'pending') return { ok: false, error: 'این درخواست قبلاً تعیین تکلیف شده است.' };
   if (args.approverEmployeeId === request.employeeId) return { ok: false, error: 'تأیید مرخصی توسط خود درخواست‌دهنده مجاز نیست.' };
-  const entryPatch = applyLeaveToEntries(args.entries, args.shiftTypes, request.employeeId, request.startISO, request.endISO);
+  // ساعتیِ جزئی: برنامه دست نمی‌خورد (کسر از کارکرد انجام می‌شود)؛ پوشش کامل = رفتار روزانه
+  const entryPatch = request.isHourly && !hourlyCoversWholeShift(request, args.entries, args.shiftTypes)
+    ? args.entries
+    : applyLeaveToEntries(args.entries, args.shiftTypes, request.employeeId, request.startISO, request.endISO);
   return {
     ok: true,
     request: { ...request, status: 'approved', reviewedBy: args.approverEmployeeId },
