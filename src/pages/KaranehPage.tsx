@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useAppStore, J_YEAR, J_MONTH } from '../store/appStore';
+import { useSessionStore } from '../store/session';
 import { buildKaranehSheet, karanehToCsv } from '../features/performance/performanceService';
 import { KARANEH_PRESETS, applyPreset } from '../features/performance/karanehPresets';
 import { reconcileAttendance, summarizeAttendance } from '../features/attendance/attendanceService';
@@ -70,8 +71,48 @@ function MohKaranehSection() {
   const [nursingPkgMillion, setNursingPkgMillion] = useState(40000);
   const [profile, setProfile] = useState<HospitalKaranehProfile>(loadProfile);
   const kRial = profile.kRial;
-  const setKRial = (v: number) => setProfile(p => { const next = { ...p, kRial: v }; try { localStorage.setItem(PROFILE_KEY, JSON.stringify(next)); } catch { /* ignore */ } return next; });
+  const setKRial = (v: number) => updateProfile({ kRial: v });
   const updateProfile = (patch: Partial<HospitalKaranehProfile>) => setProfile(p => { const next = { ...p, ...patch }; try { localStorage.setItem(PROFILE_KEY, JSON.stringify(next)); } catch { /* ignore */ } return next; });
+
+  // ── پروفایل‌های دیتابیسی بیمارستان (مایگریشن ۰۰۰۶) — مشترک بین مدیران ──
+  const dbProfiles = st.karanehProfiles;
+  const [activeProfileId, setActiveProfileId] = useState<string | null>(null);
+  const [profileName, setProfileName] = useState('');
+  const [saveMsg, setSaveMsg] = useState('');
+  const adoptedRef = useRef<string | null>(null);
+  const activeDbProfile = dbProfiles.find(p => p.id === activeProfileId) ?? null;
+  // وقتی پروفایل پیش‌فرض از سرور می‌رسد و کاربر هنوز دستی چیزی را عوض نکرده، همان را بردار
+  useEffect(() => {
+    const def = dbProfiles.find(p => p.isDefault) ?? dbProfiles[0];
+    if (!def || adoptedRef.current === def.id) return;
+    adoptedRef.current = def.id;
+    setActiveProfileId(def.id);
+    setProfileName(def.name);
+    setProfile({ nursingShare: def.nursingShare, onCallCoef: def.onCallCoef, kRial: def.kRial, presetId: def.presetId ?? undefined });
+  }, [dbProfiles]);
+  const loadDbProfile = (id: string) => {
+    const p = dbProfiles.find(x => x.id === id);
+    if (!p) return;
+    adoptedRef.current = p.id;
+    setActiveProfileId(p.id);
+    setProfileName(p.name);
+    setProfile({ nursingShare: p.nursingShare, onCallCoef: p.onCallCoef, kRial: p.kRial, presetId: p.presetId ?? undefined });
+  };
+  const saveDbProfile = async () => {
+    const hospitalId = useSessionStore.getState().hospitalId ?? dbProfiles[0]?.hospitalId ?? 'demo-hospital';
+    const rec = {
+      id: activeProfileId ?? crypto.randomUUID(),
+      hospitalId,
+      name: profileName.trim() || activeDbProfile?.name || 'پروفایل کارانه',
+      presetId: profile.presetId ?? null,
+      nursingShare: profile.nursingShare, onCallCoef: profile.onCallCoef, kRial: profile.kRial,
+      isDefault: activeDbProfile?.isDefault ?? dbProfiles.length === 0,
+      updatedAt: new Date().toISOString(),
+    };
+    const ok = await st.saveKaranehProfile(rec);
+    if (ok) { setActiveProfileId(rec.id); adoptedRef.current = rec.id; }
+    setSaveMsg(ok ? 'در دیتابیس بیمارستان ذخیره شد.' : 'ذخیره نشد — ذخیرهٔ پروفایل با نقش مدیر بیمارستان یا کارگزینی است.');
+  };
   const params: KaranehParams = useMemo(() => ({
     ...MOH_KARANEH_1404,
     shares: { ...MOH_KARANEH_1404.shares, nursingOfNursingPackages: profile.nursingShare },
@@ -153,7 +194,19 @@ function MohKaranehSection() {
       </div>
       <div style={{ borderTop: '1px dashed #ddd', paddingTop: 12, marginTop: 12 }}>
         <strong style={{ fontSize: 14 }}>پروفایل پارامتر این بیمارستان</strong>
-        <span style={{ fontSize: 12, color: '#68707a', marginInlineStart: 8 }}>از پریست نوع مرکز شروع کنید؛ هر مرکز فقط مصوبهٔ داخلی خودش را جایگزین می‌کند. روی همین دستگاه ذخیره می‌شود.</span>
+        <span style={{ fontSize: 12, color: '#68707a', marginInlineStart: 8 }}>از پریست نوع مرکز شروع کنید؛ هر مرکز فقط مصوبهٔ داخلی خودش را جایگزین می‌کند. پروفایل‌ها در دیتابیس بیمارستان ذخیره و بین مدیران مشترک‌اند.</span>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginTop: 10, fontSize: 13 }}>
+          <select value={activeProfileId ?? ''} onChange={e => loadDbProfile(e.target.value)} style={{ padding: 6, borderRadius: 8, border: '1px solid #ddd' }}>
+            <option value="">— پروفایل ذخیره‌شده —</option>
+            {dbProfiles.map(p => <option key={p.id} value={p.id}>{p.name}{p.isDefault ? ' (پیش‌فرض)' : ''}</option>)}
+          </select>
+          <input type="text" placeholder="نام پروفایل" value={profileName} onChange={e => setProfileName(e.target.value)} style={{ ...input, width: 180 }} />
+          <button onClick={() => void saveDbProfile()}>ذخیرهٔ پروفایل</button>
+          {activeDbProfile && !activeDbProfile.isDefault && (
+            <button onClick={() => void st.setDefaultKaranehProfile(activeDbProfile.id)}>پیش‌فرض کن</button>
+          )}
+          {saveMsg && <span style={{ fontSize: 12, color: '#0F4C4C' }}>{saveMsg}</span>}
+        </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
           {KARANEH_PRESETS.map(pr => (
             <button

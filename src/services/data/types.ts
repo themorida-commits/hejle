@@ -83,12 +83,26 @@ export interface WorkRecordRepository {
   upsertWorkRecords(records: WorkRecordRecord[]): Promise<void>;
 }
 
+/** پروفایل پارامتر کارانهٔ بیمارستان — جایگزین localStorage مرورگر (مایگریشن ۰۰۰۶). */
+export interface KaranehProfileRecord {
+  id: string; hospitalId: string; name: string;
+  presetId: string | null;
+  nursingShare: number; onCallCoef: number; kRial: number;
+  isDefault: boolean; updatedAt: string;
+}
+export interface KaranehProfileRepository {
+  listProfiles(hospitalId: string): Promise<KaranehProfileRecord[]>;
+  saveProfile(rec: Omit<KaranehProfileRecord, 'updatedAt'>): Promise<KaranehProfileRecord>;
+  setDefaultProfile(hospitalId: string, id: string): Promise<void>;
+}
+
 export interface DataRepositories {
   org: OrgRepository;
   roster: RosterRepository;
   leave: LeaveRepository;
   workRecords: WorkRecordRepository;
   nursing: NursingRepository;
+  profiles: KaranehProfileRepository;
 }
 
 /** عکس کامل دادهٔ یک بیمارستان برای هیدراته‌کردن استور. */
@@ -103,4 +117,5 @@ export interface HospitalSnapshot {
   workRecords: WorkRecordRecord[];
   nursingPackages: NursingPackageRecord[];
   nursingRecords: NursingServiceDbRecord[];
+  karanehProfiles: KaranehProfileRecord[];
 }

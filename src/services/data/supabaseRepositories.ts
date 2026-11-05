@@ -3,7 +3,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type {
   DataRepositories, EmployeeRecord, EntryRecord, LeaveRecord, LeaveTypeRecord,
-  NursingPackageRecord, NursingServiceDbRecord,
+  KaranehProfileRecord, NursingPackageRecord, NursingServiceDbRecord,
   ScheduleRecord, ShiftTypeRecord, WardRecord, WorkRecordRecord,
 } from './types';
 
@@ -69,6 +69,11 @@ const nursingRecord = (r: any): NursingServiceDbRecord => ({
   patientRef: r.patient_ref, packageId: r.package_id, count: r.service_count,
   serviceDate: r.service_date, shift: r.shift, status: r.status,
   confirmedBy: r.confirmed_by, confirmedAt: r.confirmed_at, createdAt: r.created_at,
+});
+const karanehProfile = (r: any): KaranehProfileRecord => ({
+  id: r.id, hospitalId: r.hospital_id, name: r.name, presetId: r.preset_id,
+  nursingShare: Number(r.nursing_share), onCallCoef: Number(r.on_call_coef),
+  kRial: Number(r.k_rial), isDefault: !!r.is_default, updatedAt: r.updated_at,
 });
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
@@ -212,6 +217,32 @@ export function createSupabaseRepositories(client: SupabaseClient): DataReposito
         if (error) throw new Error(`supabase write failed: ${error.message}`);
       },
     },
+    profiles: {
+      async listProfiles(hospitalId) {
+        const rows = await fetchAllPages((f, t) =>
+          client.from('karaneh_profiles').select('*').eq('hospital_id', hospitalId).order('name').range(f, t));
+        return rows.map(karanehProfile);
+      },
+      async saveProfile(rec) {
+        const row = {
+          id: rec.id, hospital_id: rec.hospitalId, name: rec.name, preset_id: rec.presetId,
+          nursing_share: rec.nursingShare, on_call_coef: rec.onCallCoef, k_rial: rec.kRial,
+          is_default: rec.isDefault, updated_at: new Date().toISOString(),
+        };
+        const { data, error } = await client.from('karaneh_profiles')
+          .upsert(row, { onConflict: 'id' }).select('*').single();
+        if (error) throw new Error(`supabase write failed: ${error.message}`);
+        return karanehProfile(data);
+      },
+      async setDefaultProfile(hospitalId, id) {
+        const off = await client.from('karaneh_profiles')
+          .update({ is_default: false }).eq('hospital_id', hospitalId).eq('is_default', true);
+        if (off.error) throw new Error(`supabase write failed: ${off.error.message}`);
+        const on = await client.from('karaneh_profiles')
+          .update({ is_default: true }).eq('id', id);
+        if (on.error) throw new Error(`supabase write failed: ${on.error.message}`);
+      },
+    },
   };
 }
 
@@ -220,7 +251,7 @@ export async function loadHospitalSnapshot(
   repos: DataRepositories,
   args: { hospitalId: string; wardId: string; jYear: number; jMonth: number },
 ) {
-  const [wards, employees, shiftTypes, leaveTypes, schedule, leaves, workRecords, nursingPackages, nursingRecords] = await Promise.all([
+  const [wards, employees, shiftTypes, leaveTypes, schedule, leaves, workRecords, nursingPackages, nursingRecords, karanehProfiles] = await Promise.all([
     repos.org.listWards(args.hospitalId),
     repos.org.listEmployees(args.wardId),
     repos.org.listShiftTypes(args.hospitalId),
@@ -230,7 +261,8 @@ export async function loadHospitalSnapshot(
     repos.workRecords.listWorkRecords(args.wardId, args.jYear, args.jMonth),
     repos.nursing.listPackages(args.hospitalId),
     repos.nursing.listRecords(args.wardId),
+    repos.profiles.listProfiles(args.hospitalId),
   ]);
   const entries = schedule ? await repos.roster.listEntries(schedule.id) : [];
-  return { wards, employees, shiftTypes, leaveTypes, schedule, entries, leaves, workRecords, nursingPackages, nursingRecords };
+  return { wards, employees, shiftTypes, leaveTypes, schedule, entries, leaves, workRecords, nursingPackages, nursingRecords, karanehProfiles };
 }

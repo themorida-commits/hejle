@@ -7,7 +7,7 @@ import { LEAVE_TYPES } from '../../features/leave/leaveService';
 import { isoFromJalali } from '../../features/leave/leaveService';
 import { getDaysInJalaliMonth } from '../../core/jalali';
 import type {
-  DataRepositories, EntryRecord, HospitalSnapshot, LeaveRecord,
+  DataRepositories, EntryRecord, HospitalSnapshot, KaranehProfileRecord, LeaveRecord,
   NursingServiceDbRecord, ScheduleRecord, WorkRecordRecord,
 } from './types';
 import { DEFAULT_NURSING_PACKAGES } from '../../features/nursingServices/nursingService';
@@ -70,6 +70,11 @@ export function buildDemoSnapshot(jYear = 1405, jMonth = 7): HospitalSnapshot {
       kValue: p.kValue, unit: p.unit, careGroup: p.careGroup ?? null, isActive: true,
     })),
     nursingRecords: buildDemoNursingRecords(entries),
+    karanehProfiles: [{
+      id: 'demo-kp-moh', hospitalId: DEMO_HOSPITAL_ID, name: 'پروفایل وزارت بهداشت ۱۴۰۴',
+      presetId: 'moh', nursingShare: 0.85, onCallCoef: 4, kRial: 201_000,
+      isDefault: true, updatedAt: new Date().toISOString(),
+    }],
   };
 }
 
@@ -162,6 +167,21 @@ export function createDemoRepositories(seed: HospitalSnapshot = buildDemoSnapsho
           const i = state.workRecords.findIndex(x => x.employeeId === r.employeeId && x.jYear === r.jYear && x.jMonth === r.jMonth);
           if (i >= 0) state.workRecords[i] = r; else state.workRecords.push(r);
         }
+      },
+    },
+    profiles: {
+      async listProfiles(hospitalId) {
+        return state.karanehProfiles.filter(p => p.hospitalId === hospitalId);
+      },
+      async saveProfile(rec) {
+        const saved: KaranehProfileRecord = { ...rec, updatedAt: new Date().toISOString() };
+        const i = state.karanehProfiles.findIndex(p => p.id === rec.id);
+        if (saved.isDefault) for (const p of state.karanehProfiles) if (p.hospitalId === rec.hospitalId) p.isDefault = false;
+        if (i >= 0) state.karanehProfiles[i] = saved; else state.karanehProfiles.push(saved);
+        return structuredClone(saved);
+      },
+      async setDefaultProfile(hospitalId, id) {
+        for (const p of state.karanehProfiles) if (p.hospitalId === hospitalId) p.isDefault = p.id === id;
       },
     },
   };

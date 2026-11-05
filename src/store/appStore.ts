@@ -16,7 +16,7 @@ import {
   employeeToPersonnel, shiftTypeToDomain, entryToDomain, leaveToDomain, workRecordToDomain,
   nursingPackageToDomain, nursingRecordToDomain, nursingRecordToDb, personnelToEmployeeRecord,
 } from '../services/data/mappers';
-import type { HospitalSnapshot } from '../services/data/types';
+import type { HospitalSnapshot, KaranehProfileRecord } from '../services/data/types';
 import { useSessionStore } from './session';
 
 // استور فاز ۱ — از لایهٔ داده تغذیه می‌شود: حالت دمو از DemoRepositories و
@@ -42,6 +42,7 @@ export function snapshotToState(snap: HospitalSnapshot) {
     scheduleStatus: (snap.schedule?.status ?? 'draft') as 'draft' | 'published',
     nursingPackages: snap.nursingPackages.map(nursingPackageToDomain),
     nursingRecords: snap.nursingRecords.map(nursingRecordToDomain),
+    karanehProfiles: snap.karanehProfiles,
   };
 }
 
@@ -116,6 +117,9 @@ interface AppState {
   confirmNursingRecord: (id: string, by: string) => void;
   addPersonnelBulk: (list: Personnel[]) => void;
   importEntries: (list: ScheduleEntry[]) => void;
+  karanehProfiles: KaranehProfileRecord[];
+  saveKaranehProfile: (rec: KaranehProfileRecord) => Promise<boolean>;
+  setDefaultKaranehProfile: (id: string) => Promise<void>;
 }
 
 /** رویدادهای دمو حضور برای ۱۲ روز اول ماه (شامل یک تأخیر و یک غیبت نمایشی). */
@@ -189,7 +193,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const entries = schedule ? await repos.roster.listEntries(schedule.id) : [];
     const partial: HospitalSnapshot = {
       wards: [], employees, shiftTypes: [], leaveTypes: [], schedule, entries, leaves, workRecords,
-      nursingPackages, nursingRecords,
+      nursingPackages, nursingRecords, karanehProfiles: [],
     };
     const cur = get();
     const merged = mergeWardIntoState(cur, partial);
@@ -238,6 +242,36 @@ export const useAppStore = create<AppState>((set, get) => ({
   addCredential: (c) => set((st) => ({ credentials: [...st.credentials, c] })),
   nursingRecords: demoState.nursingRecords,
   nursingPackages: demoState.nursingPackages,
+  karanehProfiles: demoState.karanehProfiles,
+  saveKaranehProfile: async (rec) => {
+    try {
+      const saved = await createRepositories(get().dataSource).profiles.saveProfile(rec);
+      set((st) => {
+        const others = st.karanehProfiles.filter(p => p.id !== saved.id);
+        const normalized = saved.isDefault
+          ? others.map(p => (p.hospitalId === saved.hospitalId ? { ...p, isDefault: false } : p))
+          : others;
+        return { karanehProfiles: [...normalized, saved] };
+      });
+      return true;
+    } catch (err) {
+      console.error('karaneh profile save failed', err);
+      return false;
+    }
+  },
+  setDefaultKaranehProfile: async (id) => {
+    const hospitalId = get().karanehProfiles.find(p => p.id === id)?.hospitalId;
+    if (!hospitalId) return;
+    try {
+      await createRepositories(get().dataSource).profiles.setDefaultProfile(hospitalId, id);
+      set((st) => ({
+        karanehProfiles: st.karanehProfiles.map(p =>
+          p.hospitalId === hospitalId ? { ...p, isDefault: p.id === id } : p),
+      }));
+    } catch (err) {
+      console.error('karaneh profile set-default failed', err);
+    }
+  },
   addNursingRecord: (r) => {
     set((st) => ({ nursingRecords: [...st.nursingRecords, r] }));
     // ماندگاری سمت سرور در حالت supabase — خطا فقط لاگ می‌شود؛ وضعیت UI منبع حقیقت نمایشی است.
