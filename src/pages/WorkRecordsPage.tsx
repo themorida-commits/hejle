@@ -1,5 +1,5 @@
 import { useAppStore, J_YEAR, J_MONTH } from '../store/appStore';
-import { computeWorkRecords, workRecordsToCsv } from '../features/workRecords/workRecordService';
+import { computeWorkRecords, workRecordsToCsv, summarizeWardWork, wardSummaryToCsv } from '../features/workRecords/workRecordService';
 import { reconcileAttendance, summarizeAttendance } from '../features/attendance/attendanceService';
 import { DEFAULT_GLOBAL_SETTINGS } from '../core/defaults';
 import { useMemo } from 'react';
@@ -62,6 +62,18 @@ export default function WorkRecordsPage() {
     setStatus('exported');
   };
 
+  const summary = useMemo(() => summarizeWardWork(records), [records]);
+  const wardName = st.departments.find(d => d.id === st.departmentId)?.name ?? 'بخش';
+  const downloadSummaryCsv = () => {
+    const blob = new Blob([wardSummaryToCsv(summary, wardName)], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `ward-summary-${J_YEAR}-${J_MONTH}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div>
       <h1>کارکرد ماهانه — مهر ۱۴۰۵</h1>
@@ -72,6 +84,27 @@ export default function WorkRecordsPage() {
         <button onClick={() => setStatus('approved')} disabled={records.length === 0}>تأیید همه</button>
         <button onClick={downloadCsv} disabled={records.length === 0}>خروجی CSV برای واحد حقوق</button>
       </div>
+      {records.length > 0 && (
+        <section style={{ background: '#fff', border: '1px solid #cfe0da', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+            <h2 style={{ margin: 0, fontSize: 16 }}>گزارش تجمیعی بخش {wardName}</h2>
+            <button onClick={downloadSummaryCsv}>خروجی CSV تجمیعی</button>
+          </div>
+          <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', fontSize: 13, marginTop: 12 }}>
+            <span>پرسنل: <strong>{fa(summary.headcount)}</strong></span>
+            <span>مجموع موظفی: <strong>{fa(summary.totalDutyHours)}</strong> ساعت</span>
+            <span>مجموع کارکرد: <strong>{fa(summary.totalWorkedHours)}</strong> ساعت</span>
+            <span>معادل پرداختی ماه: <strong>{fa(summary.totalPaidHours)}</strong> ساعت</span>
+            <span>مجموع اضافه‌کار: <strong>{fa(summary.totalOvertimeHours)}</strong> ساعت (میانگین هر نفر {fa(summary.avgOvertimePerPerson)})</span>
+            <span>سهم شب از کارکرد: <strong>{fa(summary.nightSharePct)}٪</strong></span>
+            <span>مرخصی: <strong>{fa(summary.totalLeaveDays)}</strong> روز + <strong>{fa(summary.totalHourlyLeaveHours)}</strong> ساعت ساعتی</span>
+          </div>
+          <p style={{ fontSize: 12, color: '#68707a', marginBottom: 0 }}>
+            توزیع شب‌کاری — بیشترین‌ها: {summary.topNight.map(t => `${t.employeeName} (${fa(t.nightHours)} ساعت)`).join('، ') || '—'}.
+            معادل پرداختی «هزینهٔ بخش در سطح ساعت» است؛ مبلغ ریالی از واحد حقوق می‌آید، نه از این نما.
+          </p>
+        </section>
+      )}
       <div style={{ overflowX: 'auto', background: '#fff', border: '1px solid #e3ddd2', borderRadius: 12 }}>
         <table style={{ borderCollapse: 'collapse', fontSize: 13, minWidth: 1000 }}>
           <thead><tr style={{ background: '#f3efe7' }}>

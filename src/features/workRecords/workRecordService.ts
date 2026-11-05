@@ -120,6 +120,72 @@ export function computeWorkRecords(args: {
   });
 }
 
+/** گزارش تجمیعی بخش (خروجی P1-03 اسپک): جمع‌ها، توزیع شب‌کاری و معادل پرداختی ماه. */
+export interface WardWorkSummary {
+  headcount: number;
+  totalDutyHours: number;
+  totalWorkedHours: number;
+  totalPaidHours: number;
+  totalOvertimeHours: number;
+  totalNightHours: number;
+  totalEveningHours: number;
+  totalMorningHours: number;
+  totalHolidayHours: number;
+  totalLeaveDays: number;
+  totalHourlyLeaveHours: number;
+  nightSharePct: number;
+  avgOvertimePerPerson: number;
+  topNight: { employeeName: string; nightHours: number }[];
+}
+
+export function summarizeWardWork(records: WorkRecord[]): WardWorkSummary {
+  const sum = (f: (r: WorkRecord) => number) => records.reduce((a, r) => a + f(r), 0);
+  const totalWorkedHours = sum(r => r.workedHours);
+  const totalNightHours = sum(r => r.nightHours);
+  const totalOvertimeHours = sum(r => r.overtimeHours);
+  return {
+    headcount: records.length,
+    totalDutyHours: sum(r => r.dutyHours),
+    totalWorkedHours,
+    totalPaidHours: sum(r => r.totalPaidHours),
+    totalOvertimeHours,
+    totalNightHours,
+    totalEveningHours: sum(r => r.eveningHours),
+    totalMorningHours: sum(r => r.morningHours),
+    totalHolidayHours: sum(r => r.holidayHours),
+    totalLeaveDays: sum(r => r.leaveDays),
+    totalHourlyLeaveHours: sum(r => r.hourlyLeaveHours ?? 0),
+    nightSharePct: totalWorkedHours > 0 ? (totalNightHours / totalWorkedHours) * 100 : 0,
+    avgOvertimePerPerson: records.length > 0 ? totalOvertimeHours / records.length : 0,
+    topNight: [...records]
+      .sort((a, b) => b.nightHours - a.nightHours)
+      .slice(0, 3)
+      .map(r => ({ employeeName: r.employeeName, nightHours: r.nightHours })),
+  };
+}
+
+export function wardSummaryToCsv(s: WardWorkSummary, wardName: string): string {
+  const r1 = (n: number) => Math.round(n * 10) / 10;
+  const rows: [string, number | string][] = [
+    ['بخش', wardName],
+    ['تعداد پرسنل', s.headcount],
+    ['مجموع موظفی (ساعت)', r1(s.totalDutyHours)],
+    ['مجموع کارکرد (ساعت)', r1(s.totalWorkedHours)],
+    ['مجموع معادل پرداختی (ساعت)', r1(s.totalPaidHours)],
+    ['مجموع اضافه‌کار (ساعت)', r1(s.totalOvertimeHours)],
+    ['میانگین اضافه‌کار هر نفر (ساعت)', r1(s.avgOvertimePerPerson)],
+    ['مجموع صبح (ساعت)', r1(s.totalMorningHours)],
+    ['مجموع عصر (ساعت)', r1(s.totalEveningHours)],
+    ['مجموع شب (ساعت)', r1(s.totalNightHours)],
+    ['سهم شب از کارکرد (٪)', r1(s.nightSharePct)],
+    ['مجموع تعطیل (ساعت)', r1(s.totalHolidayHours)],
+    ['مجموع مرخصی (روز)', r1(s.totalLeaveDays)],
+    ['مجموع مرخصی ساعتی (ساعت)', r1(s.totalHourlyLeaveHours)],
+    ...s.topNight.map((t, i) => [`بیشترین شب‌کاری ${i + 1}`, `${t.employeeName}: ${r1(t.nightHours)} ساعت`] as [string, string]),
+  ];
+  return '\uFEFF' + rows.map(([k, v]) => `${k},${v}`).join('\n');
+}
+
 const HEADERS = [
   'کد پرسنلی', 'نام', 'موظفی (ساعت)', 'کارکرد (ساعت)', 'صبح (ساعت)', 'عصر (ساعت)',
   'شب (ساعت)', 'تعطیل (ساعت)', 'مرخصی (روز)', 'مرخصی ساعتی (ساعت)', 'اضافه‌کار (ساعت)',
