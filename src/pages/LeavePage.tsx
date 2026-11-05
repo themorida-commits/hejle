@@ -32,10 +32,28 @@ export default function LeavePage() {
   const nameOf = (id: string) => st.personnel.find(p => p.id === id)?.name ?? id;
   const myLeaves = st.leaves.filter(l => deptIds.has(l.employeeId));
 
-  const submit = () => {
+  const [attachFile, setAttachFile] = useState<File | null>(null);
+
+  const submit = async () => {
     if (mode === 'hourly' && !(hourlyHours > 0 && hourlyHours <= 16)) {
       alert('بازهٔ ساعتی معتبر نیست: ساعت پایان باید بعد از شروع و مجموع حداکثر ۱۶ ساعت باشد.');
       return;
+    }
+    // پیوست مدرک (استعلاجی): در حالت سوپابیس آپلود واقعی؛ در دمو فقط نام فایل نگه داشته می‌شود
+    let attachmentPath: string | null = null;
+    if (attachFile) {
+      try {
+        if (st.dataSource === 'supabase') {
+          const { uploadLeaveAttachment } = await import('../services/attachments');
+          const { useSessionStore } = await import('../store/session');
+          const hospitalId = useSessionStore.getState().hospitalId;
+          if (hospitalId) attachmentPath = await uploadLeaveAttachment(attachFile, hospitalId, st.currentEmployeeId);
+        } else {
+          attachmentPath = `demo:${attachFile.name}`;
+        }
+      } catch {
+        alert('آپلود مدرک ناموفق بود؛ درخواست بدون پیوست ثبت می‌شود.');
+      }
     }
     const req: LeaveRequest = {
       id: `lv-${Date.now()}`,
@@ -47,11 +65,26 @@ export default function LeavePage() {
         : isoFromJalali(J_YEAR, J_MONTH, toDay),
       isHourly: mode === 'hourly',
       hours: mode === 'hourly' ? hourlyHours : null,
+      attachmentPath,
       reason: reason || undefined,
       status: 'pending',
     };
     st.addLeave(req);
     setReason('');
+    setAttachFile(null);
+  };
+
+  const viewAttachment = async (l: LeaveRequest) => {
+    if (!l.attachmentPath || l.attachmentPath.startsWith('demo:')) {
+      alert(`پیوست (حالت دمو — فایل واقعی ذخیره نشده): ${l.attachmentPath?.slice(5) ?? ''}`);
+      return;
+    }
+    try {
+      const { getLeaveAttachmentUrl } = await import('../services/attachments');
+      window.open(await getLeaveAttachmentUrl(l.attachmentPath), '_blank');
+    } catch {
+      alert('باز کردن مدرک ناموفق بود.');
+    }
   };
 
   const runSim = (req: LeaveRequest) => {
@@ -100,6 +133,12 @@ export default function LeavePage() {
             </>
           )}
           <input placeholder="دلیل (اختیاری)" value={reason} onChange={e => setReason(e.target.value)} style={{ minWidth: 200 }} />
+          {type === 'sick' && (
+            <label style={{ fontSize: 13 }}>
+              مدرک پزشکی (اختیاری):{' '}
+              <input type="file" accept="image/*,.pdf" onChange={e => setAttachFile(e.target.files?.[0] ?? null)} />
+            </label>
+          )}
           <button onClick={submit}>ثبت درخواست</button>
         </div>
         <p style={{ fontSize: 12, color: '#68707a' }}>
@@ -116,7 +155,9 @@ export default function LeavePage() {
             <tr key={l.id} style={{ borderTop: '1px solid #eee' }}>
               <td style={{ padding: 8 }}>{nameOf(l.employeeId)}</td>
               <td>{LEAVE_TYPES.find(t => t.code === l.leaveTypeCode)?.name}</td>
-              <td>{l.isHourly ? `ساعتی — ${(l.hours ?? 0).toLocaleString('fa-IR')} ساعت در ${l.startISO}` : `${l.startISO} تا ${l.endISO}`}</td>
+              <td>{l.isHourly ? `ساعتی — ${(l.hours ?? 0).toLocaleString('fa-IR')} ساعت در ${l.startISO}` : `${l.startISO} تا ${l.endISO}`}
+                {l.attachmentPath && <button onClick={() => viewAttachment(l)} style={{ marginInlineStart: 8 }}>مشاهدهٔ مدرک</button>}
+              </td>
               <td>{STATUS_FA[l.status]}</td>
               <td style={{ display: 'flex', gap: 6, padding: 8 }}>
                 {l.status === 'pending' && <>

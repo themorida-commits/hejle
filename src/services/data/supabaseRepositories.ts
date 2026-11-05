@@ -55,6 +55,7 @@ const leave = (r: any): LeaveRecord => ({
   id: r.id, hospitalId: r.hospital_id, wardId: r.ward_id, employeeId: r.employee_id,
   leaveTypeCode: r.leave_types?.code ?? '', startDate: r.start_date, endDate: r.end_date,
   isHourly: r.is_hourly, hours: r.hours, reason: r.reason, status: r.status, reviewedBy: r.reviewed_by,
+  attachmentPath: r.attachment_path ?? null,
 });
 const workRecord = (r: any): WorkRecordRecord => ({
   id: r.id, hospitalId: r.hospital_id, wardId: r.ward_id, employeeId: r.employee_id,
@@ -162,6 +163,7 @@ export function createSupabaseRepositories(client: SupabaseClient): DataReposito
           hospital_id: rec.hospitalId, ward_id: rec.wardId, employee_id: rec.employeeId,
           leave_type_id: (lt as { id: string }).id, start_date: rec.startDate, end_date: rec.endDate,
           is_hourly: rec.isHourly, hours: rec.hours, reason: rec.reason,
+          attachment_path: rec.attachmentPath,
         }).select('*, leave_types(code)').single();
         if (error) throw new Error(`supabase write failed: ${error.message}`);
         return leave(data);

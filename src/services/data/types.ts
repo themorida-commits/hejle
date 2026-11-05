@@ -35,6 +35,8 @@ export interface LeaveRecord {
   startDate: string; endDate: string; isHourly: boolean; hours: number | null;
   reason: string | null; status: 'pending' | 'approved' | 'rejected' | 'cancelled';
   reviewedBy: string | null;
+  /** مسیر پیوست مدرک در باکت leave-attachments (مایگریشن ۰۰۰۸)؛ null یعنی بدون پیوست. */
+  attachmentPath: string | null;
 }
 export interface WorkRecordRecord {
   id: string; hospitalId: string; wardId: string; employeeId: string;

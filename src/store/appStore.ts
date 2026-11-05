@@ -13,7 +13,7 @@ import { isoFromJalali } from '../features/leave/leaveService';
 import { buildDemoSnapshot } from '../services/data/demoRepositories';
 import { createRepositories, currentDataSource, loadHospitalSnapshot } from '../services/data/index';
 import {
-  employeeToPersonnel, shiftTypeToDomain, entryToDomain, leaveToDomain, workRecordToDomain,
+  employeeToPersonnel, shiftTypeToDomain, entryToDomain, leaveToDomain, leaveRequestToDb, workRecordToDomain,
   nursingPackageToDomain, nursingRecordToDomain, nursingRecordToDb, personnelToEmployeeRecord,
 } from '../services/data/mappers';
 import type { HospitalSnapshot, KaranehProfileRecord } from '../services/data/types';
@@ -232,8 +232,26 @@ export const useAppStore = create<AppState>((set, get) => ({
       return { entries: [...st.entries.filter(e => !keys.has(`${e.personnelId}|${e.date}`)), ...list] };
     }),
   setScheduleStatus: (s) => set({ scheduleStatus: s }),
-  addLeave: (l) => set((st) => ({ leaves: [...st.leaves, l] })),
-  updateLeave: (l) => set((st) => ({ leaves: st.leaves.map(x => (x.id === l.id ? l : x)) })),
+  addLeave: (l) => {
+    set((st) => ({ leaves: [...st.leaves, l] }));
+    // در حالت سوپابیس روی دیتابیس هم نوشته می‌شود تا درخواست با رفرش گم نشود
+    if (get().dataSource === 'supabase') {
+      const session = useSessionStore.getState();
+      const wardId = get().personnel.find(p => p.id === l.employeeId)?.departmentId;
+      if (session.hospitalId && wardId) {
+        createRepositories('supabase').leave.createLeaveRequest(leaveRequestToDb(l, session.hospitalId, wardId))
+          .then(created => set((st) => ({ leaves: st.leaves.map(x => x.id === l.id ? leaveToDomain(created) : x) })))
+          .catch(err => console.error('leave create persist failed', err));
+      }
+    }
+  },
+  updateLeave: (l) => {
+    set((st) => ({ leaves: st.leaves.map(x => (x.id === l.id ? l : x)) }));
+    if (get().dataSource === 'supabase') {
+      createRepositories('supabase').leave.updateLeaveStatus(l.id, l.status, null)
+        .catch(err => console.error('leave status persist failed', err));
+    }
+  },
   addSwap: (s) => set((st) => ({ swaps: [...st.swaps, s] })),
   updateSwap: (s) => set((st) => ({ swaps: st.swaps.map(x => (x.id === s.id ? s : x)) })),
   setWorkRecords: (w) => set({ workRecords: w }),

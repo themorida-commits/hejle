@@ -5,6 +5,7 @@ import assert from 'node:assert/strict';
 import { fetchAllPages, createSupabaseRepositories } from '../../src/services/data/supabaseRepositories';
 import { createDemoRepositories, buildDemoSnapshot } from '../../src/services/data/demoRepositories';
 import { snapshotToState } from '../../src/store/appStore';
+import { leaveToDomain, leaveRequestToDb } from '../../src/services/data/mappers';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 test('D-1 fetchAllPages تا صفحهٔ کوتاه ادامه می‌دهد (۳ صفحه: ۵۰۰+۵۰۰+۲۰۰)', async () => {
@@ -151,6 +152,19 @@ test('D-K1 پروفایل کارانهٔ دمو: سید پیش‌فرض وزار
   assert.equal(profiles[0]!.nursingShare, 0.85);
   const state = snapshotToState(buildDemoSnapshot());
   assert.equal(state.karanehProfiles.length, 1);
+});
+
+test('D-A1 پیوست مرخصی: مسیر در رکورد دیتابیس و برگشت به دامنه حفظ می‌شود', async () => {
+  const demo = createDemoRepositories();
+  const path = 'h1/e1/1700000000000-note.pdf';
+  const dbRec = leaveRequestToDb(
+    { id: 'x', employeeId: 'e1', leaveTypeCode: 'sick', startISO: '2026-09-23', endISO: '2026-09-24', attachmentPath: path, status: 'pending' },
+    'h1', 'w1',
+  );
+  assert.equal(dbRec.attachmentPath, path);
+  const created = await demo.leave.createLeaveRequest(dbRec);
+  assert.equal(created.attachmentPath, path);
+  assert.equal(leaveToDomain(created).attachmentPath, path);
 });
 
 test('D-K2 پروفایل کارانه: ذخیره و جابه‌جایی پیش‌فرض — دقیقاً یک پیش‌فرض می‌ماند', async () => {

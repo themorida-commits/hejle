@@ -21,6 +21,8 @@ export interface LeaveRequest {
   /** مرخصی ساعتی (نسخهٔ ۱٫۱ اسپک): تک‌روزه، با تعداد ساعت؛ شیفت روز دست‌نخورده می‌ماند مگر ساعت‌ها کل شیفت را بپوشاند. */
   isHourly?: boolean;
   hours?: number | null;
+  /** مسیر پیوست مدرک (استعلاجی) در Storage؛ در حالت دمو فقط نام فایل نگه داشته می‌شود. */
+  attachmentPath?: string | null;
   reason?: string;
   status: LeaveStatus;
   reviewedBy?: string;
