@@ -23,10 +23,65 @@ export interface LeaveRequest {
   hours?: number | null;
   /** مسیر پیوست مدرک (استعلاجی) در Storage؛ در حالت دمو فقط نام فایل نگه داشته می‌شود. */
   attachmentPath?: string | null;
+  /** گام فعلی در زنجیرهٔ تأیید (از ۰) و تاریخچهٔ اقدام‌های زنجیره. */
+  approvalStep?: number;
+  approvals?: { step: number; role: string; by: string; decision: 'approved' | 'rejected'; at: string }[];
   reason?: string;
   status: LeaveStatus;
   reviewedBy?: string;
   reviewNote?: string;
+}
+
+// ── زنجیرهٔ تأیید چندمرحله‌ای (قابل‌پیکربندی به‌ازای بیمارستان) ────────────────
+// زنجیره ترتیب نقش‌هاست (مثلاً ['ward_manager','hospital_admin']). درخواست فقط
+// وقتی «تأییدشده» می‌شود که همهٔ گام‌ها به‌ترتیب تأیید شوند؛ رد در هر گام نهایی
+// است. مدیر بیمارستان به‌عنوان مقام مافوق می‌تواند در هر گامی اقدام کند.
+// تأیید مرخصی خود شخص در هیچ گامی ممکن نیست (قانون DR-002).
+
+export interface ChainActor { employeeId: string; role: string }
+
+export function chainStepRole(chain: string[], req: LeaveRequest): string | null {
+  if (req.status !== 'pending') return null;
+  return chain[req.approvalStep ?? 0] ?? null;
+}
+
+export function canActOnLeave(
+  chain: string[], req: LeaveRequest, actor: ChainActor,
+): { ok: boolean; reason?: string } {
+  if (req.status !== 'pending') return { ok: false, reason: 'این درخواست قبلاً تعیین تکلیف شده است.' };
+  if (actor.employeeId === req.employeeId) return { ok: false, reason: 'تأیید یا رد مرخصی خودتان ممکن نیست.' };
+  const needed = chainStepRole(chain, req);
+  if (!needed) return { ok: false, reason: 'گام فعالی برای این درخواست تعریف نشده است.' };
+  if (actor.role !== needed && actor.role !== 'hospital_admin') {
+    return { ok: false, reason: `این گام نوبت نقش «${needed}» است.` };
+  }
+  return { ok: true };
+}
+
+export function applyChainApproval(
+  chain: string[], req: LeaveRequest, actor: ChainActor, todayISO: string,
+): { request: LeaveRequest; finalApproved: boolean } {
+  const step = req.approvalStep ?? 0;
+  const approvals = [
+    ...(req.approvals ?? []),
+    { step, role: actor.role, by: actor.employeeId, decision: 'approved' as const, at: todayISO },
+  ];
+  const isFinal = step + 1 >= chain.length;
+  return {
+    request: { ...req, approvals, approvalStep: step + 1, status: isFinal ? 'approved' : 'pending', reviewedBy: actor.employeeId },
+    finalApproved: isFinal,
+  };
+}
+
+export function applyChainRejection(
+  _chain: string[], req: LeaveRequest, actor: ChainActor, todayISO: string,
+): { request: LeaveRequest } {
+  const step = req.approvalStep ?? 0;
+  const approvals = [
+    ...(req.approvals ?? []),
+    { step, role: actor.role, by: actor.employeeId, decision: 'rejected' as const, at: todayISO },
+  ];
+  return { request: { ...req, approvals, status: 'rejected', reviewedBy: actor.employeeId } };
 }
 
 export const LEAVE_TYPES = [

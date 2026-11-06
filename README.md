@@ -1,32 +1,35 @@
-# React + TypeScript + Vite
+# حجله (Hejleh) — لایهٔ نیروی انسانی بالینی بیمارستان
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+برنامه‌ریزی شیفت، مرخصی، حضور و غیاب، ثبت خدمات پرستاری، کارکرد و کارانه برای بیمارستان‌ها — بین HRIS عمومی و HIS بیمارستانی. قانون حاکم بر هسته: **قانون ارتقای بهره‌وری کارکنان بالینی** به‌صورت موتور قواعد پارامتریک، و هیچ تصمیم برگشت‌ناپذیری با AI گرفته نمی‌شود (سند تصمیم: NUR-DR-2026-002).
 
-Currently, two official plugins are available:
+## پشته
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+React 19 + Vite + TypeScript (strict) · Supabase (Postgres + RLS عضویتی + Auth) · استقرار: Netlify (اصلی) / Azure (موقت). حل‌کنندهٔ برنامهٔ شیفت یک هستهٔ قطعیِ خالص است (Web Worker) که بدون تغییر از نسخهٔ قبلی منتقل شده و با ۱۴ تست طلایی قفل شده است.
 
-## React Compiler
+## شروع سریع
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+npm run dev          # حالت دمو به‌صورت پیش‌فرض (دادهٔ نمونهٔ توکار)
+npm test             # تست‌های واحد + طلایی (node:test)
+npm run test:unit    # vitest
+npm run test:rls     # سوییت SQL محلی: زنجیرهٔ کامل مایگریشن‌ها از صفر + تست‌های RLS (نیازمند Postgres محلی)
+npm run build        # tsc -b + vite build
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+حالت واقعی: `.env.local` با `VITE_DATA_SOURCE=supabase` و کلیدهای پروژهٔ Supabase؛ زمینهٔ سازمانی کاربر از عضویت‌های خودش می‌آید (env فقط پشتیبان پایلوت است).
+
+## نقشهٔ ریپو
+
+- `src/core/` — هستهٔ قطعی: حل‌کننده، محاسبهٔ موظفی، تقویم جلالی، موتور قواعد (۱۱ قاعدهٔ قانون بهره‌وری با پیام فارسی)
+- `src/features/` — سرویس‌های دامنه: مرخصی (با شبیه‌سازی پوشش و زنجیرهٔ تأیید)، کارکرد، حضور، خدمات پرستاری، کارانه، مدارک
+- `src/services/data/` — لایهٔ داده: قرارداد ریپازیتوری + دو پیاده‌سازی (demo / supabase)؛ تنها جایی که با دیتابیس حرف می‌زند
+- `src/pages/` — صفحات؛ `src/store/` — استور اپ + استور نشست
+- `supabase/migrations/` — اسکیمای نسخه‌دار (تا ۰۰۰۹)؛ `supabase/tests/` — تست‌های SQL؛ `supabase/onboarding/` — اتصال کاربر به پروفایل/عضویت/کارمند
+- `supabase/seed.sql` — بیمارستان دمو (۴۲ پرسنل، ۳ بخش)
+- `tools/bootstrap/` — ساخت بیمارستان تازه از کانفیگ + CSV پرسنل (خروجی: SQL ایدمپوتنت؛ پروفایل مرخصی standard/army)
+- `netlify/functions/` — پروکسی AI (کلید فقط سمت سرور)
+
+## اسناد
+
+اسناد محصول (اسپک، ران‌بوک عملیات، دیکشنری داده، راهنماهای کاربر و مدیر، گزارش‌ها) در پوشهٔ اسناد پروژه نزد مالک محصول نگه داشته می‌شوند؛ دیکشنری دادهٔ v2 و ران‌بوک عملیات مرجع‌های زندهٔ این ریپو هستند. تصمیم‌های قفل: DR-001 (وضعیت و شراکت) و DR-002 (اسکوپ و مسیر بازنویسی).

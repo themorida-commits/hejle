@@ -6,6 +6,7 @@ import type {
   KaranehProfileRecord, NursingPackageRecord, NursingServiceDbRecord,
   ScheduleRecord, ShiftTypeRecord, WardRecord, WorkRecordRecord,
 } from './types';
+import { normalizeHospitalSettings, hospitalSettingsToJson } from './settings';
 
 const PAGE = 500;
 
@@ -56,6 +57,7 @@ const leave = (r: any): LeaveRecord => ({
   leaveTypeCode: r.leave_types?.code ?? '', startDate: r.start_date, endDate: r.end_date,
   isHourly: r.is_hourly, hours: r.hours, reason: r.reason, status: r.status, reviewedBy: r.reviewed_by,
   attachmentPath: r.attachment_path ?? null,
+  approvalStep: r.approval_step ?? 0, approvals: r.approvals ?? [],
 });
 const workRecord = (r: any): WorkRecordRecord => ({
   id: r.id, hospitalId: r.hospital_id, wardId: r.ward_id, employeeId: r.employee_id,
@@ -173,6 +175,14 @@ export function createSupabaseRepositories(client: SupabaseClient): DataReposito
           .update({ status, reviewed_by: reviewedBy, reviewed_at: new Date().toISOString() }).eq('id', id);
         if (error) throw new Error(`supabase write failed: ${error.message}`);
       },
+      async updateApproval(id, patch) {
+        const { error } = await client.from('leave_requests')
+          .update({
+            status: patch.status, approval_step: patch.approvalStep, approvals: patch.approvals,
+            reviewed_at: new Date().toISOString(),
+          }).eq('id', id);
+        if (error) throw new Error(`supabase write failed: ${error.message}`);
+      },
     },
     nursing: {
       async listPackages(hospitalId) {
@@ -245,6 +255,21 @@ export function createSupabaseRepositories(client: SupabaseClient): DataReposito
         if (on.error) throw new Error(`supabase write failed: ${on.error.message}`);
       },
     },
+    settings: {
+      async getSettings(hospitalId) {
+        const { data, error } = await client.from('hospitals').select('settings').eq('id', hospitalId).single();
+        if (error) return normalizeHospitalSettings(null);
+        return normalizeHospitalSettings((data as { settings?: unknown })?.settings);
+      },
+      async saveSettings(hospitalId, settings) {
+        // ادغام با کلیدهای دیگر settings تا چیزی از قلم نیفتد؛ نوشتن طبق RLS فقط hospital_admin
+        const { data } = await client.from('hospitals').select('settings').eq('id', hospitalId).single();
+        const current = ((data as { settings?: Record<string, unknown> } | null)?.settings ?? {}) as Record<string, unknown>;
+        const merged = { ...current, ...hospitalSettingsToJson(settings) };
+        const { error } = await client.from('hospitals').update({ settings: merged }).eq('id', hospitalId);
+        if (error) throw new Error(`supabase write failed: ${error.message}`);
+      },
+    },
   };
 }
 
@@ -253,7 +278,7 @@ export async function loadHospitalSnapshot(
   repos: DataRepositories,
   args: { hospitalId: string; wardId: string; jYear: number; jMonth: number },
 ) {
-  const [wards, employees, shiftTypes, leaveTypes, schedule, leaves, workRecords, nursingPackages, nursingRecords, karanehProfiles] = await Promise.all([
+  const [wards, employees, shiftTypes, leaveTypes, schedule, leaves, workRecords, nursingPackages, nursingRecords, karanehProfiles, settings] = await Promise.all([
     repos.org.listWards(args.hospitalId),
     repos.org.listEmployees(args.wardId),
     repos.org.listShiftTypes(args.hospitalId),
@@ -264,7 +289,8 @@ export async function loadHospitalSnapshot(
     repos.nursing.listPackages(args.hospitalId),
     repos.nursing.listRecords(args.wardId),
     repos.profiles.listProfiles(args.hospitalId),
+    repos.settings.getSettings(args.hospitalId),
   ]);
   const entries = schedule ? await repos.roster.listEntries(schedule.id) : [];
-  return { wards, employees, shiftTypes, leaveTypes, schedule, entries, leaves, workRecords, nursingPackages, nursingRecords, karanehProfiles };
+  return { wards, employees, shiftTypes, leaveTypes, schedule, entries, leaves, workRecords, nursingPackages, nursingRecords, karanehProfiles, settings };
 }

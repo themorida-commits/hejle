@@ -12,6 +12,7 @@ import KaranehPage from '../pages/KaranehPage';
 import NursingServicesPage from '../pages/NursingServicesPage';
 import AccreditationPage from '../pages/AccreditationPage';
 import AiAssistantPage from '../pages/AiAssistantPage';
+import SettingsPage from '../pages/SettingsPage';
 
 // basename از BASE_URL وایت می‌آید: در بیلد عادی «/» و در بیلد زیرمسیر
 // (مثل دیپلوی موقت Azure زیر /hejleh/) همان زیرمسیر — بدون نیاز به تغییر کد.
@@ -35,6 +36,7 @@ export const router = createBrowserRouter([
       { path: '/nursing-services', element: <NursingServicesPage /> },
       { path: '/accreditation', element: <AccreditationPage /> },
       { path: '/ai', element: <AiAssistantPage /> },
+      { path: '/settings', element: <SettingsPage /> },
       { path: '/self-service', element: <SelfServicePage /> },
     ],
   },

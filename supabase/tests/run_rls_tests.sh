@@ -16,7 +16,8 @@ psql -d "$DB" -v ON_ERROR_STOP=1 -q \
   -f supabase/migrations/20261104000005_nursing_services.sql \
   -f supabase/migrations/20261105000006_karaneh_profiles.sql \
   -f supabase/migrations/20261105000007_special_leave_types.sql \
-  -f supabase/migrations/20261105000008_leave_attachments.sql
+  -f supabase/migrations/20261105000008_leave_attachments.sql \
+  -f supabase/migrations/20261106000009_approval_chain.sql
 psql -d "$DB" -f supabase/tests/01_rls_leak_tests.sql
 psql -d "$DB" -f supabase/tests/02_audit_trigger_tests.sql
 # تست‌های ۰۳ و ۰۴ روی صحنهٔ سید دمو اجرا می‌شوند (کارمند/بخش واقعیِ سید لازم دارند)
@@ -26,6 +27,7 @@ psql -d "$DB" -f supabase/tests/04_credentials_tests.sql
 psql -d "$DB" -f supabase/tests/05_nursing_services_tests.sql
 psql -d "$DB" -f supabase/tests/06_karaneh_profiles_tests.sql
 psql -d "$DB" -f supabase/tests/07_leave_attachments_tests.sql
+psql -d "$DB" -f supabase/tests/08_approval_chain_tests.sql
 # تست ابزار Bootstrap: خروجی سمپل روی همین دیتابیس اعمال و شمارش‌ها سنجیده می‌شود
 node tools/bootstrap/bootstrap-hospital.mjs --config tools/bootstrap/sample/hospital.json \
   --personnel tools/bootstrap/sample/staff.csv --out /tmp/bootstrap-test.sql >/dev/null

@@ -124,6 +124,30 @@ export function buildBootstrapSql(config, personnelCsvText) {
   out.push(`-- خروجی ابزار Bootstrap حجله برای «${config.name}» — ایدمپوتنت؛ اجرای دوباره بی‌اثر است.`);
   out.push('begin;');
   out.push(`insert into public.hospitals (id, name, code) values (${q(hospitalId)}, ${q(config.name)}, ${q(config.code)}) on conflict (id) do nothing;`);
+  // تنظیمات بیمارستان بر حسب پروفایل: زنجیرهٔ تأیید + جدول کاهش ساعت (معادل ماهانهٔ جدول هفتگی قانون بهره‌وری)
+  const settings = config.leaveProfile === 'army'
+    ? {
+        leaveApprovalChain: ['ward_manager', 'hospital_admin'],
+        globalDuty: {
+          employmentStatuses: [
+            { status: 'رسمی', baseHours: 176 }, { status: 'قراردادی', baseHours: 176 },
+            { status: 'طرحی', baseHours: 176 }, { status: 'شرکتی', baseHours: 176 },
+          ],
+          roleDeductions: [
+            { role: 'سرپرستار', deduction: 0 }, { role: 'پرستار', deduction: 0 },
+            { role: 'بهیار', deduction: 0 }, { role: 'بی‌هوشی', deduction: 0 }, { role: 'اتاق عمل', deduction: 0 },
+          ],
+          // جدول وزارت بهداشت: هفتگی ۱/۲/۳/۴/۵ ساعت برای سابقهٔ ۰–۴/۴–۸/۸–۱۲/۱۲–۱۶/۱۶+ سال ← معادل ماهانه (×۴٫۳۳)
+          seniorityDeductions: [
+            { minMonths: 0, maxMonths: 48, deduction: 4.33 }, { minMonths: 48, maxMonths: 96, deduction: 8.67 },
+            { minMonths: 96, maxMonths: 144, deduction: 13 }, { minMonths: 144, maxMonths: 192, deduction: 17.33 },
+            { minMonths: 192, maxMonths: 600, deduction: 21.67 },
+          ],
+          reminderLeadDays: 1, defaultReminderMinutes: 60,
+        },
+      }
+    : { leaveApprovalChain: ['ward_manager'] };
+  out.push(`update public.hospitals set settings = ${q(JSON.stringify(settings))}::jsonb where id = ${q(hospitalId)};`);
   for (const w of config.wards) {
     out.push(`insert into public.wards (id, hospital_id, name, code) values (${q(wardIdByKey.get(w.name))}, ${q(hospitalId)}, ${q(w.name)}, ${w.code ? q(w.code) : 'null'}) on conflict (id) do nothing;`);
   }

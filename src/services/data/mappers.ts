@@ -84,6 +84,8 @@ export function leaveToDomain(l: LeaveRecord): LeaveRequest {
     isHourly: l.isHourly,
     hours: l.hours,
     attachmentPath: l.attachmentPath ?? undefined,
+    approvalStep: l.approvalStep ?? 0,
+    approvals: l.approvals ?? [],
     reason: l.reason ?? undefined,
     status: l.status,
     reviewedBy: l.reviewedBy ?? undefined,
@@ -93,7 +95,7 @@ export function leaveToDomain(l: LeaveRecord): LeaveRequest {
 /** درخواست دامنه → رکورد لایهٔ داده برای ساخت در دیتابیس (بدون id و وضعیت و بازبین). */
 export function leaveRequestToDb(
   req: LeaveRequest, hospitalId: string, wardId: string,
-): Omit<LeaveRecord, 'id' | 'status' | 'reviewedBy'> {
+): Omit<LeaveRecord, 'id' | 'status' | 'reviewedBy' | 'approvalStep' | 'approvals'> {
   return {
     hospitalId, wardId, employeeId: req.employeeId, leaveTypeCode: req.leaveTypeCode,
     startDate: req.startISO, endDate: req.endISO,

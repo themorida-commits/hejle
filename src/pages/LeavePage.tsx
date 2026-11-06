@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react';
 import { useAppStore, J_YEAR, J_MONTH } from '../store/appStore';
+import { useSessionStore } from '../store/session';
 import {
-  LEAVE_TYPES, approveLeave, rejectLeave, simulateLeaveCoverage,
+  LEAVE_TYPES, approveLeave, simulateLeaveCoverage,
+  canActOnLeave, applyChainApproval, applyChainRejection, chainStepRole,
   isoFromJalali, leaveDurationDays, type LeaveRequest, type CoverageSimulation,
 } from '../features/leave/leaveService';
 
@@ -9,9 +11,16 @@ const MINIMUMS = { morning: 3, evening: 2, night: 1 };
 const STATUS_FA: Record<LeaveRequest['status'], string> = {
   pending: 'در انتظار', approved: 'تأییدشده', rejected: 'ردشده', cancelled: 'لغوشده',
 };
+export const ROLE_FA: Record<string, string> = {
+  ward_manager: 'سرپرستار بخش', hospital_admin: 'مدیر بیمارستان', hr_admin: 'مدیر منابع انسانی', staff: 'پرستار',
+};
 
 export default function LeavePage() {
   const st = useAppStore();
+  const sessionRole = useSessionStore(s => s.role);
+  // نقش اقدام‌کننده: در سوپابیس از نشست واقعی؛ در دمو از نقش نمایشی
+  const actorRole = st.dataSource === 'supabase' ? (sessionRole ?? 'staff') : st.viewRole;
+  const actor = { employeeId: st.currentEmployeeId, role: actorRole };
   const [type, setType] = useState('annual');
   const [fromDay, setFromDay] = useState(10);
   const [toDay, setToDay] = useState(12);
@@ -96,17 +105,27 @@ export default function LeavePage() {
   };
 
   const approve = (req: LeaveRequest) => {
+    const verdict = canActOnLeave(st.approvalChain, req, actor);
+    if (!verdict.ok) { alert(verdict.reason); return; }
+    const today = new Date().toISOString().slice(0, 10);
+    const step = applyChainApproval(st.approvalChain, req, actor, today);
+    if (!step.finalApproved) {
+      // گام میانی زنجیره: فقط پیشرفت گام ثبت می‌شود؛ روس‌تر و مانده در گام نهایی دست می‌خورند
+      st.updateLeave(step.request);
+      return;
+    }
     const res = approveLeave({ request: req, approverEmployeeId: st.currentEmployeeId, entries: st.entries, shiftTypes: st.shiftTypes });
     if (!res.ok) { alert(res.error); return; }
-    st.updateLeave(res.request);
+    st.updateLeave({ ...res.request, approvals: step.request.approvals, approvalStep: step.request.approvalStep });
     st.setEntries(res.entryPatch);
     st.adjustBalance(req.employeeId, leaveDurationDays(req));
   };
 
   const reject = (req: LeaveRequest) => {
-    const res = rejectLeave({ request: req, approverEmployeeId: st.currentEmployeeId });
-    if (!res.ok) { alert(res.error); return; }
-    st.updateLeave(res.request);
+    const verdict = canActOnLeave(st.approvalChain, req, actor);
+    if (!verdict.ok) { alert(verdict.reason); return; }
+    const today = new Date().toISOString().slice(0, 10);
+    st.updateLeave(applyChainRejection(st.approvalChain, req, actor, today).request);
   };
 
   return (
@@ -158,11 +177,24 @@ export default function LeavePage() {
               <td>{l.isHourly ? `ساعتی — ${(l.hours ?? 0).toLocaleString('fa-IR')} ساعت در ${l.startISO}` : `${l.startISO} تا ${l.endISO}`}
                 {l.attachmentPath && <button onClick={() => viewAttachment(l)} style={{ marginInlineStart: 8 }}>مشاهدهٔ مدرک</button>}
               </td>
-              <td>{STATUS_FA[l.status]}</td>
+              <td>{STATUS_FA[l.status]}
+                {l.status === 'pending' && st.approvalChain.length > 1 && (
+                  <div style={{ fontSize: 12, color: '#68707a' }}>
+                    گام {((l.approvalStep ?? 0) + 1).toLocaleString('fa-IR')} از {st.approvalChain.length.toLocaleString('fa-IR')} — نوبت {ROLE_FA[chainStepRole(st.approvalChain, l) ?? ''] ?? ''}
+                  </div>
+                )}
+                {(l.approvals?.length ?? 0) > 0 && (
+                  <div style={{ fontSize: 12, color: '#68707a' }}>
+                    {l.approvals!.map((a, i) => (
+                      <div key={i}>{ROLE_FA[a.role] ?? a.role}: {a.decision === 'approved' ? 'تأیید' : 'رد'} ({a.at})</div>
+                    ))}
+                  </div>
+                )}
+              </td>
               <td style={{ display: 'flex', gap: 6, padding: 8 }}>
                 {l.status === 'pending' && <>
                   <button onClick={() => runSim(l)}>شبیه‌سازی پوشش</button>
-                  {st.viewRole === 'ward_manager' && <>
+                  {canActOnLeave(st.approvalChain, l, actor).ok && <>
                     <button onClick={() => approve(l)}>تأیید</button>
                     <button onClick={() => reject(l)}>رد</button>
                   </>}

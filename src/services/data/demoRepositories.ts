@@ -6,6 +6,7 @@ import { generateScheduleDeterministic } from '../../core/scheduling/schedulerSo
 import { LEAVE_TYPES } from '../../features/leave/leaveService';
 import { isoFromJalali } from '../../features/leave/leaveService';
 import { getDaysInJalaliMonth } from '../../core/jalali';
+import { defaultHospitalSettings } from './settings';
 import type {
   DataRepositories, EntryRecord, HospitalSnapshot, KaranehProfileRecord, LeaveRecord,
   NursingServiceDbRecord, ScheduleRecord, WorkRecordRecord,
@@ -75,6 +76,7 @@ export function buildDemoSnapshot(jYear = 1405, jMonth = 7): HospitalSnapshot {
       presetId: 'moh', nursingShare: 0.85, onCallCoef: 4, kRial: 201_000,
       isDefault: true, updatedAt: new Date().toISOString(),
     }],
+    settings: defaultHospitalSettings(),
   };
 }
 
@@ -149,13 +151,17 @@ export function createDemoRepositories(seed: HospitalSnapshot = buildDemoSnapsho
     leave: {
       async listLeaveRequests(wardId) { return state.leaves.filter(l => l.wardId === wardId); },
       async createLeaveRequest(rec) {
-        const created: LeaveRecord = { ...rec, id: `demo-leave-${++seq}`, status: 'pending', reviewedBy: null };
+        const created: LeaveRecord = { ...rec, id: `demo-leave-${++seq}`, status: 'pending', reviewedBy: null, approvalStep: 0, approvals: [] };
         state.leaves.push(created);
         return created;
       },
       async updateLeaveStatus(id, status, reviewedBy) {
         const l = state.leaves.find(x => x.id === id);
         if (l) { l.status = status; l.reviewedBy = reviewedBy; }
+      },
+      async updateApproval(id, patch) {
+        const l = state.leaves.find(x => x.id === id);
+        if (l) { l.status = patch.status; l.approvalStep = patch.approvalStep; l.approvals = patch.approvals; }
       },
     },
     workRecords: {
@@ -183,6 +189,10 @@ export function createDemoRepositories(seed: HospitalSnapshot = buildDemoSnapsho
       async setDefaultProfile(hospitalId, id) {
         for (const p of state.karanehProfiles) if (p.hospitalId === hospitalId) p.isDefault = p.id === id;
       },
+    },
+    settings: {
+      async getSettings() { return structuredClone(state.settings); },
+      async saveSettings(_hospitalId, settings) { state.settings = structuredClone(settings); },
     },
   };
 }

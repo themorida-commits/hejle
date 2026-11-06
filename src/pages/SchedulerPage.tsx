@@ -5,7 +5,7 @@ import { detectConflicts } from '../core/scheduling/conflictDetector';
 import { DEFAULT_RULES } from '../core/defaults';
 import { buildEmployeeFacts, evaluateRules, DEFAULT_RULE_CONFIGS } from '../core/rules/engine';
 import { scheduleSolver } from '../services/scheduleSolverClient';
-import { DEFAULT_AI_SETTINGS, DEFAULT_GLOBAL_SETTINGS } from '../core/defaults';
+import { DEFAULT_AI_SETTINGS } from '../core/defaults';
 import { credentialGate } from '../features/credentials/credentialService';
 import { buildSymbolResolver, parseRosterGridCsv, rosterGridTemplateCsv, type RosterImportResult } from '../features/import/rosterImport';
 
@@ -125,7 +125,7 @@ export default function SchedulerPage() {
     try {
       const fresh = await scheduleSolver.solve({
         personnel: deptPeople.filter(p => !blockedIds.has(p.id)), shiftTypes: st.shiftTypes, currentSchedule: [], requests: st.requests,
-        rules: DEFAULT_RULES, aiSettings: DEFAULT_AI_SETTINGS, globalSettings: DEFAULT_GLOBAL_SETTINGS,
+        rules: DEFAULT_RULES, aiSettings: DEFAULT_AI_SETTINGS, globalSettings: st.globalDutySettings,
         jYear: J_YEAR, jMonth: J_MONTH,
       });
       const others = st.entries.filter(e => !deptIds.has(e.personnelId));

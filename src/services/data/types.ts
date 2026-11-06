@@ -4,6 +4,25 @@
 // همین اینترفیس‌ها سوارند؛ منبع داده (demo | supabase) از env انتخاب می‌شود.
 // ─────────────────────────────────────────────────────────────────────────────
 
+import type { GlobalDutySettings } from '../../core/types';
+
+/** یک اقدام در زنجیرهٔ تأیید مرخصی (مایگریشن ۰۰۰۹). */
+export interface LeaveApprovalEntry {
+  step: number;
+  role: string;
+  by: string;
+  decision: 'approved' | 'rejected';
+  at: string;
+}
+
+/** تنظیمات سطح بیمارستان از hospitals.settings (نرمال‌شده در settings.ts). */
+export interface HospitalSettingsRecord {
+  /** ترتیب نقش‌های تأییدکنندهٔ مرخصی؛ پیش‌فرض فقط سرپرستار. */
+  approvalChain: string[];
+  /** تنظیمات موظفی شامل جدول کاهش ساعت سابقه (Q2) — به‌ازای بیمارستان. */
+  globalDuty: GlobalDutySettings;
+}
+
 export interface WardRecord {
   id: string; hospitalId: string; name: string; code: string | null; isActive: boolean;
 }
@@ -37,6 +56,9 @@ export interface LeaveRecord {
   reviewedBy: string | null;
   /** مسیر پیوست مدرک در باکت leave-attachments (مایگریشن ۰۰۰۸)؛ null یعنی بدون پیوست. */
   attachmentPath: string | null;
+  /** گام فعلی زنجیرهٔ تأیید و تاریخچهٔ اقدام‌ها (مایگریشن ۰۰۰۹). */
+  approvalStep: number;
+  approvals: LeaveApprovalEntry[];
 }
 export interface WorkRecordRecord {
   id: string; hospitalId: string; wardId: string; employeeId: string;
@@ -77,8 +99,15 @@ export interface RosterRepository {
 }
 export interface LeaveRepository {
   listLeaveRequests(wardId: string): Promise<LeaveRecord[]>;
-  createLeaveRequest(rec: Omit<LeaveRecord, 'id' | 'status' | 'reviewedBy'>): Promise<LeaveRecord>;
+  createLeaveRequest(rec: Omit<LeaveRecord, 'id' | 'status' | 'reviewedBy' | 'approvalStep' | 'approvals'>): Promise<LeaveRecord>;
   updateLeaveStatus(id: string, status: LeaveRecord['status'], reviewedBy: string | null): Promise<void>;
+  /** ثبت یک اقدام زنجیرهٔ تأیید (گام + تاریخچه + وضعیت نهایی احتمالی). */
+  updateApproval(id: string, patch: { status: LeaveRecord['status']; approvalStep: number; approvals: LeaveApprovalEntry[] }): Promise<void>;
+}
+
+export interface SettingsRepository {
+  getSettings(hospitalId: string): Promise<HospitalSettingsRecord>;
+  saveSettings(hospitalId: string, settings: HospitalSettingsRecord): Promise<void>;
 }
 export interface WorkRecordRepository {
   listWorkRecords(wardId: string, jYear: number, jMonth: number): Promise<WorkRecordRecord[]>;
@@ -105,6 +134,7 @@ export interface DataRepositories {
   workRecords: WorkRecordRepository;
   nursing: NursingRepository;
   profiles: KaranehProfileRepository;
+  settings: SettingsRepository;
 }
 
 /** عکس کامل دادهٔ یک بیمارستان برای هیدراته‌کردن استور. */
@@ -120,4 +150,5 @@ export interface HospitalSnapshot {
   nursingPackages: NursingPackageRecord[];
   nursingRecords: NursingServiceDbRecord[];
   karanehProfiles: KaranehProfileRecord[];
+  settings: HospitalSettingsRecord;
 }

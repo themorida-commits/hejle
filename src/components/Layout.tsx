@@ -15,6 +15,7 @@ const links = [
   { to: '/nursing-services', label: 'خدمات پرستاری' },
   { to: '/accreditation', label: 'اعتباربخشی' },
   { to: '/ai', label: 'دستیار AI' },
+  { to: '/settings', label: 'تنظیمات بیمارستان' },
   { to: '/self-service', label: 'سلف‌سرویس پرستار' },
 ];
 

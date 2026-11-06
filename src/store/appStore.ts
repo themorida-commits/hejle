@@ -16,7 +16,8 @@ import {
   employeeToPersonnel, shiftTypeToDomain, entryToDomain, leaveToDomain, leaveRequestToDb, workRecordToDomain,
   nursingPackageToDomain, nursingRecordToDomain, nursingRecordToDb, personnelToEmployeeRecord,
 } from '../services/data/mappers';
-import type { HospitalSnapshot, KaranehProfileRecord } from '../services/data/types';
+import type { HospitalSnapshot, HospitalSettingsRecord, KaranehProfileRecord } from '../services/data/types';
+import type { GlobalDutySettings } from '../core/types';
 import { useSessionStore } from './session';
 
 // استور فاز ۱ — از لایهٔ داده تغذیه می‌شود: حالت دمو از DemoRepositories و
@@ -32,6 +33,7 @@ export function snapshotToState(snap: HospitalSnapshot) {
     const p = personnel.find(x => x.id === id);
     return { name: p?.name ?? id, code: p?.personnelCode ?? '' };
   };
+  const annualQuota = snap.leaveTypes.find(t => t.code === 'annual')?.annualQuotaDays ?? 26;
   return {
     departments: snap.wards.map(w => ({ id: w.id, name: w.name, themeColor: '' })),
     personnel,
@@ -43,6 +45,10 @@ export function snapshotToState(snap: HospitalSnapshot) {
     nursingPackages: snap.nursingPackages.map(nursingPackageToDomain),
     nursingRecords: snap.nursingRecords.map(nursingRecordToDomain),
     karanehProfiles: snap.karanehProfiles,
+    approvalChain: snap.settings.approvalChain,
+    globalDutySettings: snap.settings.globalDuty,
+    leaveBalances: Object.fromEntries(personnel.map(p => [p.id, { entitled: annualQuota, used: 0 }])),
+    dutyByEmployee: new Map(personnel.map(p => [p.id, calculateDutyHours(p, snap.settings.globalDuty, 0, J_YEAR, J_MONTH)])),
   };
 }
 
@@ -59,7 +65,7 @@ export function mergeWardIntoState(
   const newIds = new Set(mapped.personnel.map(p => p.id));
   const duty = new Map(cur.dutyByEmployee);
   for (const p of mapped.personnel) {
-    if (!duty.has(p.id)) duty.set(p.id, calculateDutyHours(p, DEFAULT_GLOBAL_SETTINGS, 0, J_YEAR, J_MONTH));
+    if (!duty.has(p.id)) duty.set(p.id, calculateDutyHours(p, snap.settings.globalDuty, 0, J_YEAR, J_MONTH));
   }
   const balances = { ...cur.leaveBalances };
   // سهمیهٔ استحقاقی از خود بیمارستان می‌آید (مثلاً ۳۰ روز مادهٔ ۹۴ قانون ارتش)؛ ۲۶ فقط fallback است
@@ -120,6 +126,11 @@ interface AppState {
   addPersonnelBulk: (list: Personnel[]) => void;
   importEntries: (list: ScheduleEntry[]) => void;
   karanehProfiles: KaranehProfileRecord[];
+  /** زنجیرهٔ تأیید مرخصی این بیمارستان (از تنظیمات بیمارستان). */
+  approvalChain: string[];
+  /** تنظیمات موظفی این بیمارستان شامل جدول کاهش ساعت (از تنظیمات بیمارستان). */
+  globalDutySettings: GlobalDutySettings;
+  saveHospitalSettings: (s: HospitalSettingsRecord) => Promise<boolean>;
   saveKaranehProfile: (rec: KaranehProfileRecord) => Promise<boolean>;
   setDefaultKaranehProfile: (id: string) => Promise<void>;
 }
@@ -196,6 +207,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const partial: HospitalSnapshot = {
       wards: [], employees, shiftTypes: [], leaveTypes: [], schedule, entries, leaves, workRecords,
       nursingPackages, nursingRecords, karanehProfiles: [],
+      settings: { approvalChain: st.approvalChain, globalDuty: st.globalDutySettings },
     };
     const cur = get();
     const merged = mergeWardIntoState(cur, partial);
@@ -250,8 +262,9 @@ export const useAppStore = create<AppState>((set, get) => ({
   updateLeave: (l) => {
     set((st) => ({ leaves: st.leaves.map(x => (x.id === l.id ? l : x)) }));
     if (get().dataSource === 'supabase') {
-      createRepositories('supabase').leave.updateLeaveStatus(l.id, l.status, null)
-        .catch(err => console.error('leave status persist failed', err));
+      createRepositories('supabase').leave.updateApproval(l.id, {
+        status: l.status, approvalStep: l.approvalStep ?? 0, approvals: l.approvals ?? [],
+      }).catch(err => console.error('leave approval persist failed', err));
     }
   },
   addSwap: (s) => set((st) => ({ swaps: [...st.swaps, s] })),
@@ -263,6 +276,24 @@ export const useAppStore = create<AppState>((set, get) => ({
   nursingRecords: demoState.nursingRecords,
   nursingPackages: demoState.nursingPackages,
   karanehProfiles: demoState.karanehProfiles,
+  approvalChain: demoState.approvalChain,
+  globalDutySettings: demoState.globalDutySettings,
+  saveHospitalSettings: async (s) => {
+    try {
+      if (get().dataSource === 'supabase') {
+        const hospitalId = useSessionStore.getState().hospitalId;
+        if (!hospitalId) return false;
+        await createRepositories('supabase').settings.saveSettings(hospitalId, s);
+      } else {
+        await createRepositories('demo').settings.saveSettings('demo', s);
+      }
+      set({ approvalChain: s.approvalChain, globalDutySettings: s.globalDuty });
+      return true;
+    } catch (err) {
+      console.error('hospital settings save failed', err);
+      return false;
+    }
+  },
   saveKaranehProfile: async (rec) => {
     try {
       const saved = await createRepositories(get().dataSource).profiles.saveProfile(rec);

@@ -1,7 +1,6 @@
 import { useAppStore, J_YEAR, J_MONTH } from '../store/appStore';
 import { computeWorkRecords, workRecordsToCsv, summarizeWardWork, wardSummaryToCsv } from '../features/workRecords/workRecordService';
 import { reconcileAttendance, summarizeAttendance } from '../features/attendance/attendanceService';
-import { DEFAULT_GLOBAL_SETTINGS } from '../core/defaults';
 import { useMemo } from 'react';
 
 export default function WorkRecordsPage() {
@@ -39,7 +38,7 @@ export default function WorkRecordsPage() {
       ...st.workRecords.filter(r => !deptIds.has(r.employeeId)),
       ...computeWorkRecords({
         personnel: deptPeople, entries: deptEntries, shiftTypes: st.shiftTypes,
-        jYear: J_YEAR, jMonth: J_MONTH, globalSettings: DEFAULT_GLOBAL_SETTINGS,
+        jYear: J_YEAR, jMonth: J_MONTH, globalSettings: st.globalDutySettings,
         leaveDatesByEmployee: leaveMap, attendanceSummaries,
         hourlyLeaves: st.leaves
           .filter(l => l.status === 'approved' && l.isHourly && deptIds.has(l.employeeId))
