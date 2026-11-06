@@ -19,6 +19,9 @@ export interface LeaveApprovalEntry {
 export interface HospitalSettingsRecord {
   /** ترتیب نقش‌های تأییدکنندهٔ مرخصی؛ پیش‌فرض فقط سرپرستار. */
   approvalChain: string[];
+  /** پیش‌فرض بخشی‌ای که زنجیره از آن شروع شده (government/private/army)؛ null یعنی سفارشی.
+   *  لازم است چون زنجیرهٔ دولتی و ارتش نقش‌های یکسان دارند و از روی خود زنجیره قابل تشخیص نیستند. */
+  chainPresetId: 'government' | 'private' | 'army' | null;
   /** تنظیمات موظفی شامل جدول کاهش ساعت سابقه (Q2) — به‌ازای بیمارستان. */
   globalDuty: GlobalDutySettings;
 }

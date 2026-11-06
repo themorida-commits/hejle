@@ -46,6 +46,7 @@ export function snapshotToState(snap: HospitalSnapshot) {
     nursingRecords: snap.nursingRecords.map(nursingRecordToDomain),
     karanehProfiles: snap.karanehProfiles,
     approvalChain: snap.settings.approvalChain,
+    chainPresetId: snap.settings.chainPresetId,
     globalDutySettings: snap.settings.globalDuty,
     leaveBalances: Object.fromEntries(personnel.map(p => [p.id, { entitled: annualQuota, used: 0 }])),
     dutyByEmployee: new Map(personnel.map(p => [p.id, calculateDutyHours(p, snap.settings.globalDuty, 0, J_YEAR, J_MONTH)])),
@@ -130,6 +131,8 @@ interface AppState {
   approvalChain: string[];
   /** تنظیمات موظفی این بیمارستان شامل جدول کاهش ساعت (از تنظیمات بیمارستان). */
   globalDutySettings: GlobalDutySettings;
+  /** پیش‌فرض بخشی زنجیره (government/private/army) یا null برای زنجیرهٔ سفارشی. */
+  chainPresetId: 'government' | 'private' | 'army' | null;
   saveHospitalSettings: (s: HospitalSettingsRecord) => Promise<boolean>;
   saveKaranehProfile: (rec: KaranehProfileRecord) => Promise<boolean>;
   setDefaultKaranehProfile: (id: string) => Promise<void>;
@@ -207,7 +210,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     const partial: HospitalSnapshot = {
       wards: [], employees, shiftTypes: [], leaveTypes: [], schedule, entries, leaves, workRecords,
       nursingPackages, nursingRecords, karanehProfiles: [],
-      settings: { approvalChain: st.approvalChain, globalDuty: st.globalDutySettings },
+      settings: { approvalChain: st.approvalChain, chainPresetId: st.chainPresetId, globalDuty: st.globalDutySettings },
     };
     const cur = get();
     const merged = mergeWardIntoState(cur, partial);
@@ -277,6 +280,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   nursingPackages: demoState.nursingPackages,
   karanehProfiles: demoState.karanehProfiles,
   approvalChain: demoState.approvalChain,
+  chainPresetId: null,
   globalDutySettings: demoState.globalDutySettings,
   saveHospitalSettings: async (s) => {
     try {
@@ -287,7 +291,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       } else {
         await createRepositories('demo').settings.saveSettings('demo', s);
       }
-      set({ approvalChain: s.approvalChain, globalDutySettings: s.globalDuty });
+      set({ approvalChain: s.approvalChain, chainPresetId: s.chainPresetId, globalDutySettings: s.globalDuty });
       return true;
     } catch (err) {
       console.error('hospital settings save failed', err);

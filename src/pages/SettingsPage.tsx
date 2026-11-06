@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAppStore } from '../store/appStore';
 import { useSessionStore } from '../store/session';
 import { ROLE_FA } from './LeavePage';
+import { CHAIN_PRESETS, matchChainPreset } from '../services/data/settings';
 import type { HospitalSettingsRecord } from '../services/data/types';
 
 // تنظیمات بیمارستان: زنجیرهٔ تأیید مرخصی + جدول کاهش ساعت موظفی (Q2).
@@ -17,6 +18,9 @@ export default function SettingsPage() {
   const canEdit = st.dataSource === 'demo' || sessionRole === 'hospital_admin';
 
   const [chain, setChain] = useState<string[]>(st.approvalChain);
+  const [presetId, setPresetId] = useState<'government' | 'private' | 'army' | null>(st.chainPresetId);
+  // هر ویرایش دستی روی گام‌ها، پیش‌فرض را به «سفارشی» برمی‌گرداند.
+  const editChain = (next: string[]) => { setChain(next); setPresetId(null); };
   const [bands, setBands] = useState<BandDraft[]>(
     st.globalDutySettings.seniorityDeductions.map(b => ({
       minYears: b.minMonths / 12, maxYears: b.maxMonths >= 600 ? 99 : b.maxMonths / 12, deduction: b.deduction,
@@ -30,6 +34,7 @@ export default function SettingsPage() {
   const save = async () => {
     const settings: HospitalSettingsRecord = {
       approvalChain: chain.length > 0 ? chain : ['ward_manager'],
+      chainPresetId: presetId,
       globalDuty: {
         ...st.globalDutySettings,
         seniorityDeductions: bands
@@ -67,20 +72,40 @@ export default function SettingsPage() {
           درخواست مرخصی به‌ترتیب از این نقش‌ها رد می‌شود و فقط با تأیید گام آخر نهایی می‌شود؛ رد در هر گام نهایی است.
           مدیر بیمارستان به‌عنوان مقام مافوق در هر گامی می‌تواند اقدام کند و تأیید مرخصی خود شخص همیشه ممنوع است.
         </p>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
+          <span style={{ fontSize: 13, color: '#68707a' }}>شروع از پیش‌فرض بخشی:</span>
+          {CHAIN_PRESETS.map(p => (
+            <button key={p.id} disabled={!canEdit} onClick={() => { setChain([...p.chain]); setPresetId(p.id); }}>
+              {p.label}
+            </button>
+          ))}
+        </div>
+        {(() => {
+          const matched = presetId
+            ? CHAIN_PRESETS.find(p => p.id === presetId) ?? null
+            : matchChainPreset(chain);
+          return (
+            <p style={{ background: '#f6f8f7', border: '1px solid #e3ddd2', borderRadius: 10, padding: 10, fontSize: 13 }}>
+              {matched
+                ? <>پیش‌فرض «{matched.label}»: {matched.note}</>
+                : 'زنجیرهٔ سفارشی — با هیچ‌یک از پیش‌فرض‌های بخشی یکسان نیست. برای نیروهای مسلح، سقف روزهای هر گام را حتماً از آیین‌نامهٔ داخلی بیمارستان بگیرید؛ پیش‌فرض عمومی وجود ندارد.'}
+            </p>
+          );
+        })()}
         {chain.map((role, i) => (
           <div key={i} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
             <span>گام {fa(i + 1)}:</span>
             <select value={role} disabled={!canEdit}
-              onChange={e => setChain(chain.map((r, j) => (j === i ? e.target.value : r)))}>
+              onChange={e => editChain(chain.map((r, j) => (j === i ? e.target.value : r)))}>
               {CHAIN_ROLES.map(r => <option key={r} value={r}>{ROLE_FA[r]}</option>)}
             </select>
             {canEdit && chain.length > 1 && (
-              <button onClick={() => setChain(chain.filter((_, j) => j !== i))}>حذف گام</button>
+              <button onClick={() => editChain(chain.filter((_, j) => j !== i))}>حذف گام</button>
             )}
           </div>
         ))}
         {canEdit && chain.length < 4 && (
-          <button onClick={() => setChain([...chain, 'hospital_admin'])}>+ افزودن گام</button>
+          <button onClick={() => editChain([...chain, 'hospital_admin'])}>+ افزودن گام</button>
         )}
       </section>
 
