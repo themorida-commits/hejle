@@ -4,10 +4,11 @@ import { useSessionStore } from '../store/session';
 import { ROLE_FA } from './LeavePage';
 import { CHAIN_PRESETS, matchChainPreset } from '../services/data/settings';
 import type { HospitalSettingsRecord } from '../services/data/types';
+import { RESPONSIBILITY_ITEMS, MOH_KARANEH_1404 } from '../features/performance/karanehEngine';
 
 // تنظیمات بیمارستان: زنجیرهٔ تأیید مرخصی + جدول کاهش ساعت موظفی (Q2).
 // منبع: hospitals.settings — نوشتن در حالت واقعی فقط برای مدیر بیمارستان (RLS).
-const CHAIN_ROLES = ['ward_manager', 'hospital_admin', 'hr_admin'];
+const CHAIN_ROLES = ['ward_manager', 'matron', 'hospital_admin', 'hr_admin'];
 const fa = (n: number) => n.toLocaleString('fa-IR');
 
 interface BandDraft { minYears: number; maxYears: number; deduction: number }
@@ -29,12 +30,20 @@ export default function SettingsPage() {
   const [baseHours, setBaseHours] = useState(
     Object.fromEntries(st.globalDutySettings.employmentStatuses.map(s => [s.status, s.baseHours])),
   );
+  const [sig, setSig] = useState(st.signatures);
+  const [reqs, setReqs] = useState(st.dailyRequirements);
+  const [note, setNote] = useState(st.rosterNote);
+  const [weights, setWeights] = useState<Record<string, number>>(st.responsibilityWeights);
   const [msg, setMsg] = useState('');
 
   const save = async () => {
     const settings: HospitalSettingsRecord = {
       approvalChain: chain.length > 0 ? chain : ['ward_manager'],
       chainPresetId: presetId,
+      signatures: sig,
+      dailyRequirements: reqs,
+      rosterNote: note,
+      responsibilityWeights: weights,
       globalDuty: {
         ...st.globalDutySettings,
         seniorityDeductions: bands
@@ -144,6 +153,76 @@ export default function SettingsPage() {
             </label>
           ))}
         </div>
+      </section>
+
+      <section style={{ background: '#fff', border: '1px solid #e3ddd2', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+        <h2 style={{ marginTop: 0, fontSize: 16 }}>فرم چاپی چینش شیفت — امضاها، نیاز روزانه و توضیحات</h2>
+        <p style={{ color: '#68707a', fontSize: 13 }}>
+          این سه قلم روی خروجی چاپی رسمی برنامه (فرم چینش) می‌نشیند: نام‌های امضا، نیاز ایستادهٔ روزانهٔ بخش
+          (ردیف‌های «تعداد صبح/عصر/شب» بالای فرم؛ صفر یعنی آن ردیف خالی چاپ شود) و متن توضیحات ماه.
+          امضای سوم فرم، «سرپرستار بخش»، خودکار از پرسنل همان بخش خوانده می‌شود.
+        </p>
+        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 10 }}>
+          <label style={{ fontSize: 13 }}>
+            مدیر خدمات پرستاری (مترون):{' '}
+            <input style={{ width: 180, padding: 6 }} disabled={!canEdit} value={sig.matronName}
+              onChange={e => setSig({ ...sig, matronName: e.target.value })} />
+          </label>
+          <label style={{ fontSize: 13 }}>
+            رییس بیمارستان:{' '}
+            <input style={{ width: 180, padding: 6 }} disabled={!canEdit} value={sig.chiefName}
+              onChange={e => setSig({ ...sig, chiefName: e.target.value })} />
+          </label>
+        </div>
+        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginBottom: 10 }}>
+          {([['morning', 'نیاز صبح'], ['evening', 'نیاز عصر'], ['night', 'نیاز شب']] as const).map(([k, label]) => (
+            <label key={k} style={{ fontSize: 13 }}>
+              {label}:{' '}
+              <input type="number" min={0} style={input} disabled={!canEdit} value={reqs[k]}
+                onChange={e => setReqs({ ...reqs, [k]: Math.max(0, Number(e.target.value) || 0) })} />
+            </label>
+          ))}
+        </div>
+        <label style={{ fontSize: 13, display: 'block' }}>
+          توضیحات ماه (اطلاعیه‌ها و یادداشت‌های فرم):
+          <textarea rows={2} disabled={!canEdit} value={note} onChange={e => setNote(e.target.value)}
+            style={{ display: 'block', width: '100%', marginTop: 6, padding: 8 }} />
+        </label>
+      </section>
+
+      <section style={{ background: '#fff', border: '1px solid #e3ddd2', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+        <h2 style={{ marginTop: 0, fontSize: 16 }}>جدول وزن‌های مسئولیتی کارانه — مخصوص همین بیمارستان</h2>
+        <p style={{ color: '#68707a', fontSize: 13 }}>
+          امتیاز نقش‌های غیرمستقیم کارانه، ضریبی از میانهٔ امتیاز پرستاران مستقیم همان بخش است.
+          ستون «پیش‌فرض سند» اعداد دستورالعمل وزارت بهداشت است؛ هر عددی را که عوض کنی فقط روی
+          بیمارستان شما اعمال می‌شود و بقیه از پیش‌فرض می‌خوانند. بیمارستان‌های ارتش و خصوصی
+          جدول داخلی خودشان را همین‌جا وارد می‌کنند.
+        </p>
+        <table style={{ borderCollapse: 'collapse', fontSize: 13 }}>
+          <thead>
+            <tr style={{ textAlign: 'right', color: '#68707a' }}>
+              <th style={{ padding: '4px 8px' }}>آیتم مسئولیتی</th>
+              <th style={{ padding: '4px 8px' }}>پیش‌فرض سند</th>
+              <th style={{ padding: '4px 8px' }}>وزن این بیمارستان</th>
+            </tr>
+          </thead>
+          <tbody>
+            {RESPONSIBILITY_ITEMS.map(item => (
+              <tr key={item.role} style={{ borderTop: '1px solid #eee' }}>
+                <td style={{ padding: '4px 8px' }}>{item.label}</td>
+                <td style={{ padding: '4px 8px' }}>{fa(MOH_KARANEH_1404.indirectMultiples[item.role])}</td>
+                <td style={{ padding: '4px 8px' }}>
+                  <input type="number" min={0} max={5} step={0.05} style={input} disabled={!canEdit}
+                    value={weights[item.role] ?? MOH_KARANEH_1404.indirectMultiples[item.role]}
+                    onChange={e => setWeights({ ...weights, [item.role]: Math.max(0, Number(e.target.value) || 0) })} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {canEdit && Object.keys(weights).length > 0 && (
+          <button onClick={() => setWeights({})} style={{ marginTop: 8 }}>بازگردانی همه به پیش‌فرض سند</button>
+        )}
       </section>
 
       {canEdit && <button onClick={save} style={{ padding: '8px 22px' }}>ذخیرهٔ تنظیمات</button>}

@@ -6,7 +6,7 @@
 import type { GlobalDutySettings, Personnel, ScheduleEntry, ShiftType } from '../../core/types';
 import { buildEmployeeFacts } from '../../core/rules/engine';
 import { calculateDutyHours } from '../../core/duty';
-import { NATIONAL_HOLIDAYS } from '../../core/defaults';
+import { holidaysFor } from '../../core/defaults';
 import { getDaysInJalaliMonth } from '../../core/jalali';
 import type { AttendanceSummary } from '../attendance/attendanceService';
 
@@ -54,7 +54,7 @@ export function computeWorkRecords(args: {
 }): WorkRecord[] {
   const daysInMonth = getDaysInJalaliMonth(args.jYear, args.jMonth);
   void daysInMonth;
-  const holidaysCount = NATIONAL_HOLIDAYS.filter(h => h.month === args.jMonth).length;
+  const holidaysCount = holidaysFor(args.jYear, args.jMonth).length;
   // کسر تعطیلات مثل محصول فعلی: ۶ ساعت به‌ازای هر تعطیل رسمی غیرجمعه (تقریب v1 —
   // محاسبهٔ دقیق جمعه‌بودن تعطیل در لایهٔ facts انجام می‌شود؛ اینجا سقف کسر ماهانه)
   const holidayDeduction = holidaysCount * 6;

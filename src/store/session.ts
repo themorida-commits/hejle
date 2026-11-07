@@ -2,7 +2,7 @@ import { create } from 'zustand';
 
 // وضعیت نشست و زمینهٔ سازمانی (بیمارستان/بخش فعال). در حالت supabase مقدارها
 // از AuthGate می‌آیند (نشست واقعی + عضویت‌های کاربر)؛ در حالت demo خالی می‌ماند.
-export type SessionRole = 'hospital_admin' | 'hr_admin' | 'ward_manager' | 'staff';
+export type SessionRole = 'hospital_admin' | 'hr_admin' | 'ward_manager' | 'matron' | 'staff';
 
 /** یک بیمارستان در دسترس کاربر (برای سوییچر چندبیمارستانی). */
 export interface HospitalContext {

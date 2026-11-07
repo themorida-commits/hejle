@@ -78,9 +78,11 @@ test('G1-2 اسنپ‌شات طلایی: بخش داخلی (۱۴ نفر)، مه�
 test('G1-3 اسنپ‌شات طلایی: بخش داخلی، فروردین ۱۴۰۵ (مسیر تعطیلات رسمی و کسر موظفی)', () => {
   const out = generateScheduleDeterministic({ ...baseParams, personnel: dep1, jYear: 1405, jMonth: 1 });
   assert.equal(out.length, 14 * 31);
-  assert.equal(scheduleHash(out), '03d18365e894e8369e7bd0cd56a1cd62c173db609e0640556ef47602dd3b20c5');
-  // سرپرستار در تعطیلات رسمی فروردین (۱ تا ۴، ۱۲، ۱۳) باید آف باشد
-  for (const d of [1, 2, 3, 4, 12, 13]) {
+  // هش ۲۰۲۶-۱۱-۰۷ دوباره برکت داده شد: فهرست تعطیلات ۱۴۰۵ کامل شد (۲۵ فروردین،
+  // شهادت امام صادق، از تقویم رسمی کشور اضافه شد) — تغییر رفتار عمدی و مستند است.
+  assert.equal(scheduleHash(out), 'eec659bf0d771168666bba7273bfcc70daac2ec41b40f97adab862c010e1d341');
+  // سرپرستار در تعطیلات رسمی فروردین (۱ تا ۴، ۱۲، ۱۳ و ۲۵) باید آف باشد
+  for (const d of [1, 2, 3, 4, 12, 13, 25]) {
     assert.equal(shiftOn(out, 'p1', 1405, 1, d), 's-off', `روز ${d} فروردین`);
   }
 });

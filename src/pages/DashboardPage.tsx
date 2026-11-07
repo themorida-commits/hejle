@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
 import { useAppStore, J_YEAR, J_MONTH } from '../store/appStore';
+import { useSessionStore } from '../store/session';
 import { buildEmployeeFacts, buildWardFacts, evaluateRules, DEFAULT_RULE_CONFIGS } from '../core/rules/engine';
+import HospitalQueueSection from '../features/oversight/HospitalQueueSection';
 
 function Card({ title, value, hint }: { title: string; value: string; hint?: string }) {
   return (
@@ -14,6 +16,10 @@ function Card({ title, value, hint }: { title: string; value: string; hint?: str
 
 export default function DashboardPage() {
   const { personnel, entries, shiftTypes, leaves, swaps, departmentId, scheduleStatus, dutyByEmployee } = useAppStore();
+  const dataSource = useAppStore(s => s.dataSource);
+  const viewRole = useAppStore(s => s.viewRole);
+  const sessionRole = useSessionStore(s => s.role);
+  const actorRole = dataSource === 'supabase' ? (sessionRole ?? 'staff') : viewRole;
   const deptPeople = personnel.filter(p => p.departmentId === departmentId);
   const deptIds = new Set(deptPeople.map(p => p.id));
   const deptEntries = entries.filter(e => deptIds.has(e.personnelId));
@@ -38,7 +44,8 @@ export default function DashboardPage() {
   const fa = (n: number) => n.toLocaleString('fa-IR');
   return (
     <div>
-      <h1>داشبورد سرپرستار — مهر ۱۴۰۵</h1>
+      <h1>داشبورد — مهر ۱۴۰۵</h1>
+      <HospitalQueueSection actorRole={actorRole} variant="panel" />
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
         <Card title="پرسنل بخش" value={fa(deptPeople.length)} />
         <Card title="وضعیت برنامه" value={scheduleStatus === 'published' ? 'منتشرشده' : 'پیش‌نویس'} />

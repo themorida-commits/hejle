@@ -3,6 +3,7 @@ import Layout from '../components/Layout';
 import AuthGate from '../components/AuthGate';
 import DashboardPage from '../pages/DashboardPage';
 import SchedulerPage from '../pages/SchedulerPage';
+import PrintRosterPage from '../pages/PrintRosterPage';
 import LeavePage from '../pages/LeavePage';
 import WorkRecordsPage from '../pages/WorkRecordsPage';
 import SelfServicePage from '../pages/SelfServicePage';
@@ -28,6 +29,7 @@ export const router = createBrowserRouter([
     children: [
       { path: '/', element: <DashboardPage /> },
       { path: '/scheduler', element: <SchedulerPage /> },
+      { path: '/scheduler/print', element: <PrintRosterPage /> },
       { path: '/leave', element: <LeavePage /> },
       { path: '/work-records', element: <WorkRecordsPage /> },
       { path: '/attendance', element: <AttendancePage /> },

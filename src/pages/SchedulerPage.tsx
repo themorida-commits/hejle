@@ -1,6 +1,12 @@
 import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAppStore, J_YEAR, J_MONTH } from '../store/appStore';
 import { buildMonthGrid, applyManualEdit, shiftSymbol } from '../features/roster/rosterModel';
+import {
+  LEAVE_CELL, SCREEN_LEAVE_BG, SCREEN_HOLIDAY_BG, weekdayLetters, holidayDayNumbers,
+  buildLeaveCellStates, buildLeaveDatesMap, dayCountsByCategory, employmentShort,
+} from '../features/roster/rosterPrintModel';
+import { computeWorkRecords } from '../features/workRecords/workRecordService';
 import { detectConflicts } from '../core/scheduling/conflictDetector';
 import { DEFAULT_RULES } from '../core/defaults';
 import { buildEmployeeFacts, evaluateRules, DEFAULT_RULE_CONFIGS } from '../core/rules/engine';
@@ -75,6 +81,7 @@ function RosterImportCard() {
 
 export default function SchedulerPage() {
   const st = useAppStore();
+  const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
   const deptPeople = st.personnel.filter(p => p.departmentId === st.departmentId);
   const deptIds = useMemo(() => new Set(deptPeople.map(p => p.id)), [deptPeople]);
@@ -136,6 +143,34 @@ export default function SchedulerPage() {
     }
   };
 
+  const letters = useMemo(() => weekdayLetters(J_YEAR, J_MONTH), []);
+  const holidays = useMemo(() => holidayDayNumbers(J_YEAR, J_MONTH), []);
+  const leaveStates = useMemo(
+    () => buildLeaveCellStates(st.leaves.filter(l => deptIds.has(l.employeeId))),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [st.leaves, st.departmentId],
+  );
+  const counts = useMemo(
+    () => dayCountsByCategory(deptEntries, st.shiftTypes, deptIds, J_YEAR, J_MONTH),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [st.entries, st.departmentId],
+  );
+  // اعداد ستون‌های ساختار فرم (موظفی/مجموع/کسر-اضافه) — همان منبع واحد صفحهٔ کارکرد و فرم چاپی.
+  const records = useMemo(
+    () => computeWorkRecords({
+      personnel: deptPeople, entries: deptEntries, shiftTypes: st.shiftTypes,
+      jYear: J_YEAR, jMonth: J_MONTH, globalSettings: st.globalDutySettings,
+      leaveDatesByEmployee: buildLeaveDatesMap(st.leaves),
+      hourlyLeaves: st.leaves
+        .filter(l => l.status === 'approved' && l.isHourly && deptIds.has(l.employeeId))
+        .map(l => ({ employeeId: l.employeeId, dateISO: l.startISO, hours: l.hours ?? 0 })),
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [st.entries, st.leaves, st.departmentId],
+  );
+  const recOf = (id: string) => records.find(r => r.employeeId === id);
+  const dayCount = grid.get(deptPeople[0]?.id ?? '')?.length ?? letters.length;
+
   const fa = (n: number) => n.toLocaleString('fa-IR');
   return (
     <div>
@@ -145,6 +180,7 @@ export default function SchedulerPage() {
           {st.departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
         </select>
         <button onClick={regenerate} disabled={busy}>{busy ? 'در حال تولید…' : 'تولید خودکار برنامه'}</button>
+        <button onClick={() => navigate('/scheduler/print')}>چاپ فرم چینش</button>
         {st.scheduleStatus === 'draft'
           ? <button onClick={() => st.setScheduleStatus('published')}>انتشار برنامه</button>
           : <button onClick={() => st.setScheduleStatus('draft')}>برگرداندن به پیش‌نویس</button>}
@@ -168,34 +204,91 @@ export default function SchedulerPage() {
         </div>
       )}
       <div style={{ overflowX: 'auto', background: '#fff', border: '1px solid #e3ddd2', borderRadius: 12 }}>
-        <table style={{ borderCollapse: 'collapse', fontSize: 12, minWidth: 1100 }}>
+        <table style={{ borderCollapse: 'collapse', fontSize: 12, minWidth: 1280 }}>
           <thead>
+            {([['تعداد صبح', st.dailyRequirements.morning], ['تعداد عصر', st.dailyRequirements.evening], ['تعداد شب', st.dailyRequirements.night]] as const).map(([label, v]) => (
+              <tr key={label}>
+                <th colSpan={5} style={{ background: '#f3efe7', padding: 3, textAlign: 'right', fontSize: 11, color: '#68707a' }}>{label} (نیاز بخش)</th>
+                {Array.from({ length: dayCount }, (_, i) => (
+                  <th key={i} style={{ padding: 3, fontSize: 11, background: '#f3efe7', color: '#68707a' }}>{v > 0 ? fa(v) : ''}</th>
+                ))}
+                <th style={{ background: '#f3efe7' }}></th>
+                <th style={{ background: '#f3efe7' }}></th>
+              </tr>
+            ))}
+            <tr>
+              <th colSpan={5} style={{ position: 'sticky', right: 0, background: '#f3efe7', padding: 6, textAlign: 'right' }}></th>
+              {letters.slice(0, dayCount).map((l, i) => (
+                <th key={i} style={{ padding: 2, fontSize: 10, background: '#f3efe7', color: l === 'ج' ? '#b3402f' : '#68707a' }}>{l}</th>
+              ))}
+              <th style={{ background: '#f3efe7' }}></th>
+              <th style={{ background: '#f3efe7' }}></th>
+            </tr>
             <tr>
               <th style={{ position: 'sticky', right: 0, background: '#f3efe7', padding: 6, textAlign: 'right' }}>نام</th>
-              {Array.from({ length: 30 }, (_, i) => (
+              <th style={{ background: '#f3efe7', padding: 4, whiteSpace: 'nowrap' }}>سمت</th>
+              <th style={{ background: '#f3efe7', padding: 4 }}>وضعیت</th>
+              <th style={{ background: '#f3efe7', padding: 4, whiteSpace: 'nowrap' }}>موظفی ماه</th>
+              <th style={{ background: '#f3efe7', padding: 4, whiteSpace: 'nowrap' }}>طلب/بدهی</th>
+              {Array.from({ length: dayCount }, (_, i) => (
                 <th key={i} style={{ padding: 4, background: grid.get(deptPeople[0]?.id ?? '')?.[i]?.isFriday ? '#fde8e8' : '#f3efe7' }}>{fa(i + 1)}</th>
               ))}
+              <th style={{ background: '#f3efe7', padding: 4, whiteSpace: 'nowrap' }}>مجموع ساعت</th>
+              <th style={{ background: '#f3efe7', padding: 4, whiteSpace: 'nowrap' }}>کسر/اضافه</th>
             </tr>
           </thead>
           <tbody>
-            {deptPeople.map(p => (
+            {deptPeople.map(p => {
+              const rec = recOf(p.id);
+              const bal = st.leaveBalances[p.id];
+              const remaining = bal ? bal.entitled - bal.used : null;
+              const diff = rec ? rec.workedHours - rec.dutyHours : 0;
+              const infoTd = { padding: 6, whiteSpace: 'nowrap', color: '#3c4450', textAlign: 'center' } as const;
+              return (
               <tr key={p.id}>
                 <td style={{ position: 'sticky', right: 0, background: '#fff', padding: 6, whiteSpace: 'nowrap', fontWeight: 600 }}>
                   {p.name}{blockedIds.has(p.id) && <span style={{ color: '#b3402f', fontSize: 11 }}> · قفل صلاحیت</span>}
                 </td>
-                {(grid.get(p.id) ?? []).map(cell => (
-                  <td
-                    key={cell.jDay}
-                    onClick={() => cycleShift(p.id, cell.dateISO, cell.entry?.shiftTypeId)}
-                    style={{ padding: 4, textAlign: 'center', cursor: st.scheduleStatus === 'draft' ? 'pointer' : 'default', background: cell.isFriday ? '#fff5f5' : undefined, color: cell.entry?.shiftTypeId === 's-n' ? '#7c3aed' : undefined, fontWeight: cell.entry?.isManualEntry ? 800 : 400 }}
-                    title={cell.dateISO}
-                  >
-                    {shiftSymbol(st.shiftTypes, cell.entry?.shiftTypeId)}
-                  </td>
+                <td style={infoTd}>{p.role}</td>
+                <td style={infoTd}>{employmentShort(p.employmentStatus)}</td>
+                <td style={infoTd}>{rec ? fa(rec.dutyHours) : ''}</td>
+                <td style={infoTd}>{remaining !== null ? fa(remaining) : ''}</td>
+                {(grid.get(p.id) ?? []).map(cell => {
+                  const leaveCode = leaveStates.get(`${p.id}|${cell.dateISO}`);
+                  const leaveCell = !cell.entry && leaveCode ? LEAVE_CELL[leaveCode] : undefined;
+                  const bg = (leaveCell ? SCREEN_LEAVE_BG[leaveCode!] : undefined)
+                    ?? (!cell.entry && holidays.has(cell.jDay) ? SCREEN_HOLIDAY_BG : cell.isFriday ? '#fff5f5' : undefined);
+                  return (
+                    <td
+                      key={cell.jDay}
+                      onClick={() => cycleShift(p.id, cell.dateISO, cell.entry?.shiftTypeId)}
+                      style={{ padding: 4, textAlign: 'center', cursor: st.scheduleStatus === 'draft' ? 'pointer' : 'default', background: bg, color: cell.entry?.shiftTypeId === 's-n' ? '#7c3aed' : undefined, fontWeight: cell.entry?.isManualEntry ? 800 : 400 }}
+                      title={leaveCell ? `${leaveCell.name} — ${cell.dateISO}` : cell.dateISO}
+                    >
+                      {cell.entry ? shiftSymbol(st.shiftTypes, cell.entry.shiftTypeId) : leaveCell ? leaveCell.label : shiftSymbol(st.shiftTypes, undefined)}
+                    </td>
+                  );
+                })}
+                <td style={{ ...infoTd, fontWeight: 600 }}>{rec ? fa(rec.workedHours) : ''}</td>
+                <td style={{ ...infoTd, fontWeight: 600, color: diff > 0 ? '#1e6b3a' : diff < 0 ? '#b3402f' : undefined }}>
+                  {rec ? `${diff > 0 ? '+' : ''}${fa(diff)}` : ''}
+                </td>
+              </tr>
+              );
+            })}
+          </tbody>
+          <tfoot>
+            {([['تعداد صبح', counts.morning], ['تعداد عصر', counts.evening], ['تعداد شب', counts.night]] as const).map(([label, arr]) => (
+              <tr key={label}>
+                <td colSpan={5} style={{ position: 'sticky', right: 0, background: '#f3efe7', padding: 6, fontWeight: 700, whiteSpace: 'nowrap' }}>{label}</td>
+                {arr.slice(0, dayCount).map((v, i) => (
+                  <td key={i} style={{ padding: 4, textAlign: 'center', background: '#f3efe7', fontWeight: 600 }}>{v > 0 ? fa(v) : ''}</td>
                 ))}
+                <td style={{ background: '#f3efe7' }}></td>
+                <td style={{ background: '#f3efe7' }}></td>
               </tr>
             ))}
-          </tbody>
+          </tfoot>
         </table>
       </div>
       {deptPeople.length > 0 && deptEntries.length === 0 && <p>برای این بخش هنوز برنامه‌ای نیست؛ «تولید خودکار برنامه» را بزنید.</p>}

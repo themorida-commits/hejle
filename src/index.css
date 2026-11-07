@@ -10,3 +10,12 @@ select, input { font-family: inherit; padding: 6px 8px; border: 1px solid #cfc8b
 h1 { font-size: 22px; }
 h2 { font-size: 17px; }
 table th { font-weight: 700; }
+
+/* چاپ فرم چینش (دور ۷): فقط ناحیهٔ چاپ دیده شود؛ A3 افقی. */
+@media print {
+  body * { visibility: hidden; }
+  .print-area, .print-area * { visibility: visible; }
+  .print-area { position: absolute; top: 0; right: 0; left: 0; }
+  .no-print { display: none !important; }
+  @page { size: A3 landscape; margin: 7mm; }
+}

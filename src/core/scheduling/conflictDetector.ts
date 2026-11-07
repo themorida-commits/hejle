@@ -1,6 +1,6 @@
 
 import type { ScheduleEntry, Personnel, ShiftType, CustomRule, StaffRequest } from '../types';
-import { NATIONAL_HOLIDAYS } from '../defaults';
+import { holidaysFor } from '../defaults';
 import { jalaliToGregorian, getDaysInJalaliMonth, getPersianDayOfWeek } from '../jalali';
 
 export function detectConflicts(
@@ -18,7 +18,7 @@ export function detectConflicts(
     const scheduleMap = new Map(schedule.map(entry => [`${entry.personnelId}-${entry.date}`, entry]));
     const shiftTypeMap = new Map(shiftTypes.map(st => [st.id, st]));
     const daysInMonth = getDaysInJalaliMonth(jYear, jMonth);
-    const holidaysInMonth = new Set(NATIONAL_HOLIDAYS.filter(h => h.month === jMonth).map(h => h.day));
+    const holidaysInMonth = new Set(holidaysFor(jYear, jMonth).map(h => h.day));
 
     const morningShiftId = shiftTypes.find(s => s.symbol === 'M' || s.name === 'صبح')?.id;
     const eveningShiftId = shiftTypes.find(s => s.symbol === 'E' || s.name === 'عصر')?.id;

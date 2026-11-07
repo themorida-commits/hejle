@@ -79,6 +79,40 @@ export const MOH_KARANEH_1404: KaranehParams = {
   onCallCoef: 4,
 };
 
+/**
+ * آیتم‌های مسئولیتی — همان «جدول توزیع»ای که بیمارستان‌ها با آن کارانه را بین
+ * نقش‌های غیرمستقیم پخش می‌کنند (در سند د وزارت بهداشت: ضرایب میانه، جدول ۳).
+ * وزن هر آیتم برای هر بیمارستان جداگانه قابل تنظیم است (تنظیمات بیمارستان)؛
+ * این فهرست فقط کاتالوگ آیتم‌ها و مقادیر پیش‌فرض مستند است.
+ */
+export const RESPONSIBILITY_ITEMS: { role: IndirectRole; label: string }[] = [
+  { role: 'matron', label: 'مترون (مدیر خدمات پرستاری)' },
+  { role: 'supervisor', label: 'سوپروایزر پرستاری' },
+  { role: 'headNurse', label: 'سرپرستار بخش' },
+  { role: 'deputy', label: 'جانشین سرپرستار' },
+  { role: 'unitExpert', label: 'کارشناس مسئول واحد' },
+  { role: 'behyar', label: 'بهیار' },
+  { role: 'sterilization', label: 'استریلیزاسیون' },
+  { role: 'aide', label: 'کمک‌پرستار / خدمات' },
+];
+
+export const RESPONSIBILITY_ROLES = RESPONSIBILITY_ITEMS.map(i => i.role) as IndirectRole[];
+
+/** ضرایب مؤثر یک بیمارستان: پیش‌فرض سند روی پارامترها + بازنویسی‌های همان بیمارستان. */
+export function effectiveIndirectMultiples(
+  overrides: Record<string, number> | null | undefined,
+  p: KaranehParams = MOH_KARANEH_1404,
+): Record<IndirectRole, number> {
+  const out = { ...p.indirectMultiples };
+  if (overrides) {
+    for (const role of RESPONSIBILITY_ROLES) {
+      const v = overrides[role];
+      if (typeof v === 'number' && Number.isFinite(v) && v >= 0) out[role] = v;
+    }
+  }
+  return out;
+}
+
 // ── استخرهای گروهی (سند الف) ────────────────────────────────────────────────
 export interface GroupPools {
   physiciansCap: number;

@@ -6,13 +6,14 @@ import {
   canActOnLeave, applyChainApproval, applyChainRejection, chainStepRole,
   isoFromJalali, leaveDurationDays, type LeaveRequest, type CoverageSimulation,
 } from '../features/leave/leaveService';
+import HospitalQueueSection from '../features/oversight/HospitalQueueSection';
 
 const MINIMUMS = { morning: 3, evening: 2, night: 1 };
 const STATUS_FA: Record<LeaveRequest['status'], string> = {
   pending: 'در انتظار', approved: 'تأییدشده', rejected: 'ردشده', cancelled: 'لغوشده',
 };
 export const ROLE_FA: Record<string, string> = {
-  ward_manager: 'سرپرستار بخش', hospital_admin: 'مدیر بیمارستان', hr_admin: 'مدیر منابع انسانی', staff: 'پرستار',
+  ward_manager: 'سرپرستار بخش', hospital_admin: 'مدیر بیمارستان', hr_admin: 'مدیر منابع انسانی', matron: 'مترون (مدیر خدمات پرستاری)', staff: 'پرستار',
 };
 
 export default function LeavePage() {
@@ -131,6 +132,7 @@ export default function LeavePage() {
   return (
     <div>
       <h1>مرخصی‌ها — مهر ۱۴۰۵</h1>
+      <HospitalQueueSection actorRole={actorRole} variant="full" />
       <section style={{ background: '#fff', border: '1px solid #e3ddd2', borderRadius: 12, padding: 16, marginBottom: 20 }}>
         <h2 style={{ marginTop: 0 }}>ثبت درخواست تازه (به نام {nameOf(st.currentEmployeeId)})</h2>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>

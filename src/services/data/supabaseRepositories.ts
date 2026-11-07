@@ -93,6 +93,11 @@ export function createSupabaseRepositories(client: SupabaseClient): DataReposito
           client.from('employees').select('*, positions(title)').eq('ward_id', wardId).eq('is_active', true).order('full_name').range(f, t));
         return rows.map(employee);
       },
+      async listEmployeesByHospital(hospitalId) {
+        const rows = await fetchAllPages((f, t) =>
+          client.from('employees').select('*, positions(title)').eq('hospital_id', hospitalId).eq('is_active', true).order('full_name').range(f, t));
+        return rows.map(employee);
+      },
       async listShiftTypes(hospitalId) {
         const rows = await fetchAllPages((f, t) =>
           client.from('shift_types').select('*').eq('hospital_id', hospitalId).order('symbol').range(f, t));
@@ -154,6 +159,11 @@ export function createSupabaseRepositories(client: SupabaseClient): DataReposito
       async listLeaveRequests(wardId) {
         const rows = await fetchAllPages((f, t) =>
           client.from('leave_requests').select('*, leave_types(code)').eq('ward_id', wardId).order('created_at', { ascending: false }).range(f, t));
+        return rows.map(leave);
+      },
+      async listLeaveRequestsByHospital(hospitalId) {
+        const rows = await fetchAllPages((f, t) =>
+          client.from('leave_requests').select('*, leave_types(code)').eq('hospital_id', hospitalId).order('created_at', { ascending: false }).range(f, t));
         return rows.map(leave);
       },
       async createLeaveRequest(rec) {

@@ -6,7 +6,7 @@ import { KARANEH_PRESETS, applyPreset } from '../features/performance/karanehPre
 import { reconcileAttendance, summarizeAttendance } from '../features/attendance/attendanceService';
 import {
   MOH_KARANEH_1404, computeGroupPools, computeNursingKaraneh, nursingSlips, slipsToCsv,
-  physicianShareM, physicianQ, type KaranehParams,
+  physicianShareM, physicianQ, effectiveIndirectMultiples, type KaranehParams,
 } from '../features/performance/karanehEngine';
 
 interface HospitalKaranehProfile { nursingShare: number; onCallCoef: number; kRial: number; presetId?: string }
@@ -117,7 +117,9 @@ function MohKaranehSection() {
     ...MOH_KARANEH_1404,
     shares: { ...MOH_KARANEH_1404.shares, nursingOfNursingPackages: profile.nursingShare },
     onCallCoef: profile.onCallCoef,
-  }), [profile]);
+    // وزن‌های مسئولیتیِ خودِ این بیمارستان (تنظیمات) روی پیش‌فرض سند می‌نشینند
+    indirectMultiples: effectiveIndirectMultiples(st.responsibilityWeights),
+  }), [profile, st.responsibilityWeights]);
   const deptPeople = st.personnel.filter(p => p.departmentId === st.departmentId);
   const names = useMemo(() => new Map(st.personnel.map(p => [p.id, p.name])), [st.personnel]);
   const pools = useMemo(() => computeGroupPools(profMillion * 1e6, nursingPkgMillion * 1e6, 0, params), [profMillion, nursingPkgMillion, params]);

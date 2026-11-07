@@ -7,7 +7,7 @@ import type { HospitalSettingsRecord } from './types';
 
 export const DEFAULT_APPROVAL_CHAIN: string[] = ['ward_manager'];
 
-const KNOWN_ROLES = new Set(['hospital_admin', 'hr_admin', 'ward_manager', 'staff']);
+const KNOWN_ROLES = new Set(['hospital_admin', 'hr_admin', 'ward_manager', 'matron', 'staff']);
 
 /** پیش‌فرض زنجیرهٔ تأیید بر اساس بخش — از پژوهش زنجیره‌های مرخصی (۲۰۲۶-۱۱-۰۶).
  *  دولتی و خصوصی از اسناد عمومی مستندند؛ نیروهای مسلح پیش‌فرض عمومی ندارد
@@ -47,10 +47,19 @@ export function matchChainPreset(chain: string[]): ChainPreset | null {
   ) ?? null;
 }
 
+/** کلیدهای معتبر وزن مسئولیتی — آیینهٔ کاتالوگ موتور کارانه (RESPONSIBILITY_ITEMS). */
+const RESPONSIBILITY_KEYS = new Set([
+  'matron', 'supervisor', 'headNurse', 'deputy', 'unitExpert', 'behyar', 'sterilization', 'aide',
+]);
+
 export function defaultHospitalSettings(): HospitalSettingsRecord {
   return {
     approvalChain: [...DEFAULT_APPROVAL_CHAIN],
     chainPresetId: null,
+    signatures: { matronName: '', chiefName: '' },
+    dailyRequirements: { morning: 0, evening: 0, night: 0 },
+    rosterNote: '',
+    responsibilityWeights: {},
     globalDuty: structuredClone(DEFAULT_GLOBAL_SETTINGS),
   };
 }
@@ -69,6 +78,29 @@ export function normalizeHospitalSettings(raw: unknown): HospitalSettingsRecord 
 
   if (r.chainPresetId === 'government' || r.chainPresetId === 'private' || r.chainPresetId === 'army') {
     out.chainPresetId = r.chainPresetId;
+  }
+
+  const sig = r.signatures as { matronName?: unknown; chiefName?: unknown } | undefined;
+  if (sig && typeof sig === 'object') {
+    out.signatures = {
+      matronName: typeof sig.matronName === 'string' ? sig.matronName : '',
+      chiefName: typeof sig.chiefName === 'string' ? sig.chiefName : '',
+    };
+  }
+  const req = r.dailyRequirements as { morning?: unknown; evening?: unknown; night?: unknown } | undefined;
+  if (req && typeof req === 'object') {
+    const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? Math.round(v) : 0);
+    out.dailyRequirements = { morning: num(req.morning), evening: num(req.evening), night: num(req.night) };
+  }
+  if (typeof r.rosterNote === 'string') out.rosterNote = r.rosterNote;
+
+  const rw = r.responsibilityWeights as Record<string, unknown> | undefined;
+  if (rw && typeof rw === 'object') {
+    for (const [k, v] of Object.entries(rw)) {
+      if (RESPONSIBILITY_KEYS.has(k) && typeof v === 'number' && Number.isFinite(v) && v >= 0 && v <= 5) {
+        out.responsibilityWeights[k] = Math.round(v * 100) / 100;
+      }
+    }
   }
 
   const gd = r.globalDuty as Partial<GlobalDutySettings> | undefined;
@@ -91,5 +123,10 @@ export function normalizeHospitalSettings(raw: unknown): HospitalSettingsRecord 
 
 /** شکل ذخیره‌سازی در hospitals.settings (کلیدهای پایدار). */
 export function hospitalSettingsToJson(s: HospitalSettingsRecord): Record<string, unknown> {
-  return { leaveApprovalChain: s.approvalChain, chainPresetId: s.chainPresetId, globalDuty: s.globalDuty };
+  return {
+    leaveApprovalChain: s.approvalChain, chainPresetId: s.chainPresetId,
+    signatures: s.signatures, dailyRequirements: s.dailyRequirements, rosterNote: s.rosterNote,
+    responsibilityWeights: s.responsibilityWeights,
+    globalDuty: s.globalDuty,
+  };
 }

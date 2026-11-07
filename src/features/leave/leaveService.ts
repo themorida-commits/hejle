@@ -15,7 +15,7 @@ export type LeaveStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 export interface LeaveRequest {
   id: string;
   employeeId: string;
-  leaveTypeCode: string; // annual | sick | unpaid | mission | maternity | marriage | bereavement | hajj
+  leaveTypeCode: string; // annual | sick | unpaid | mission | maternity | marriage | bereavement | hajj | incentive | enroute
   startISO: string;
   endISO: string;
   /** مرخصی ساعتی (نسخهٔ ۱٫۱ اسپک): تک‌روزه، با تعداد ساعت؛ شیفت روز دست‌نخورده می‌ماند مگر ساعت‌ها کل شیفت را بپوشاند. */
@@ -93,6 +93,10 @@ export const LEAVE_TYPES = [
   { code: 'marriage', name: 'ازدواج', isPaid: true },
   { code: 'bereavement', name: 'فوت بستگان', isPaid: true },
   { code: 'hajj', name: 'حج', isPaid: true },
+  // دو نوع تازه برای ضمیمه‌های فرم چاپی چینش (دور ۷): تشویقی در مادهٔ ۹۴ قانون ارتش هم آمده است؛
+  // «تو راهی» روزهای مسیر مأموریت/مرخصی است که در فرم کاغذی ثبت جدا دارد.
+  { code: 'incentive', name: 'تشویقی', isPaid: true },
+  { code: 'enroute', name: 'تو راهی', isPaid: true },
 ] as const;
 
 /** ساعت موظفی یک روز — مبنای تبدیل مرخصی ساعتی به روز (۴۴ ساعت هفته ÷ ۶ روز کاری). */
@@ -119,12 +123,14 @@ export function hourlyCoversWholeShift(
 }
 
 export function leaveDaysInRange(startISO: string, endISO: string): string[] {
+  // UTC صریح: ساخت Date محلی + toISOString در منطقه‌های جلوتر از UTC (ایران)
+  // همهٔ روزها را یک روز عقب می‌انداخت — مرخصی روی روزهای اشتباه پچ می‌شد.
   const out: string[] = [];
-  const cur = new Date(startISO + 'T00:00:00');
-  const end = new Date(endISO + 'T00:00:00');
+  const cur = new Date(startISO + 'T00:00:00Z');
+  const end = new Date(endISO + 'T00:00:00Z');
   while (cur <= end) {
     out.push(cur.toISOString().slice(0, 10));
-    cur.setDate(cur.getDate() + 1);
+    cur.setUTCDate(cur.getUTCDate() + 1);
   }
   return out;
 }

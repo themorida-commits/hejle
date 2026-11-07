@@ -1,6 +1,6 @@
 // تایپ‌های ردیف‌های دیتابیس نسخهٔ ۲ — آیینهٔ مایگریشن 20261103000001.
 // در فاز ۱ با خروجی رسمی «supabase gen types» جایگزین می‌شود.
-export type MembershipRole = 'hospital_admin' | 'hr_admin' | 'ward_manager' | 'staff';
+export type MembershipRole = 'hospital_admin' | 'hr_admin' | 'ward_manager' | 'matron' | 'staff';
 export type RequestStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
 export type ScheduleStatus = 'draft' | 'published';
 export type WorkRecordStatus = 'draft' | 'approved' | 'exported';

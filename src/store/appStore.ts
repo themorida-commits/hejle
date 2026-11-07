@@ -25,7 +25,7 @@ import { useSessionStore } from './session';
 export const J_YEAR = 1405;
 export const J_MONTH = 7;
 
-export type ViewRole = 'ward_manager' | 'staff';
+export type ViewRole = 'ward_manager' | 'matron' | 'hr_admin' | 'staff';
 
 export function snapshotToState(snap: HospitalSnapshot) {
   const personnel = snap.employees.map(employeeToPersonnel);
@@ -47,6 +47,10 @@ export function snapshotToState(snap: HospitalSnapshot) {
     karanehProfiles: snap.karanehProfiles,
     approvalChain: snap.settings.approvalChain,
     chainPresetId: snap.settings.chainPresetId,
+    signatures: snap.settings.signatures,
+    dailyRequirements: snap.settings.dailyRequirements,
+    rosterNote: snap.settings.rosterNote,
+    responsibilityWeights: snap.settings.responsibilityWeights,
     globalDutySettings: snap.settings.globalDuty,
     leaveBalances: Object.fromEntries(personnel.map(p => [p.id, { entitled: annualQuota, used: 0 }])),
     dutyByEmployee: new Map(personnel.map(p => [p.id, calculateDutyHours(p, snap.settings.globalDuty, 0, J_YEAR, J_MONTH)])),
@@ -133,6 +137,11 @@ interface AppState {
   globalDutySettings: GlobalDutySettings;
   /** پیش‌فرض بخشی زنجیره (government/private/army) یا null برای زنجیرهٔ سفارشی. */
   chainPresetId: 'government' | 'private' | 'army' | null;
+  /** نام‌های امضای فرم چاپی + نیاز روزانهٔ بخش + توضیحات ماه (از تنظیمات بیمارستان). */
+  signatures: { matronName: string; chiefName: string };
+  dailyRequirements: { morning: number; evening: number; night: number };
+  rosterNote: string;
+  responsibilityWeights: Record<string, number>;
   saveHospitalSettings: (s: HospitalSettingsRecord) => Promise<boolean>;
   saveKaranehProfile: (rec: KaranehProfileRecord) => Promise<boolean>;
   setDefaultKaranehProfile: (id: string) => Promise<void>;
@@ -210,7 +219,12 @@ export const useAppStore = create<AppState>((set, get) => ({
     const partial: HospitalSnapshot = {
       wards: [], employees, shiftTypes: [], leaveTypes: [], schedule, entries, leaves, workRecords,
       nursingPackages, nursingRecords, karanehProfiles: [],
-      settings: { approvalChain: st.approvalChain, chainPresetId: st.chainPresetId, globalDuty: st.globalDutySettings },
+      settings: {
+        approvalChain: st.approvalChain, chainPresetId: st.chainPresetId,
+        signatures: st.signatures, dailyRequirements: st.dailyRequirements, rosterNote: st.rosterNote,
+        responsibilityWeights: st.responsibilityWeights,
+        globalDuty: st.globalDutySettings,
+      },
     };
     const cur = get();
     const merged = mergeWardIntoState(cur, partial);
@@ -281,6 +295,10 @@ export const useAppStore = create<AppState>((set, get) => ({
   karanehProfiles: demoState.karanehProfiles,
   approvalChain: demoState.approvalChain,
   chainPresetId: null,
+  signatures: { matronName: '', chiefName: '' },
+  dailyRequirements: { morning: 0, evening: 0, night: 0 },
+  rosterNote: '',
+  responsibilityWeights: {},
   globalDutySettings: demoState.globalDutySettings,
   saveHospitalSettings: async (s) => {
     try {
@@ -291,7 +309,12 @@ export const useAppStore = create<AppState>((set, get) => ({
       } else {
         await createRepositories('demo').settings.saveSettings('demo', s);
       }
-      set({ approvalChain: s.approvalChain, chainPresetId: s.chainPresetId, globalDutySettings: s.globalDuty });
+      set({
+        approvalChain: s.approvalChain, chainPresetId: s.chainPresetId,
+        signatures: s.signatures, dailyRequirements: s.dailyRequirements, rosterNote: s.rosterNote,
+        responsibilityWeights: s.responsibilityWeights,
+        globalDutySettings: s.globalDuty,
+      });
       return true;
     } catch (err) {
       console.error('hospital settings save failed', err);

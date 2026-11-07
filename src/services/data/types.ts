@@ -22,6 +22,15 @@ export interface HospitalSettingsRecord {
   /** پیش‌فرض بخشی‌ای که زنجیره از آن شروع شده (government/private/army)؛ null یعنی سفارشی.
    *  لازم است چون زنجیرهٔ دولتی و ارتش نقش‌های یکسان دارند و از روی خود زنجیره قابل تشخیص نیستند. */
   chainPresetId: 'government' | 'private' | 'army' | null;
+  /** نام‌های امضای فرم چاپی چینش شیفت (مدیر خدمات پرستاری و رییس بیمارستان؛ امضای سوم از سرپرستار همان بخش می‌آید). */
+  signatures: { matronName: string; chiefName: string };
+  /** نیاز ایستادهٔ روزانهٔ بخش برای هر دسته شیفت — ردیف‌های «تعداد صبح/عصر/شب» بالای فرم چاپی؛ صفر یعنی خالی. */
+  dailyRequirements: { morning: number; evening: number; night: number };
+  /** متن آزاد «توضیحات» ماه روی فرم چاپی (اطلاعیه‌ها و یادداشت‌های همان ماه). */
+  rosterNote: string;
+  /** وزن‌های مسئولیتی کارانهٔ همین بیمارستان (کلید = نقش غیرمستقیم موتور کارانه)؛
+   *  فقط بازنویسی‌ها نگه داشته می‌شوند — خالی یعنی پیش‌فرض مستند وزارت بهداشت. */
+  responsibilityWeights: Record<string, number>;
   /** تنظیمات موظفی شامل جدول کاهش ساعت سابقه (Q2) — به‌ازای بیمارستان. */
   globalDuty: GlobalDutySettings;
 }
@@ -83,6 +92,8 @@ export interface NursingServiceDbRecord {
 export interface OrgRepository {
   listWards(hospitalId: string): Promise<WardRecord[]>;
   listEmployees(wardId: string): Promise<EmployeeRecord[]>;
+  /** همهٔ پرسنل بیمارستان — برای نماهای سطح بیمارستان (مترون/اداری). */
+  listEmployeesByHospital(hospitalId: string): Promise<EmployeeRecord[]>;
   listShiftTypes(hospitalId: string): Promise<ShiftTypeRecord[]>;
   listLeaveTypes(hospitalId: string): Promise<LeaveTypeRecord[]>;
   /** ورود گروهی پرسنل (ایمپورتر) — کد پرسنلی موجود رد می‌شود، تازه‌ها برمی‌گردند. */
@@ -102,6 +113,8 @@ export interface RosterRepository {
 }
 export interface LeaveRepository {
   listLeaveRequests(wardId: string): Promise<LeaveRecord[]>;
+  /** همهٔ درخواست‌های بیمارستان — صف نقش‌های سطح بیمارستان (مترون/اداری). */
+  listLeaveRequestsByHospital(hospitalId: string): Promise<LeaveRecord[]>;
   createLeaveRequest(rec: Omit<LeaveRecord, 'id' | 'status' | 'reviewedBy' | 'approvalStep' | 'approvals'>): Promise<LeaveRecord>;
   updateLeaveStatus(id: string, status: LeaveRecord['status'], reviewedBy: string | null): Promise<void>;
   /** ثبت یک اقدام زنجیرهٔ تأیید (گام + تاریخچه + وضعیت نهایی احتمالی). */

@@ -1,27 +1,14 @@
 import { useEffect } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
-import { useAppStore } from '../store/appStore';
+import { useAppStore, type ViewRole } from '../store/appStore';
 import { useSessionStore } from '../store/session';
 import { signOut } from '../services/auth';
-
-const links = [
-  { to: '/', label: 'داشبورد سرپرستار' },
-  { to: '/scheduler', label: 'برنامهٔ شیفت' },
-  { to: '/leave', label: 'مرخصی‌ها' },
-  { to: '/work-records', label: 'کارکرد ماهانه' },
-  { to: '/attendance', label: 'حضور و غیاب' },
-  { to: '/personnel', label: 'پرونده پرسنلی' },
-  { to: '/karaneh', label: 'کارانه' },
-  { to: '/nursing-services', label: 'خدمات پرستاری' },
-  { to: '/accreditation', label: 'اعتباربخشی' },
-  { to: '/ai', label: 'دستیار AI' },
-  { to: '/settings', label: 'تنظیمات بیمارستان' },
-  { to: '/self-service', label: 'سلف‌سرویس پرستار' },
-];
+import { navForRole } from '../features/oversight/roleNav';
 
 export default function Layout() {
   const { viewRole, setViewRole, currentEmployeeId, setCurrentEmployee, personnel, departmentId, hydrated, hydrateFromSupabase, dataSource } = useAppStore();
   const sessionEmail = useSessionStore(s => s.email);
+  const sessionRole = useSessionStore(s => s.role);
   const sessionHospitals = useSessionStore(s => s.hospitals);
   const activeHospitalId = useSessionStore(s => s.hospitalId);
   const setSessionContext = useSessionStore(s => s.setContext);
@@ -37,6 +24,8 @@ export default function Layout() {
     return <div dir="rtl" style={{ fontFamily: 'Vazirmatn, system-ui', padding: 40 }}>در حال بارگذاری داده‌ها…</div>;
   }
   const deptPeople = personnel.filter(p => p.departmentId === departmentId);
+  // هر نقش فقط میز کار خودش را می‌بیند (مترون و اداری هم میز جدا دارند)
+  const links = navForRole(dataSource === 'supabase' ? (sessionRole ?? 'staff') : viewRole);
   return (
     <div dir="rtl" style={{ fontFamily: 'Vazirmatn, system-ui, sans-serif', minHeight: '100vh', background: '#faf7f2', color: '#1d2733' }}>
       <header style={{ display: 'flex', gap: 16, alignItems: 'center', padding: '10px 20px', background: '#0f4c4c', color: '#fff', flexWrap: 'wrap' }}>
@@ -66,8 +55,10 @@ export default function Layout() {
         ) : (
           <span style={{ marginInlineStart: 'auto', display: 'flex', gap: 8, alignItems: 'center', fontSize: 13 }}>
             نقش نمایشی:
-            <select value={viewRole} onChange={e => setViewRole(e.target.value as 'ward_manager' | 'staff')}>
+            <select value={viewRole} onChange={e => setViewRole(e.target.value as ViewRole)}>
               <option value="ward_manager">سرپرستار</option>
+              <option value="matron">مترون</option>
+              <option value="hr_admin">اداری (منابع انسانی)</option>
               <option value="staff">پرستار</option>
             </select>
             هویت:

@@ -1,7 +1,7 @@
 import type { ScheduleEntry, Personnel, ShiftType, StaffRequest, CustomRule, AiGenerationSettings, GlobalDutySettings } from '../types';
 import { jalaliToGregorian, getDaysInJalaliMonth, getPersianDayOfWeek } from '../jalali';
 import { calculateDutyHours } from '../duty';
-import { NATIONAL_HOLIDAYS } from '../defaults';
+import { holidaysFor } from '../defaults';
 
 // Seedable Pseudo-Random Number Generator (Linear Congruential Generator)
 // This ensures that for a given seed, the generated sequence of numbers is completely deterministic.
@@ -52,7 +52,7 @@ export function generateScheduleDeterministic(params: GenerateScheduleParams): S
 
     const daysInMonth = getDaysInJalaliMonth(jYear, jMonth);
     const holidaysInMonth = new Set(
-        (NATIONAL_HOLIDAYS || []).filter(h => h.month === jMonth).map(h => h.day)
+        holidaysFor(jYear, jMonth).map(h => h.day)
     );
 
     // Compute holiday hour deduction

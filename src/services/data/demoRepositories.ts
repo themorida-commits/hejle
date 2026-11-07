@@ -110,6 +110,7 @@ export function createDemoRepositories(seed: HospitalSnapshot = buildDemoSnapsho
     org: {
       async listWards(hospitalId) { return state.wards.filter(w => w.hospitalId === hospitalId); },
       async listEmployees(wardId) { return state.employees.filter(e => e.wardId === wardId && e.isActive); },
+      async listEmployeesByHospital(hospitalId) { return state.employees.filter(e => e.hospitalId === hospitalId && e.isActive); },
       async listShiftTypes(hospitalId) { return state.shiftTypes.filter(s => s.hospitalId === hospitalId); },
       async listLeaveTypes(hospitalId) { return state.leaveTypes.filter(l => l.hospitalId === hospitalId); },
       async createEmployees(records) {
@@ -150,6 +151,7 @@ export function createDemoRepositories(seed: HospitalSnapshot = buildDemoSnapsho
     },
     leave: {
       async listLeaveRequests(wardId) { return state.leaves.filter(l => l.wardId === wardId); },
+      async listLeaveRequestsByHospital(hospitalId) { return state.leaves.filter(l => l.hospitalId === hospitalId); },
       async createLeaveRequest(rec) {
         const created: LeaveRecord = { ...rec, id: `demo-leave-${++seq}`, status: 'pending', reviewedBy: null, approvalStep: 0, approvals: [] };
         state.leaves.push(created);

@@ -52,6 +52,12 @@ test('P6: ‏chainPresetId در نرمال‌سازی و سریال‌سازی �
   assert.equal(normalizeHospitalSettings(null).chainPresetId, null);
 });
 
+test('P7: نقش «مترون» در زنجیره معتبر است — زنجیرهٔ واقعی بوعلی سالم رد می‌شود', () => {
+  // پاسخ آقای حجله ۲۰۲۶-۱۱-۰۷: فرم ← سرپرستار ← مترون ← اداری بیمارستان
+  const s = normalizeHospitalSettings({ leaveApprovalChain: ['ward_manager', 'matron', 'hr_admin'] });
+  assert.deepEqual(s.approvalChain, ['ward_manager', 'matron', 'hr_admin']);
+});
+
 test('P5: زنجیرهٔ هر پیش‌فرض از نرمال‌سازی تنظیمات سالم رد می‌شود', () => {
   for (const p of CHAIN_PRESETS) {
     const s = normalizeHospitalSettings({ leaveApprovalChain: [...p.chain] });

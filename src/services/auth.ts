@@ -22,8 +22,10 @@ export interface SessionContext {
 const ROLE_PRIORITY: Record<SessionRole, number> = {
   ward_manager: 0,
   hospital_admin: 1,
-  hr_admin: 2,
-  staff: 3,
+  // مترون (مدیر خدمات پرستاری) — گام واقعی زنجیرهٔ بوعلی طبق پاسخ آقای حجله ۲۰۲۶-۱۱-۰۷
+  matron: 2,
+  hr_admin: 3,
+  staff: 4,
 };
 
 /**

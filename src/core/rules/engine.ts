@@ -7,7 +7,7 @@
 import type { Personnel, ScheduleEntry, ShiftType } from '../types';
 import { jalaliToGregorian, getDaysInJalaliMonth } from '../jalali';
 import { calculateShiftHoursDetailed } from '../duty';
-import { NATIONAL_HOLIDAYS } from '../defaults';
+import { holidaysFor } from '../defaults';
 
 export type RuleSeverity = 'hard' | 'warn';
 
@@ -117,7 +117,7 @@ export function buildEmployeeFacts(args: {
   const { personnel, entries, shiftTypes, jYear, jMonth } = args;
   const daysInMonth = getDaysInJalaliMonth(jYear, jMonth);
   const shiftById = new Map(shiftTypes.map(s => [s.id, s]));
-  const holidays = new Set(NATIONAL_HOLIDAYS.filter(h => h.month === jMonth).map(h => h.day));
+  const holidays = new Set(holidaysFor(jYear, jMonth).map(h => h.day));
   const entryByKey = new Map(entries.map(e => [`${e.personnelId}|${e.date}`, e]));
 
   return personnel.map(p => {
