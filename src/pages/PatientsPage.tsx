@@ -12,7 +12,7 @@ import {
 // شده، پزشکش کیست و امروز در هر شیفت پرستار مسئولش چه کسی است (دور ۱۶).
 const faDateTime = (iso: string) => new Intl.DateTimeFormat('fa-IR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso));
 const SHIFTS: CareShift[] = ['morning', 'evening', 'night'];
-const inputStyle = { display: 'block', padding: 7, borderRadius: 8, border: '1px solid #cbd5e1', background: '#f8fafc' } as const;
+const inputStyle = { display: 'block', padding: 7, borderRadius: 8, border: '1px solid #cbd5e1', background: '#F9F9F9' } as const;
 
 export default function PatientsPage() {
   const st = useAppStore();
@@ -72,7 +72,7 @@ export default function PatientsPage() {
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
         <div className="stat-card" style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 16, padding: 14, minWidth: 170 }}>
           <div style={{ fontSize: 12, color: '#64748b' }}>بستری‌های فعلی بخش</div>
-          <div style={{ fontSize: 22, fontWeight: 800, color: '#0f172a', margin: '4px 0' }}>{active.length.toLocaleString('fa-IR')}</div>
+          <div style={{ fontSize: 22, fontWeight: 800, color: '#0A2735', margin: '4px 0' }}>{active.length.toLocaleString('fa-IR')}</div>
           <div style={{ fontSize: 12, color: '#64748b' }}>اپیزود باز</div>
         </div>
         <div className="stat-card" style={{ background: '#fff', border: `1px solid ${missingToday ? '#fda4af' : '#e2e8f0'}`, borderRadius: 16, padding: 14, minWidth: 170 }}>
@@ -81,7 +81,7 @@ export default function PatientsPage() {
           <div style={{ fontSize: 12, color: '#64748b' }}>شکاف پاسخگویی — از پروندهٔ بیمار تخصیص بدهید</div>
         </div>
         {canManage && (
-          <button onClick={() => setShowForm(s => !s)} style={{ alignSelf: 'center', padding: '10px 18px', borderRadius: 10, border: 'none', background: '#2563eb', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>
+          <button onClick={() => setShowForm(s => !s)} style={{ alignSelf: 'center', padding: '10px 18px', borderRadius: 10, border: 'none', background: '#004E72', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>
             {showForm ? 'بستن فرم پذیرش' : '＋ پذیرش بیمار تازه'}
           </button>
         )}
@@ -117,7 +117,7 @@ export default function PatientsPage() {
             <label style={{ fontSize: 12 }}>بیمه<input value={form.insuranceType} onChange={e => setForm(f => ({ ...f, insuranceType: e.target.value }))} style={{ ...inputStyle, width: 130 }} /></label>
             <label style={{ fontSize: 12 }}>حساسیت دارویی<input value={form.allergySummary} onChange={e => setForm(f => ({ ...f, allergySummary: e.target.value }))} placeholder="پنی‌سیلین" style={{ ...inputStyle, width: 130 }} /></label>
           </div>
-          <button onClick={admit} style={{ marginTop: 14, padding: '9px 20px', borderRadius: 10, border: 'none', background: '#2563eb', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>ثبت پذیرش و ساخت پرونده</button>
+          <button onClick={admit} style={{ marginTop: 14, padding: '9px 20px', borderRadius: 10, border: 'none', background: '#004E72', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>ثبت پذیرش و ساخت پرونده</button>
         </div>
       )}
 
@@ -136,7 +136,7 @@ export default function PatientsPage() {
                 <tr key={a.id} style={{ borderTop: '1px solid #e2e8f0' }}>
                   <td style={{ padding: '10px 12px', fontWeight: 700 }}>{a.bedLabel ?? '—'}</td>
                   <td>
-                    <div style={{ fontWeight: 700, color: '#0f172a' }}>{p?.fullName ?? '—'}</div>
+                    <div style={{ fontWeight: 700, color: '#0A2735' }}>{p?.fullName ?? '—'}</div>
                     <div style={{ fontSize: 12, color: '#64748b' }}>پرونده {p?.fileNo ?? ''}{a.allergySummary ? <span style={{ color: '#e11d48', fontWeight: 700 }}> • حساسیت: {a.allergySummary}</span> : null}</div>
                   </td>
                   <td style={{ maxWidth: 260 }}>
@@ -152,14 +152,14 @@ export default function PatientsPage() {
                         return (
                           <span key={s} style={{
                             fontSize: 11, padding: '2px 8px', borderRadius: 999,
-                            background: asg ? '#dbeafe' : '#fff1f2', color: asg ? '#1d4ed8' : '#be123c',
-                            border: `1px solid ${asg ? '#bfdbfe' : '#fda4af'}`,
+                            background: asg ? '#DCE9F0' : '#fff1f2', color: asg ? '#003A56' : '#be123c',
+                            border: `1px solid ${asg ? '#DCE9F0' : '#fda4af'}`,
                           }}>{SHIFT_LABELS[s]}: {asg ? (names.get(asg.employeeId) ?? '—') : 'تعیین نشده'}</span>
                         );
                       })}
                     </div>
                   </td>
-                  <td style={{ whiteSpace: 'nowrap' }}><Link to={`/patients/${a.id}`} style={{ color: '#2563eb', fontWeight: 700 }}>پرونده ←</Link></td>
+                  <td style={{ whiteSpace: 'nowrap' }}><Link to={`/patients/${a.id}`} style={{ color: '#004E72', fontWeight: 700 }}>پرونده ←</Link></td>
                 </tr>
               );
             })}
@@ -175,7 +175,7 @@ export default function PatientsPage() {
           <strong>بسته‌شده‌های این بخش:</strong>{' '}
           {closed.map(a => (
             <span key={a.id} style={{ marginInlineEnd: 12 }}>
-              <Link to={`/patients/${a.id}`} style={{ color: '#2563eb' }}>{patientOf.get(a.patientId)?.fullName ?? a.id}</Link>
+              <Link to={`/patients/${a.id}`} style={{ color: '#004E72' }}>{patientOf.get(a.patientId)?.fullName ?? a.id}</Link>
               {' '}({ADMISSION_STATUS_LABELS[a.status]})
             </span>
           ))}

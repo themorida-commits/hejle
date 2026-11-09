@@ -3,18 +3,18 @@
    نه فقط اندازه؛ فاصله‌ها روی مقیاس ۴/۸؛ سایه‌ها دو لایه و خفه؛ رنگ لهجه کمیاب
    است و فقط برای کنش اصلی و وضعیت‌ها خرج می‌شود. (منابع: NN/g، Carbon، Refactoring UI) */
 :root {
-  --bg: #f8fafc;
+  --bg: #F9F9F9;
   --surface: #ffffff;
   --band: #f1f5f9;
   --border: #e2e8f0;
   --border-strong: #cbd5e1;
-  --ink: #0f172a;
+  --ink: #0A2735;
   --ink-2: #334155;
   --muted: #64748b;
   --faint: #94a3b8;
-  --primary: #2563eb;
-  --primary-hover: #1d4ed8;
-  --primary-soft: #eff6ff;
+  --primary: #004E72;
+  --primary-hover: #003A56;
+  --primary-soft: #DCE9F0;
   --danger: #e11d48;
   --danger-hover: #be123c;
   --danger-soft: #fff1f2;
@@ -22,8 +22,8 @@
   --success-soft: #f0fdf4;
   --warn: #b45309;
   --warn-soft: #fffbeb;
-  --header: #0f172a;
-  --header-accent: #93c5fd;
+  --header: #0A2735;
+  --header-accent: #FF6D41;
   --radius: 12px;
   --radius-lg: 16px;
   --shadow-sm: 0 1px 2px rgb(15 23 42 / 0.05), 0 1px 3px rgb(15 23 42 / 0.06);
@@ -32,7 +32,7 @@
 
 * { box-sizing: border-box; }
 body { margin: 0; font-family: Vazirmatn, system-ui, 'Segoe UI', Tahoma, sans-serif; background: var(--bg); color: var(--ink); }
-::selection { background: #bfdbfe; }
+::selection { background: #DCE9F0; }
 
 /* دکمهٔ اصلی — فقط برای کنش اصلی هر نما؛ بقیهٔ کنش‌ها واریانت ثانویه/شبحی می‌گیرند. */
 button {
@@ -59,8 +59,8 @@ select, input {
 input[type='number'] { font-variant-numeric: tabular-nums; }
 
 /* فوکوسِ دیده‌شدنی برای ناوبری با صفحه‌کلید — هیچ عنصری بی‌نشانه نمی‌ماند. */
-:focus-visible { outline: 2px solid #93c5fd; outline-offset: 1px; }
-input:focus, select:focus { border-color: var(--primary); outline: none; background: #fff; box-shadow: 0 0 0 3px rgb(37 99 235 / 0.15); }
+:focus-visible { outline: 2px solid #FF6D41; outline-offset: 1px; }
+input:focus, select:focus { border-color: var(--primary); outline: none; background: #fff; box-shadow: 0 0 0 3px rgb(0 78 114 / 0.15); }
 
 /* کارت آماری داشبورد: در استراحت سایهٔ خفه، زیر اشاره‌گر یک پله بالاتر. */
 .stat-card { box-shadow: var(--shadow-sm); transition: box-shadow 0.15s ease; }
@@ -75,7 +75,7 @@ table th { font-weight: 700; }
 
 /* سربرگ جدول برنامه هنگام اسکرول عمودی چسبیده می‌ماند تا ستون روزها هرگز گم نشود. */
 .roster-grid thead { position: sticky; top: 0; z-index: 4; }
-.roster-grid tbody tr:hover td { background-color: #f8fafc; }
+.roster-grid tbody tr:hover td { background-color: #F9F9F9; }
 
 /* اسکرول‌بار باریک و خنثی برای ناحیهٔ اسکرول جدول برنامه. */
 .scroll-slim { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }

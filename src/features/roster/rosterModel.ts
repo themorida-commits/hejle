@@ -134,7 +134,7 @@ export function contrastTextColor(hex: string | undefined): string {
   const b = parseInt(hex.slice(5, 7), 16) / 255;
   const lin = (c: number) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
   const luminance = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
-  return luminance > 0.35 ? '#0f172a' : '#fff';
+  return luminance > 0.35 ? '#0A2735' : '#fff';
 }
 
 // چک‌لیست برابری با قابلیت‌های صفحهٔ برنامهٔ نسخهٔ فعلی (از ممیزی ۲ نوامبر) —

@@ -94,7 +94,7 @@ export default function SettingsPage() {
             ? CHAIN_PRESETS.find(p => p.id === presetId) ?? null
             : matchChainPreset(chain);
           return (
-            <p style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: 10, fontSize: 13 }}>
+            <p style={{ background: '#F9F9F9', border: '1px solid #e2e8f0', borderRadius: 10, padding: 10, fontSize: 13 }}>
               {matched
                 ? <>پیش‌فرض «{matched.label}»: {matched.note}</>
                 : 'زنجیرهٔ سفارشی — با هیچ‌یک از پیش‌فرض‌های بخشی یکسان نیست. برای نیروهای مسلح، سقف روزهای هر گام را حتماً از آیین‌نامهٔ داخلی بیمارستان بگیرید؛ پیش‌فرض عمومی وجود ندارد.'}

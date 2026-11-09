@@ -147,7 +147,7 @@ function MohKaranehSection() {
   const input = { padding: 6, borderRadius: 8, border: '1px solid #ddd', width: 130, marginInlineStart: 6 } as const;
 
   return (
-    <div style={{ background: '#fff', border: '1px solid #dbeafe', borderRadius: 12, padding: 16, marginBottom: 20 }}>
+    <div style={{ background: '#fff', border: '1px solid #DCE9F0', borderRadius: 12, padding: 16, marginBottom: 20 }}>
       <h2 style={{ marginTop: 0, fontSize: 17 }}>محاسبه با قالب وزارت بهداشت — ویرایش ۱۴۰۴</h2>
       <p style={{ color: '#64748b', fontSize: 13, maxWidth: 780 }}>
         قالب پیش‌فرض اسناد جاری وزارت بهداشت (سهم‌ها و ضرایب عین دستورالعمل)؛ هر بیمارستان پروفایل پارامتر خودش را دارد و می‌تواند اعداد را با مصوبهٔ داخلی‌اش جایگزین کند.
@@ -225,7 +225,7 @@ function MohKaranehSection() {
           ))}
         </div>
         {KARANEH_PRESETS.filter(pr => pr.id === profile.presetId).map(pr => (
-          <p key={pr.id} style={{ fontSize: 12, color: '#b45309', background: '#f8fafc', borderRadius: 8, padding: '6px 10px', marginTop: 8 }}>{pr.note}</p>
+          <p key={pr.id} style={{ fontSize: 12, color: '#b45309', background: '#F9F9F9', borderRadius: 8, padding: '6px 10px', marginTop: 8 }}>{pr.note}</p>
         ))}
         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 10, fontSize: 13 }}>
           <label>سهم گروه پرستاری از درآمد بسته‌ها (٪)

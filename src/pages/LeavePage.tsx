@@ -267,7 +267,7 @@ export default function LeavePage() {
             </p>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {canAct && b.suggestion !== 'review' && (
-                <button onClick={followSuggestion} style={{ padding: '7px 16px', borderRadius: 10, border: 'none', background: '#2563eb', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>
+                <button onClick={followSuggestion} style={{ padding: '7px 16px', borderRadius: 10, border: 'none', background: '#004E72', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>
                   اقدام طبق پیشنهاد ({b.suggestion === 'approve' ? 'تأیید مرخصی' : 'رد مرخصی'})
                 </button>
               )}

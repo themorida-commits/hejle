@@ -27,10 +27,10 @@ export default function Layout() {
   // هر نقش فقط میز کار خودش را می‌بیند (مترون و اداری هم میز جدا دارند)
   const links = navForRole(dataSource === 'supabase' ? (sessionRole ?? 'staff') : viewRole);
   return (
-    <div dir="rtl" style={{ fontFamily: 'Vazirmatn, system-ui, sans-serif', minHeight: '100vh', background: '#f8fafc', color: '#0f172a' }}>
-      <header style={{ display: 'flex', gap: 16, alignItems: 'center', padding: '10px 20px', background: 'linear-gradient(180deg, #17233c 0%, #0f172a 100%)', color: '#fff', flexWrap: 'wrap', boxShadow: '0 1px 3px rgb(15 23 42 / 0.25)', position: 'sticky', top: 0, zIndex: 40 }}>
+    <div dir="rtl" style={{ fontFamily: 'Vazirmatn, system-ui, sans-serif', minHeight: '100vh', background: '#F9F9F9', color: '#0A2735' }}>
+      <header style={{ display: 'flex', gap: 16, alignItems: 'center', padding: '10px 20px', background: 'linear-gradient(180deg, #17233c 0%, #0A2735 100%)', color: '#fff', flexWrap: 'wrap', boxShadow: '0 1px 3px rgb(15 23 42 / 0.25)', position: 'sticky', top: 0, zIndex: 40 }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span aria-hidden style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: 10, background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)', color: '#fff', fontWeight: 800, fontSize: 17, boxShadow: 'inset 0 1px 0 rgb(255 255 255 / 0.3)' }}>ح</span>
+          <span aria-hidden style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: 10, background: 'linear-gradient(135deg, #FF6D41, #003A56)', color: '#fff', fontWeight: 800, fontSize: 17, boxShadow: 'inset 0 1px 0 rgb(255 255 255 / 0.3)' }}>ح</span>
           <span style={{ lineHeight: 1.25 }}>
             <strong style={{ fontSize: 16, display: 'block' }}>حجله</strong>
             <span style={{ fontSize: 11, color: '#94a3b8', display: 'block' }}>لایهٔ نیروی انسانی بیمارستان</span>
@@ -59,7 +59,7 @@ export default function Layout() {
               </select>
             )}
             <span style={{ direction: 'ltr' }}>{sessionEmail ?? ''}</span>
-            <button onClick={() => void signOut()} style={{ background: 'transparent', color: '#93c5fd', border: '1px solid #93c5fd', borderRadius: 6, padding: '3px 12px', cursor: 'pointer', fontSize: 13 }}>خروج</button>
+            <button onClick={() => void signOut()} style={{ background: 'transparent', color: '#FF6D41', border: '1px solid #FF6D41', borderRadius: 6, padding: '3px 12px', cursor: 'pointer', fontSize: 13 }}>خروج</button>
           </span>
         ) : (
           <span style={{ marginInlineStart: 'auto', display: 'flex', gap: 8, alignItems: 'center', fontSize: 13 }}>

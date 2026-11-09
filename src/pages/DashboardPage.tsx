@@ -11,7 +11,7 @@ function Card({ title, value, hint, alert }: { title: string; value: string; hin
       borderTop: alert ? '3px solid #e11d48' : undefined,
     }}>
       <div style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>{title}</div>
-      <div className="num" style={{ fontSize: 28, fontWeight: 800, marginTop: 6, color: alert ? '#e11d48' : '#0f172a' }}>{value}</div>
+      <div className="num" style={{ fontSize: 28, fontWeight: 800, marginTop: 6, color: alert ? '#e11d48' : '#0A2735' }}>{value}</div>
       {hint && <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>{hint}</div>}
     </div>
   );

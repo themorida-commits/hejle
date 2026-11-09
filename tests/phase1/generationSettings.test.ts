@@ -101,9 +101,9 @@ test('GS-5 توزیع تصادفی: خروجی کامل و قطعی (دو اجر
 });
 
 test('GS-6 رنگ متن چیپ: روی زرد/سبز روشن متن تیره، روی آبی تیره متن سفید', () => {
-  assert.equal(contrastTextColor('#fbbf24'), '#0f172a');
-  assert.equal(contrastTextColor('#34d399'), '#0f172a');
-  assert.equal(contrastTextColor('#e2e8f0'), '#0f172a');
+  assert.equal(contrastTextColor('#fbbf24'), '#0A2735');
+  assert.equal(contrastTextColor('#34d399'), '#0A2735');
+  assert.equal(contrastTextColor('#e2e8f0'), '#0A2735');
   assert.equal(contrastTextColor('#1e3a8a'), '#fff');
   assert.equal(contrastTextColor('#ec4899'), '#fff');
   assert.equal(contrastTextColor(undefined), '#fff');

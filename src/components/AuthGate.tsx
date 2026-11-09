@@ -70,9 +70,9 @@ export default function AuthGate({ children }: { children: ReactNode }) {
   if (gate === 'no_membership') {
     return (
       <div dir="rtl" style={{ fontFamily: 'Vazirmatn, system-ui', padding: 40, maxWidth: 520, margin: '0 auto' }}>
-        <h2 style={{ color: '#0f172a' }}>حساب شما هنوز فعال نشده است</h2>
+        <h2 style={{ color: '#0A2735' }}>حساب شما هنوز فعال نشده است</h2>
         <p>برای این حساب، عضویت فعالی در هیچ بیمارستانی ثبت نشده است. با مدیر سیستم تماس بگیرید تا حساب‌تان به بخش درست وصل شود.</p>
-        <button onClick={() => void signOut()} style={{ background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', cursor: 'pointer' }}>خروج</button>
+        <button onClick={() => void signOut()} style={{ background: '#004E72', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', cursor: 'pointer' }}>خروج</button>
       </div>
     );
   }

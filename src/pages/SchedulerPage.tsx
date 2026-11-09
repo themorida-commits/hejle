@@ -50,7 +50,7 @@ function RosterImportCard() {
       </p>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         <button onClick={downloadTemplate}>دانلود قالب شبکه‌ای بخش</button>
-        <label style={{ border: '1px solid #ccc', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontSize: 13, background: '#f8fafc' }}>
+        <label style={{ border: '1px solid #ccc', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontSize: 13, background: '#F9F9F9' }}>
           انتخاب فایل (Excel / CSV)
           <input type="file" accept=".csv,.xlsx,.xls" style={{ display: 'none' }} onChange={e => void onFile(e.target.files?.[0])} />
         </label>
@@ -116,7 +116,7 @@ function RosterExplainPanel() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
         <strong style={{ fontSize: 13 }}>توضیح ایجنت — خوانش برنامهٔ ماه (Zone C)</strong>
         <div style={{ display: 'flex', gap: 8 }}>
-          <button onClick={run} style={{ padding: '6px 14px', borderRadius: 10, border: '1px solid #2563eb', background: '#fff', color: '#2563eb', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>توضیح ایجنت</button>
+          <button onClick={run} style={{ padding: '6px 14px', borderRadius: 10, border: '1px solid #004E72', background: '#fff', color: '#004E72', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>توضیح ایجنت</button>
           {brief && (
             <button onClick={save} disabled={saved}
               style={{ padding: '6px 14px', borderRadius: 10, border: '1px solid #cbd5e1', background: saved ? '#f1f5f9' : '#fff', color: '#334155', fontSize: 12, fontWeight: 700, cursor: saved ? 'default' : 'pointer' }}>
@@ -324,7 +324,7 @@ export default function SchedulerPage() {
       <RosterImportCard />
       <RosterExplainPanel />
       {(gate.blocked.length > 0 || gate.warnings.length > 0) && (
-        <div style={{ background: '#f8fafc', border: '1px solid #fde68a', borderRadius: 12, padding: '10px 14px', marginBottom: 12, fontSize: 13 }}>
+        <div style={{ background: '#F9F9F9', border: '1px solid #fde68a', borderRadius: 12, padding: '10px 14px', marginBottom: 12, fontSize: 13 }}>
           {gate.blocked.length > 0 && (
             <div style={{ color: '#b45309' }}>
               <strong>قفل صلاحیت — از برنامه کنار گذاشته شدند:</strong>{' '}

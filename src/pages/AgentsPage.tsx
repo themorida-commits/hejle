@@ -15,7 +15,7 @@ import { forecastCensus } from '../features/agents/censusBaseline';
 // اجرا در «ردّ اجراها» ثبت می‌شود تا قابل audit باشد. تصمیم با انسان است.
 const faNum = (n: number) => n.toLocaleString('fa-IR');
 const faDateTime = (iso: string) => new Intl.DateTimeFormat('fa-IR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso));
-const inputStyle = { display: 'block', padding: 8, borderRadius: 8, border: '1px solid #cbd5e1', background: '#f8fafc' } as const;
+const inputStyle = { display: 'block', padding: 8, borderRadius: 8, border: '1px solid #cbd5e1', background: '#F9F9F9' } as const;
 const card = { background: '#fff', border: '1px solid #e2e8f0', borderRadius: 16, padding: 16, marginBottom: 16 } as const;
 
 const BUCKET_STYLE: Record<RadarBucket, { label: string; bg: string; color: string }> = {
@@ -131,7 +131,7 @@ export default function AgentsPage() {
 
   return (
     <div>
-      <h1 style={{ fontSize: 20, fontWeight: 800, color: '#0f172a', margin: '4px 0 4px' }}>مرکز ایجنت‌ها</h1>
+      <h1 style={{ fontSize: 20, fontWeight: 800, color: '#0A2735', margin: '4px 0 4px' }}>مرکز ایجنت‌ها</h1>
       <p style={{ fontSize: 13, color: '#64748b', margin: '0 0 16px' }}>
         لایهٔ ایجنت (تصمیم NUR-DR-2026-003): ابزارهای فاز ۱ فقط می‌خوانند و توضیح می‌دهند؛ ابزارهای فاز ۲ (Zone C)
         پیش‌نویس و پیشنهاد می‌سازند و تصمیم نهایی همیشه با موتور قوانین و انسان است. هر اجرا در ردّ اجراها ثبت می‌شود.
@@ -151,24 +151,24 @@ export default function AgentsPage() {
             placeholder="مثلاً: سقف اضافه‌کار ماهانه چقدر است؟"
             style={{ ...inputStyle, flex: '1 1 320px' }}
           />
-          <button onClick={() => ask(question)} style={{ padding: '8px 18px', borderRadius: 10, border: 'none', background: '#2563eb', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>
+          <button onClick={() => ask(question)} style={{ padding: '8px 18px', borderRadius: 10, border: 'none', background: '#004E72', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>
             بپرس
           </button>
         </div>
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 10 }}>
           {POLICY_CORPUS.map(e => (
             <button key={e.id} onClick={() => { setQuestion(e.title); ask(e.title); }}
-              style={{ padding: '4px 10px', borderRadius: 999, border: '1px solid #cbd5e1', background: '#f8fafc', color: '#334155', fontSize: 12, cursor: 'pointer' }}>
+              style={{ padding: '4px 10px', borderRadius: 999, border: '1px solid #cbd5e1', background: '#F9F9F9', color: '#334155', fontSize: 12, cursor: 'pointer' }}>
               {e.title}
             </button>
           ))}
         </div>
         {answer?.kind === 'answer' && (
-          <div style={{ marginTop: 14, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: 12 }}>
+          <div style={{ marginTop: 14, background: '#F9F9F9', border: '1px solid #e2e8f0', borderRadius: 12, padding: 12 }}>
             <div style={{ fontWeight: 700, marginBottom: 6 }}>{answer.entry.title}</div>
             <div style={{ fontSize: 13, lineHeight: 2 }}>{answer.entry.answer}</div>
             <div style={{ marginTop: 8 }}>
-              <span style={{ fontSize: 11, background: '#e0e7ff', color: '#3730a3', borderRadius: 999, padding: '3px 10px' }}>
+              <span style={{ fontSize: 11, background: '#DCE9F0', color: '#3730a3', borderRadius: 999, padding: '3px 10px' }}>
                 منبع: {answer.entry.citation}
               </span>
             </div>
@@ -344,9 +344,9 @@ export default function AgentsPage() {
             </div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {census.forecast.slice(0, 3).map(d => (
-                <div key={d.dateISO} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: '10px 14px', minWidth: 170 }}>
+                <div key={d.dateISO} style={{ background: '#F9F9F9', border: '1px solid #e2e8f0', borderRadius: 12, padding: '10px 14px', minWidth: 170 }}>
                   <div style={{ fontSize: 12, color: '#64748b' }}>{new Intl.DateTimeFormat('fa-IR', { dateStyle: 'medium' }).format(new Date(d.dateISO))}</div>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: '#0f172a' }}>{d.mean.toLocaleString('fa-IR', { maximumFractionDigits: 1 })} بیمار</div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: '#0A2735' }}>{d.mean.toLocaleString('fa-IR', { maximumFractionDigits: 1 })} بیمار</div>
                   <div style={{ fontSize: 12, color: '#64748b' }}>بازهٔ تقریبی: {d.low.toLocaleString('fa-IR', { maximumFractionDigits: 1 })} تا {d.high.toLocaleString('fa-IR', { maximumFractionDigits: 1 })}</div>
                 </div>
               ))}

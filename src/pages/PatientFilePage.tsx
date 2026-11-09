@@ -13,14 +13,14 @@ import { composeReportDraft } from '../features/agents/reportDraft';
 // پرستارش کی بوده و گزارش امضاشده‌اش چیست، و تحویل‌ها به چه کسی انجام شده.
 const faDate = (iso: string) => new Intl.DateTimeFormat('fa-IR', { dateStyle: 'medium' }).format(new Date(iso));
 const faDateTime = (iso: string) => new Intl.DateTimeFormat('fa-IR', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso));
-const inputStyle = { display: 'block', padding: 7, borderRadius: 8, border: '1px solid #cbd5e1', background: '#f8fafc' } as const;
+const inputStyle = { display: 'block', padding: 7, borderRadius: 8, border: '1px solid #cbd5e1', background: '#F9F9F9' } as const;
 const cardStyle = { background: '#fff', border: '1px solid #e2e8f0', borderRadius: 16, padding: 16, marginBottom: 16 } as const;
 const SHIFTS: CareShift[] = ['morning', 'evening', 'night'];
 
 export default function PatientFilePage() {
   const { admissionId } = useParams();
   const st = useAppStore();
-  const navigateBack = <Link to="/patients" style={{ color: '#2563eb', fontSize: 13 }}>→ بازگشت به بیماران بخش</Link>;
+  const navigateBack = <Link to="/patients" style={{ color: '#004E72', fontSize: 13 }}>→ بازگشت به بیماران بخش</Link>;
   const admission = st.admissions.find(a => a.id === admissionId);
   const patient = admission ? st.patients.find(p => p.id === admission.patientId) : undefined;
   const names = useMemo(() => new Map(st.personnel.map(p => [p.id, p.name])), [st.personnel]);
@@ -145,22 +145,22 @@ export default function PatientFilePage() {
           </div>
         )}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(230px, 1fr))', gap: 12, marginTop: 14 }}>
-          <div style={{ background: '#f8fafc', borderRadius: 12, padding: 12 }}>
+          <div style={{ background: '#F9F9F9', borderRadius: 12, padding: 12 }}>
             <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>چرا پذیرش شد؟</div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>{admission.admissionReason}</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#0A2735' }}>{admission.admissionReason}</div>
             {admission.chiefComplaint && <div style={{ fontSize: 12, color: '#475569', marginTop: 4 }}>شکایت اصلی: {admission.chiefComplaint}</div>}
             {admission.diagnosisText && <div style={{ fontSize: 12, color: '#475569' }}>تشخیص: {admission.diagnosisText}{admission.diagnosisIcd10 ? ` (${admission.diagnosisIcd10})` : ''}</div>}
           </div>
-          <div style={{ background: '#f8fafc', borderRadius: 12, padding: 12 }}>
+          <div style={{ background: '#F9F9F9', borderRadius: 12, padding: 12 }}>
             <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>پزشک معالج</div>
-            <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>{admission.attendingName}</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: '#0A2735' }}>{admission.attendingName}</div>
             <div style={{ fontSize: 12, color: '#475569' }}>
               {admission.attendingService ?? ''}{admission.attendingCouncilNo ? ` • نظام پزشکی ${admission.attendingCouncilNo}` : ''}
             </div>
           </div>
-          <div style={{ background: '#f8fafc', borderRadius: 12, padding: 12 }}>
+          <div style={{ background: '#F9F9F9', borderRadius: 12, padding: 12 }}>
             <div style={{ fontSize: 12, color: '#64748b', marginBottom: 4 }}>پذیرش</div>
-            <div style={{ fontSize: 13, color: '#0f172a' }}>{faDateTime(admission.admittedAtISO)} — {ADMISSION_TYPE_LABELS[admission.admissionType]}</div>
+            <div style={{ fontSize: 13, color: '#0A2735' }}>{faDateTime(admission.admittedAtISO)} — {ADMISSION_TYPE_LABELS[admission.admissionType]}</div>
             <div style={{ fontSize: 12, color: '#475569' }}>
               {admission.admissionSource ?? ''}{admission.insuranceType ? ` • بیمه: ${admission.insuranceType}` : ''}
             </div>
@@ -208,7 +208,7 @@ export default function PatientFilePage() {
               <select value={asgForm.role} onChange={e => setAsgForm(f => ({ ...f, role: e.target.value as PatientAssignment['role'] }))} style={inputStyle}>
                 <option value="responsible">پرستار مسئول بیمار</option><option value="associate">پرستار همکار</option><option value="charge">مسئول شیفت</option>
               </select></label>
-            <button onClick={addAssignment} disabled={!asgForm.employeeId} style={{ padding: '8px 16px', borderRadius: 10, border: 'none', background: '#2563eb', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>ثبت تخصیص</button>
+            <button onClick={addAssignment} disabled={!asgForm.employeeId} style={{ padding: '8px 16px', borderRadius: 10, border: 'none', background: '#004E72', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>ثبت تخصیص</button>
           </div>
         )}
       </div>
@@ -237,7 +237,7 @@ export default function PatientFilePage() {
               {r.body.incidents && <div style={{ color: '#be123c' }}><b>حادثه:</b> {r.body.incidents}</div>}
             </div>
             {r.status === 'draft' && (canManage || r.authorEmployeeId === st.currentEmployeeId) && (
-              <button onClick={() => signReport(r)} style={{ marginTop: 8, padding: '6px 14px', borderRadius: 8, border: '1px solid #2563eb', background: '#fff', color: '#2563eb', fontWeight: 700, cursor: 'pointer' }}>امضای گزارش</button>
+              <button onClick={() => signReport(r)} style={{ marginTop: 8, padding: '6px 14px', borderRadius: 8, border: '1px solid #004E72', background: '#fff', color: '#004E72', fontWeight: 700, cursor: 'pointer' }}>امضای گزارش</button>
             )}
           </div>
         ))}
@@ -267,7 +267,7 @@ export default function PatientFilePage() {
             </div>
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10, alignItems: 'center' }}>
               <button onClick={() => { const t = composeReportDraft(repBody); if (t) setRepNarrative(t); }}
-                style={{ padding: '8px 16px', borderRadius: 10, border: '1px solid #2563eb', background: '#fff', color: '#2563eb', fontWeight: 700, cursor: 'pointer' }}>
+                style={{ padding: '8px 16px', borderRadius: 10, border: '1px solid #004E72', background: '#fff', color: '#004E72', fontWeight: 700, cursor: 'pointer' }}>
                 ساخت پیش‌نویس روایی از بخش‌ها (ایجنت)
               </button>
               <span style={{ fontSize: 12, color: '#64748b' }}>متن روایی فقط از همین بخش‌های پرشده ساخته می‌شود؛ ویرایش و امضایش با خودتان است.</span>
@@ -278,7 +278,7 @@ export default function PatientFilePage() {
                   style={{ ...inputStyle, width: '100%', resize: 'vertical', lineHeight: 2 }} />
               </label>
             )}
-            <button onClick={addReport} style={{ marginTop: 10, padding: '8px 16px', borderRadius: 10, border: 'none', background: '#2563eb', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>ثبت پیش‌نویس گزارش</button>
+            <button onClick={addReport} style={{ marginTop: 10, padding: '8px 16px', borderRadius: 10, border: 'none', background: '#004E72', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>ثبت پیش‌نویس گزارش</button>
           </div>
         )}
       </div>
@@ -331,7 +331,7 @@ export default function PatientFilePage() {
                 </label>
               ))}
             </div>
-            <button onClick={addHandover} disabled={!hovForm.fromAssignmentId || !hovForm.receiverId} style={{ marginTop: 10, padding: '8px 16px', borderRadius: 10, border: 'none', background: '#2563eb', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>ثبت تحویل</button>
+            <button onClick={addHandover} disabled={!hovForm.fromAssignmentId || !hovForm.receiverId} style={{ marginTop: 10, padding: '8px 16px', borderRadius: 10, border: 'none', background: '#004E72', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>ثبت تحویل</button>
           </div>
         )}
       </div>
@@ -342,7 +342,7 @@ export default function PatientFilePage() {
           {timeline.map((ev, i) => (
             <div key={`${ev.kind}-${ev.refId}-${i}`} style={{ display: 'flex', gap: 10, fontSize: 13, alignItems: 'baseline' }}>
               <span style={{ whiteSpace: 'nowrap', color: '#64748b', fontSize: 12, minWidth: 150 }}>{faDateTime(ev.atISO)}</span>
-              <span style={{ width: 8, height: 8, borderRadius: 999, background: ev.kind === 'admission' ? '#2563eb' : ev.kind === 'discharge' ? '#475569' : ev.kind === 'report' ? '#16a34a' : ev.kind === 'handover' ? '#b45309' : '#93c5fd', flexShrink: 0 }} />
+              <span style={{ width: 8, height: 8, borderRadius: 999, background: ev.kind === 'admission' ? '#004E72' : ev.kind === 'discharge' ? '#475569' : ev.kind === 'report' ? '#16a34a' : ev.kind === 'handover' ? '#b45309' : '#FF6D41', flexShrink: 0 }} />
               <span><b>{ev.title}</b>{ev.detail ? <span style={{ color: '#475569' }}> — {ev.detail}</span> : null}</span>
             </div>
           ))}

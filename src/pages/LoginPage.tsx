@@ -24,11 +24,11 @@ export default function LoginPage() {
   };
 
   return (
-    <div dir="rtl" style={{ fontFamily: 'Vazirmatn, system-ui, sans-serif', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(180deg, #e8eef6 0%, #f8fafc 55%)', color: '#0f172a' }}>
+    <div dir="rtl" style={{ fontFamily: 'Vazirmatn, system-ui, sans-serif', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(180deg, #e8eef6 0%, #F9F9F9 55%)', color: '#0A2735' }}>
       <form onSubmit={submit} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 18, padding: 30, width: 350, display: 'flex', flexDirection: 'column', gap: 12, boxShadow: '0 8px 20px -6px rgb(15 23 42 / 0.12), 0 3px 6px -3px rgb(15 23 42 / 0.07)' }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span aria-hidden style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: 11, background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)', color: '#fff', fontWeight: 800, fontSize: 20, boxShadow: 'inset 0 1px 0 rgb(255 255 255 / 0.3)' }}>ح</span>
-          <strong style={{ fontSize: 20, color: '#0f172a' }}>حجله</strong>
+          <span aria-hidden style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: 11, background: 'linear-gradient(135deg, #FF6D41, #003A56)', color: '#fff', fontWeight: 800, fontSize: 20, boxShadow: 'inset 0 1px 0 rgb(255 255 255 / 0.3)' }}>ح</span>
+          <strong style={{ fontSize: 20, color: '#0A2735' }}>حجله</strong>
         </span>
         <span style={{ fontSize: 13, color: '#64748b' }}>لایهٔ نیروی انسانی بیمارستان — ورود کاربران</span>
         <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13 }}>
@@ -40,7 +40,7 @@ export default function LoginPage() {
           <input type="password" required value={password} onChange={e => setPassword(e.target.value)} style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #cbd5e1', direction: 'ltr', textAlign: 'left' }} />
         </label>
         {error && <div style={{ color: '#e11d48', fontSize: 13 }}>{error}</div>}
-        <button type="submit" disabled={busy} style={{ background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 0', fontSize: 14, cursor: busy ? 'wait' : 'pointer' }}>
+        <button type="submit" disabled={busy} style={{ background: '#004E72', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 0', fontSize: 14, cursor: busy ? 'wait' : 'pointer' }}>
           {busy ? 'در حال ورود…' : 'ورود'}
         </button>
       </form>
