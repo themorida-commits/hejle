@@ -196,6 +196,30 @@ export interface PatientsRepository {
   dischargeAdmission(id: string, status: AdmissionRecord['status'], note: string | null, atISO: string): Promise<void>;
 }
 
+
+// ── لایهٔ ایجنت (مایگریشن ۰۰۱۴، فاز ۱) — ردّ اجرا و پیش‌نویس؛ تصمیم با انسان است.
+export interface AgentRunRecord {
+  id: string; hospitalId: string; agentKey: string; zone: 'A' | 'B' | 'C';
+  input: Record<string, unknown>; output: Record<string, unknown> | null;
+  citations: { title: string; source: string }[];
+  model: string | null; status: 'done' | 'error';
+  createdBy: string | null; createdAt: string;
+}
+export interface AgentDraftRecord {
+  id: string; hospitalId: string; runId: string | null; kind: string;
+  payload: Record<string, unknown>;
+  status: 'draft' | 'approved' | 'rejected';
+  decidedBy: string | null; decidedAt: string | null;
+  createdAt: string; updatedAt: string;
+}
+export interface AgentsRepository {
+  listRuns(hospitalId: string): Promise<AgentRunRecord[]>;
+  createRun(rec: Omit<AgentRunRecord, 'id' | 'createdAt'>): Promise<AgentRunRecord>;
+  listDrafts(hospitalId: string): Promise<AgentDraftRecord[]>;
+  createDraft(rec: Omit<AgentDraftRecord, 'id' | 'createdAt' | 'updatedAt'>): Promise<AgentDraftRecord>;
+  decideDraft(id: string, status: 'approved' | 'rejected', decidedBy: string | null, atISO: string): Promise<void>;
+}
+
 export interface DataRepositories {
   org: OrgRepository;
   roster: RosterRepository;
@@ -205,6 +229,7 @@ export interface DataRepositories {
   profiles: KaranehProfileRepository;
   settings: SettingsRepository;
   patients: PatientsRepository;
+  agents: AgentsRepository;
 }
 
 /** عکس کامل دادهٔ یک بیمارستان برای هیدراته‌کردن استور. */

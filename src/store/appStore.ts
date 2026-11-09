@@ -11,7 +11,7 @@ import { seedDemoCredentials, type Credential } from '../features/credentials/cr
 import type { NursingPackage, NursingServiceRecord } from '../features/nursingServices/nursingService';
 import { isoFromJalali } from '../features/leave/leaveService';
 import { buildDemoSnapshot } from '../services/data/demoRepositories';
-import { createRepositories, currentDataSource, loadHospitalSnapshot } from '../services/data/index';
+import { createRepositories, currentDataSource, loadHospitalSnapshot, DEMO_HOSPITAL_ID } from '../services/data/index';
 import {
   employeeToPersonnel, shiftTypeToDomain, entryToDomain, leaveToDomain, leaveRequestToDb, workRecordToDomain,
   nursingPackageToDomain, nursingRecordToDomain, nursingRecordToDb, personnelToEmployeeRecord,
@@ -21,7 +21,9 @@ import {
 import type {
   Patient, Admission, PatientAssignment, NursingReport, Handover,
 } from '../features/patients/patientService';
-import type { HospitalSnapshot, HospitalSettingsRecord, KaranehProfileRecord } from '../services/data/types';
+import type { AgentRunRecord, HospitalSnapshot, HospitalSettingsRecord, KaranehProfileRecord } from '../services/data/types';
+import { askPolicy as runPolicyAnswer, zoneOf, type PolicyAnswer } from '../features/agents/agentCore';
+import { POLICY_CORPUS } from '../features/agents/policyCorpus';
 import type { GlobalDutySettings } from '../core/types';
 import { useSessionStore } from './session';
 import {
@@ -178,6 +180,10 @@ interface AppState {
   addHandover: (h: Handover) => void;
   acceptHandover: (id: string) => void;
   dischargeAdmission: (id: string, status: Admission['status'], note?: string) => void;
+  /** لایهٔ ایجنت فاز ۱ (دور ۱۷) — ردّ اجراها؛ بخشی از snapshot بیمارستان نیست. */
+  agentRuns: AgentRunRecord[];
+  recordAgentRun: (agentKey: string, input: Record<string, unknown>, output: Record<string, unknown> | null, citations: AgentRunRecord['citations']) => void;
+  askPolicy: (question: string) => PolicyAnswer;
   addPersonnelBulk: (list: Personnel[]) => void;
   importEntries: (list: ScheduleEntry[]) => void;
   karanehProfiles: KaranehProfileRecord[];
@@ -258,6 +264,12 @@ export const useAppStore = create<AppState>((set, get) => ({
       hydrated: true,
       loadedWards: [wardId],
     });
+    // ردّ اجراهای ایجنت سطح بیمارستان است؛ اگر مایگریشن ۰۰۱۴ هنوز اعمال نشده
+    // باشد خواندنش خطا می‌دهد و بی‌سروصدا خالی می‌ماند.
+    try {
+      const runs = await createRepositories('supabase').agents.listRuns(hospitalId);
+      set({ agentRuns: runs });
+    } catch (err) { console.error('agent runs load failed', err); }
   },
   loadWard: async (wardId) => {
     const st = get();
@@ -310,6 +322,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   patientAssignments: demoState.patientAssignments,
   patientReports: demoState.patientReports,
   handovers: demoState.handovers,
+  agentRuns: [],
   attendanceEvents: seedAttendance(demoState.entries),
   credentials: seedDemoCredentials(
     demoState.personnel.filter(p => p.departmentId === 'dep1').map(p => p.id),
@@ -570,6 +583,37 @@ export const useAppStore = create<AppState>((set, get) => ({
       void createRepositories('supabase').patients.dischargeAdmission(id, status, note ?? null, atISO)
         .catch(err => console.error('discharge persist failed', err));
     }
+  },
+  recordAgentRun: (agentKey, input, output, citations) => {
+    const st = get();
+    const hospitalId = st.dataSource === 'supabase'
+      ? useSessionStore.getState().hospitalId
+      : DEMO_HOSPITAL_ID;
+    if (!hospitalId) return;
+    const optimistic: AgentRunRecord = {
+      id: `run-${Date.now()}`, hospitalId, agentKey, zone: zoneOf(agentKey) ?? 'A',
+      input, output, citations, model: null, status: 'done', createdBy: null,
+      createdAt: new Date().toISOString(),
+    };
+    set((s) => ({ agentRuns: [optimistic, ...s.agentRuns].slice(0, 100) }));
+    void createRepositories(st.dataSource).agents.createRun({
+      hospitalId, agentKey, zone: optimistic.zone, input, output, citations,
+      model: null, status: 'done', createdBy: null,
+    })
+      .then(saved => set((s) => ({ agentRuns: s.agentRuns.map(r => (r.id === optimistic.id ? saved : r)) })))
+      .catch(err => console.error('agent run persist failed', err));
+  },
+  askPolicy: (question) => {
+    const ans = runPolicyAnswer(POLICY_CORPUS, question);
+    get().recordAgentRun(
+      'policy_lookup',
+      { question },
+      ans.kind === 'answer'
+        ? { answerKind: 'answer', entryId: ans.entry.id, score: ans.score }
+        : { answerKind: 'none' },
+      ans.kind === 'answer' ? [{ title: ans.entry.title, source: ans.entry.citation }] : [],
+    );
+    return ans;
   },
   addPersonnelBulk: (list) => {
     set((st) => {

@@ -8,7 +8,7 @@ import { isoFromJalali } from '../../features/leave/leaveService';
 import { getDaysInJalaliMonth } from '../../core/jalali';
 import { defaultHospitalSettings } from './settings';
 import type {
-  AdmissionRecord, DataRepositories, EntryRecord, HospitalSnapshot, HandoverRecord,
+  AdmissionRecord, AgentDraftRecord, AgentRunRecord, DataRepositories, EntryRecord, HospitalSnapshot, HandoverRecord,
   KaranehProfileRecord, LeaveRecord, NursingServiceDbRecord, PatientAssignmentRecord,
   PatientRecord, PatientReportRecord, ScheduleRecord, WorkRecordRecord,
 } from './types';
@@ -106,6 +106,9 @@ function buildDemoNursingRecords(entries: EntryRecord[]): NursingServiceDbRecord
 
 export function createDemoRepositories(seed: HospitalSnapshot = buildDemoSnapshot()): DataRepositories & { snapshot: () => HospitalSnapshot } {
   const state: HospitalSnapshot = structuredClone(seed);
+  // ردّ اجراهای ایجنت در حافظه نگه داشته می‌شود (بخشی از snapshot نیست).
+  const agentRuns: AgentRunRecord[] = [];
+  const agentDrafts: AgentDraftRecord[] = [];
   let seq = 1000;
   return {
     snapshot: () => structuredClone(state),
@@ -177,6 +180,29 @@ export function createDemoRepositories(seed: HospitalSnapshot = buildDemoSnapsho
       async dischargeAdmission(id, status, note, atISO) {
         const a = state.admissions.find(x => x.id === id);
         if (a) { a.status = status; a.dischargeNote = note; a.dischargedAt = atISO; }
+      },
+    },
+    agents: {
+      async listRuns(hospitalId) {
+        return structuredClone(agentRuns.filter(r => r.hospitalId === hospitalId));
+      },
+      async createRun(rec) {
+        const created: AgentRunRecord = { ...rec, id: `demo-run-${++seq}`, createdAt: new Date().toISOString() };
+        agentRuns.unshift(created);
+        return structuredClone(created);
+      },
+      async listDrafts(hospitalId) {
+        return structuredClone(agentDrafts.filter(d => d.hospitalId === hospitalId));
+      },
+      async createDraft(rec) {
+        const now = new Date().toISOString();
+        const created: AgentDraftRecord = { ...rec, id: `demo-draft-${++seq}`, createdAt: now, updatedAt: now };
+        agentDrafts.unshift(created);
+        return structuredClone(created);
+      },
+      async decideDraft(id, status, decidedBy, atISO) {
+        const d = agentDrafts.find(x => x.id === id);
+        if (d) { d.status = status; d.decidedBy = decidedBy; d.decidedAt = atISO; d.updatedAt = atISO; }
       },
     },
     roster: {

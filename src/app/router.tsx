@@ -15,6 +15,7 @@ import PatientsPage from '../pages/PatientsPage';
 import PatientFilePage from '../pages/PatientFilePage';
 import AccreditationPage from '../pages/AccreditationPage';
 import AiAssistantPage from '../pages/AiAssistantPage';
+import AgentsPage from '../pages/AgentsPage';
 import SettingsPage from '../pages/SettingsPage';
 
 // basename از BASE_URL وایت می‌آید: در بیلد عادی «/» و در بیلد زیرمسیر
@@ -42,6 +43,7 @@ export const router = createBrowserRouter([
       { path: '/patients/:admissionId', element: <PatientFilePage /> },
       { path: '/accreditation', element: <AccreditationPage /> },
       { path: '/ai', element: <AiAssistantPage /> },
+      { path: '/agents', element: <AgentsPage /> },
       { path: '/settings', element: <SettingsPage /> },
       { path: '/self-service', element: <SelfServicePage /> },
     ],

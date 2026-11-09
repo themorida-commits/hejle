@@ -2,7 +2,7 @@
 // سقف پیش‌فرض PostgREST هزار ردیف است و یک ماهِ یک بخش ۴۲ نفره از آن رد می‌شود).
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type {
-  AdmissionRecord, DataRepositories, EmployeeRecord, EntryRecord, HandoverRecord,
+  AdmissionRecord, AgentDraftRecord, AgentRunRecord, DataRepositories, EmployeeRecord, EntryRecord, HandoverRecord,
   LeaveRecord, LeaveTypeRecord, KaranehProfileRecord, NursingPackageRecord,
   NursingServiceDbRecord, PatientAssignmentRecord, PatientRecord, PatientReportRecord,
   ScheduleRecord, ShiftTypeRecord, WardRecord, WorkRecordRecord,
@@ -104,6 +104,17 @@ const handover = (r: any): HandoverRecord => ({
   fromAssignmentId: r.from_assignment_id, toAssignmentId: r.to_assignment_id,
   giverEmployeeId: r.giver_employee_id, receiverEmployeeId: r.receiver_employee_id,
   handoverAt: r.handover_at, sbar: r.sbar ?? {}, stateSummary: r.state_summary, acceptedAt: r.accepted_at,
+});
+const agentRun = (r: any): AgentRunRecord => ({
+  id: r.id, hospitalId: r.hospital_id, agentKey: r.agent_key, zone: r.zone,
+  input: r.input ?? {}, output: r.output ?? null,
+  citations: (r.citations ?? []) as AgentRunRecord['citations'],
+  model: r.model ?? null, status: r.status, createdBy: r.created_by ?? null, createdAt: r.created_at,
+});
+const agentDraft = (r: any): AgentDraftRecord => ({
+  id: r.id, hospitalId: r.hospital_id, runId: r.run_id ?? null, kind: r.kind,
+  payload: r.payload ?? {}, status: r.status, decidedBy: r.decided_by ?? null,
+  decidedAt: r.decided_at ?? null, createdAt: r.created_at, updatedAt: r.updated_at,
 });
 const karanehProfile = (r: any): KaranehProfileRecord => ({
   id: r.id, hospitalId: r.hospital_id, name: r.name, presetId: r.preset_id,
@@ -408,6 +419,42 @@ export function createSupabaseRepositories(client: SupabaseClient): DataReposito
       async dischargeAdmission(id, status, note, atISO) {
         const { error } = await client.from('admissions')
           .update({ status, discharge_note: note, discharged_at: atISO }).eq('id', id);
+        if (error) throw new Error(`supabase write failed: ${error.message}`);
+      },
+    },
+    agents: {
+      async listRuns(hospitalId) {
+        const rows = await fetchAllPages((f, t) =>
+          client.from('agent_runs').select('*').eq('hospital_id', hospitalId)
+            .order('created_at', { ascending: false }).range(f, t));
+        return rows.map(agentRun);
+      },
+      async createRun(rec) {
+        const { data, error } = await client.from('agent_runs').insert({
+          hospital_id: rec.hospitalId, agent_key: rec.agentKey, zone: rec.zone,
+          input: rec.input, output: rec.output, citations: rec.citations,
+          model: rec.model, status: rec.status,
+        }).select('*').single();
+        if (error) throw new Error(`supabase write failed: ${error.message}`);
+        return agentRun(data);
+      },
+      async listDrafts(hospitalId) {
+        const rows = await fetchAllPages((f, t) =>
+          client.from('agent_drafts').select('*').eq('hospital_id', hospitalId)
+            .order('created_at', { ascending: false }).range(f, t));
+        return rows.map(agentDraft);
+      },
+      async createDraft(rec) {
+        const { data, error } = await client.from('agent_drafts').insert({
+          hospital_id: rec.hospitalId, run_id: rec.runId, kind: rec.kind, payload: rec.payload,
+          status: rec.status,
+        }).select('*').single();
+        if (error) throw new Error(`supabase write failed: ${error.message}`);
+        return agentDraft(data);
+      },
+      async decideDraft(id, status, decidedBy, atISO) {
+        const { error } = await client.from('agent_drafts')
+          .update({ status, decided_by: decidedBy, decided_at: atISO, updated_at: atISO }).eq('id', id);
         if (error) throw new Error(`supabase write failed: ${error.message}`);
       },
     },
