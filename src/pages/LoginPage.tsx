@@ -24,10 +24,10 @@ export default function LoginPage() {
   };
 
   return (
-    <div dir="rtl" style={{ fontFamily: 'Vazirmatn, system-ui, sans-serif', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', color: '#0f172a' }}>
-      <form onSubmit={submit} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 14, padding: 28, width: 340, display: 'flex', flexDirection: 'column', gap: 12, boxShadow: '0 4px 12px -2px rgb(15 23 42 / 0.08), 0 2px 4px -2px rgb(15 23 42 / 0.05)' }}>
+    <div dir="rtl" style={{ fontFamily: 'Vazirmatn, system-ui, sans-serif', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'linear-gradient(180deg, #e8eef6 0%, #f8fafc 55%)', color: '#0f172a' }}>
+      <form onSubmit={submit} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 18, padding: 30, width: 350, display: 'flex', flexDirection: 'column', gap: 12, boxShadow: '0 8px 20px -6px rgb(15 23 42 / 0.12), 0 3px 6px -3px rgb(15 23 42 / 0.07)' }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span aria-hidden style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 38, height: 38, borderRadius: 10, background: '#2563eb', color: '#fff', fontWeight: 800, fontSize: 19 }}>ح</span>
+          <span aria-hidden style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 40, height: 40, borderRadius: 11, background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)', color: '#fff', fontWeight: 800, fontSize: 20, boxShadow: 'inset 0 1px 0 rgb(255 255 255 / 0.3)' }}>ح</span>
           <strong style={{ fontSize: 20, color: '#0f172a' }}>حجله</strong>
         </span>
         <span style={{ fontSize: 13, color: '#64748b' }}>لایهٔ نیروی انسانی بیمارستان — ورود کاربران</span>

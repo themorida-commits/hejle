@@ -207,7 +207,7 @@ export default function SchedulerPage() {
           )}
         </div>
       )}
-      <div className="scroll-slim" style={{ overflow: 'auto', maxHeight: 'calc(100vh - 215px)', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, boxShadow: '0 1px 2px rgb(15 23 42 / 0.05), 0 1px 3px rgb(15 23 42 / 0.06)' }}>
+      <div className="scroll-slim" style={{ overflow: 'auto', maxHeight: 'calc(100vh - 215px)', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 16, boxShadow: '0 1px 2px rgb(15 23 42 / 0.05), 0 1px 3px rgb(15 23 42 / 0.06)' }}>
         <table className="roster-grid" style={{ borderCollapse: 'collapse', fontSize: 12, minWidth: 1280 }}>
           <thead>
             {([['morning', 'تعداد صبح'], ['evening', 'تعداد عصر'], ['night', 'تعداد شب']] as const).map(([shift, label]) => {
@@ -225,7 +225,7 @@ export default function SchedulerPage() {
                     disabled={st.scheduleStatus === 'published'}
                     title="یک عدد برای همهٔ روزهای ماه"
                     onChange={e => st.setDailyReqRow(shift, Number(e.target.value))}
-                    style={{ width: 44, fontSize: 11, textAlign: 'center', border: '1px solid #cbd5e1', borderRadius: 6, background: '#fff', padding: '1px 2px' }}
+                    style={{ width: 44, fontSize: 11, textAlign: 'center', border: '1px solid #cbd5e1', borderRadius: 999, background: '#fff', padding: '2px 2px' }}
                   />
                 </th>
                 {Array.from({ length: dayCount }, (_, i) => (
@@ -236,7 +236,7 @@ export default function SchedulerPage() {
                       disabled={st.scheduleStatus === 'published'}
                       title={`${label} — روز ${fa(i + 1)}`}
                       onChange={e => st.setDailyReq(shift, i, Number(e.target.value))}
-                      style={{ width: '100%', minWidth: 26, fontSize: 11, textAlign: 'center', border: 'none', background: 'transparent', color: '#334155', padding: 1 }}
+                      style={{ width: '100%', minWidth: 26, fontSize: 11, textAlign: 'center', border: '1px solid #e2e8f0', borderRadius: 999, background: '#fff', color: '#334155', padding: '2px 1px' }}
                     />
                   </th>
                 ))}
@@ -276,7 +276,11 @@ export default function SchedulerPage() {
               return (
               <tr key={p.id}>
                 <td style={{ position: 'sticky', right: 0, background: '#fff', padding: 6, whiteSpace: 'nowrap', fontWeight: 600 }}>
-                  {p.name}{blockedIds.has(p.id) && <span style={{ color: '#e11d48', fontSize: 11 }}> · قفل صلاحیت</span>}
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+                    <span aria-hidden style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, borderRadius: '50%', background: '#e2e8f0', color: '#334155', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>{p.name.trim().charAt(0)}</span>
+                    {p.name}
+                  </span>
+                  {blockedIds.has(p.id) && <span style={{ color: '#e11d48', fontSize: 11 }}> · قفل صلاحیت</span>}
                 </td>
                 <td style={infoTd}>{p.role}</td>
                 <td style={infoTd}>{employmentShort(p.employmentStatus)}</td>

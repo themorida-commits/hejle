@@ -6,9 +6,8 @@ import HospitalQueueSection from '../features/oversight/HospitalQueueSection';
 
 function Card({ title, value, hint, alert }: { title: string; value: string; hint?: string; alert?: boolean }) {
   return (
-    <div style={{
-      background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 16, minWidth: 180,
-      boxShadow: '0 1px 2px rgb(15 23 42 / 0.05), 0 1px 3px rgb(15 23 42 / 0.06)',
+    <div className="stat-card" style={{
+      background: '#fff', border: '1px solid #e2e8f0', borderRadius: 16, padding: 18, minWidth: 180,
       borderTop: alert ? '3px solid #e11d48' : undefined,
     }}>
       <div style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>{title}</div>

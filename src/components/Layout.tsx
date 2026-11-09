@@ -28,9 +28,9 @@ export default function Layout() {
   const links = navForRole(dataSource === 'supabase' ? (sessionRole ?? 'staff') : viewRole);
   return (
     <div dir="rtl" style={{ fontFamily: 'Vazirmatn, system-ui, sans-serif', minHeight: '100vh', background: '#f8fafc', color: '#0f172a' }}>
-      <header style={{ display: 'flex', gap: 16, alignItems: 'center', padding: '10px 20px', background: '#0f172a', color: '#fff', flexWrap: 'wrap', boxShadow: '0 1px 3px rgb(15 23 42 / 0.25)', position: 'sticky', top: 0, zIndex: 40 }}>
+      <header style={{ display: 'flex', gap: 16, alignItems: 'center', padding: '10px 20px', background: 'linear-gradient(180deg, #17233c 0%, #0f172a 100%)', color: '#fff', flexWrap: 'wrap', boxShadow: '0 1px 3px rgb(15 23 42 / 0.25)', position: 'sticky', top: 0, zIndex: 40 }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span aria-hidden style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: 9, background: '#2563eb', color: '#fff', fontWeight: 800, fontSize: 17, boxShadow: 'inset 0 1px 0 rgb(255 255 255 / 0.25)' }}>ح</span>
+          <span aria-hidden style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: 10, background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)', color: '#fff', fontWeight: 800, fontSize: 17, boxShadow: 'inset 0 1px 0 rgb(255 255 255 / 0.3)' }}>ح</span>
           <span style={{ lineHeight: 1.25 }}>
             <strong style={{ fontSize: 16, display: 'block' }}>حجله</strong>
             <span style={{ fontSize: 11, color: '#94a3b8', display: 'block' }}>لایهٔ نیروی انسانی بیمارستان</span>
