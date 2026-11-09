@@ -1,6 +1,7 @@
 
 import type { ScheduleEntry, Personnel, ShiftType, CustomRule, StaffRequest } from '../types';
 import { holidaysFor } from '../defaults';
+import { categorizeShift, DEFAULT_RULE_CONFIGS } from '../rules/engine';
 import { jalaliToGregorian, getDaysInJalaliMonth, getPersianDayOfWeek } from '../jalali';
 
 export function detectConflicts(
@@ -22,8 +23,21 @@ export function detectConflicts(
 
     const morningShiftId = shiftTypes.find(s => s.symbol === 'M' || s.name === 'صبح')?.id;
     const eveningShiftId = shiftTypes.find(s => s.symbol === 'E' || s.name === 'عصر')?.id;
-    const nightShiftId = shiftTypes.find(s => s.symbol === 'N' || s.name === 'شب')?.id;
     const offShiftId = shiftTypes.find(s => s.symbol === '-' || s.name === 'تعطیل' || s.id === 's-off')?.id;
+
+    // دستهٔ شیفت فقط از categorizeShift موتور قواعد (منبع واحد حقیقت): شیفت
+    // ترکیبی عصر‌وشب (EN) هم «شب» است. قبلاً آشکارساز فقط شناسهٔ شب خالص را
+    // می‌شناخت و ریکاوری/توالی بعد از EN را نمی‌دید (ناسازگاری اسپایک CP-SAT).
+    const categoryOf = (shiftTypeId: string) => {
+        const st = shiftTypeMap.get(shiftTypeId);
+        return st ? categorizeShift(st) : 'other';
+    };
+
+    // سقف کار متوالیِ یک شیفت منفرد، از پیکربندی پیش‌فرض موتور قواعد خوانده
+    // می‌شود تا مقدار ۱۲ ساعت فقط یک منبع داشته باشد.
+    const maxConsecutiveHoursCfg = DEFAULT_RULE_CONFIGS.find(r => r.ruleType === 'max_consecutive_hours');
+    const maxConsecutiveHours = maxConsecutiveHoursCfg?.isEnabled ? maxConsecutiveHoursCfg.value : undefined;
+    const faNum = (n: number) => n.toLocaleString('fa-IR', { maximumFractionDigits: 1 });
 
     const addCellConflict = (personnelId: string, date: string, message: string, priority: string = 'CRITICAL') => {
         const key = `${personnelId}-${date}`;
@@ -53,7 +67,7 @@ export function detectConflicts(
                 const prevDate = `${pgy}-${String(pgm).padStart(2, '0')}-${String(pgd).padStart(2, '0')}`;
                 const prevEntry = scheduleMap.get(`${p.id}-${prevDate}`);
                 
-                if (prevEntry?.shiftTypeId === nightShiftId && entry.shiftTypeId !== offShiftId) {
+                if (prevEntry && categoryOf(prevEntry.shiftTypeId) === 'night' && entry.shiftTypeId !== offShiftId) {
                     addCellConflict(p.id, date, 'نقض ریکاوری شب کاری (۲۴ ساعت استراحت اجباری)', 'CRITICAL');
                 }
                 if (prevEntry?.shiftTypeId === eveningShiftId && entry.shiftTypeId === morningShiftId) {
@@ -62,12 +76,13 @@ export function detectConflicts(
             }
 
             // 2. Max Consecutive Night Shifts Check
-            if (entry.shiftTypeId === nightShiftId && d >= maxNights) {
+            if (categoryOf(entry.shiftTypeId) === 'night' && d >= maxNights) {
                 let consecutiveCount = 1;
                 for (let i = 1; i < maxNights + 1; i++) {
                     const [bgy, bgm, bgd] = jalaliToGregorian(jYear, jMonth, d - i);
                     const bDate = `${bgy}-${String(bgm).padStart(2, '0')}-${String(bgd).padStart(2, '0')}`;
-                    if (scheduleMap.get(`${p.id}-${bDate}`)?.shiftTypeId === nightShiftId) {
+                    const backEntry = scheduleMap.get(`${p.id}-${bDate}`);
+                    if (backEntry && categoryOf(backEntry.shiftTypeId) === 'night') {
                         consecutiveCount++;
                     } else {
                         break;
@@ -78,7 +93,17 @@ export function detectConflicts(
                 }
             }
 
-            // 3. قانون ثابت سرپرستار (مستقل از فعال/غیرفعال‌بودن رکورد قاعده):
+            // 3. Max Consecutive Hours: طول واقعی خودِ شیفت منفرد (مستقل از دسته؛
+            // مثلاً شیفت ترکیبی عصر‌وشب با طول ۲۲٫۵ ساعت). موتور قواعد هم همین را
+            // در ارزیابی ماهانه flag می‌کند؛ این‌جا روی سلول برنامه هم دیده می‌شود.
+            if (maxConsecutiveHours != null) {
+                const shift = shiftTypeMap.get(entry.shiftTypeId);
+                if (shift && shift.realDuration > maxConsecutiveHours) {
+                    addCellConflict(p.id, date, `طول شیفت منفرد (${faNum(shift.realDuration)} ساعت) از سقف کار متوالی (${faNum(maxConsecutiveHours)} ساعت) بیشتر است`, 'CRITICAL');
+                }
+            }
+
+            // 4. قانون ثابت سرپرستار (مستقل از فعال/غیرفعال‌بودن رکورد قاعده):
             // تنها شیفت کاری مجاز برای سرپرستار، شیفت صبح است.
             if (p.role.includes('سرپرستار')) {
                 if ((isFriday || isOfficialHoliday) && entry.shiftTypeId !== offShiftId) {

@@ -2,6 +2,7 @@ import type { ScheduleEntry, Personnel, ShiftType, StaffRequest, CustomRule, AiG
 import { jalaliToGregorian, getDaysInJalaliMonth, getPersianDayOfWeek } from '../jalali';
 import { calculateDutyHours } from '../duty';
 import { holidaysFor } from '../defaults';
+import { categorizeShift } from '../rules/engine';
 
 // Seedable Pseudo-Random Number Generator (Linear Congruential Generator)
 // This ensures that for a given seed, the generated sequence of numbers is completely deterministic.
@@ -103,7 +104,15 @@ export function generateScheduleDeterministic(params: GenerateScheduleParams): S
         if (shiftId === enShiftId) return 13;
         return null;
     };
-    const isNightCategory = (shiftId: string) => shiftId === nShiftId || (enShiftId !== "" && shiftId === enShiftId);
+    // دستهٔ «شب» فقط از categorizeShift موتور قواعد می‌آید (منبع واحد حقیقت):
+    // هر شیفتی که موتور «شب» بداند — شب خالص، عصر‌وشب (EN) و آنکال شب — برای
+    // ریکاوری و سقف شب‌های متوالی «شب» است. قبلاً این کمکی فقط s-n و EN را با
+    // شناسه می‌شناخت و بقیهٔ منطق ریکاوری/توالی فقط s-n خالص را می‌دید، در حالی
+    // که categorizeShift، ‏EN را night می‌داند (رفع ناسازگاری اسپایک CP-SAT).
+    const nightCategoryIds = new Set(
+        shiftTypes.filter(s => categorizeShift(s) === "night").map(s => s.id)
+    );
+    const isNightCategory = (shiftId: string | undefined) => shiftId !== undefined && nightCategoryIds.has(shiftId);
 
     // Extract manual locked schedule entries mapped by personnelId-dateStr
     const lockedScheduleMap = new Map<string, string>(); // "personnelId-dateStr" -> shiftTypeId
@@ -191,7 +200,7 @@ export function generateScheduleDeterministic(params: GenerateScheduleParams): S
             if (d > 1) {
                 for (const p of personnel) {
                     const scheduleList = trialSchedule.get(p.id)!;
-                    if (scheduleList[d - 1] === nShiftId && scheduleList[d] === "") {
+                    if (isNightCategory(scheduleList[d - 1]) && scheduleList[d] === "") {
                         scheduleList[d] = offShiftId;
                     }
                 }
@@ -248,15 +257,15 @@ export function generateScheduleDeterministic(params: GenerateScheduleParams): S
                     const roleIsHeadNurse = p.role.includes("سرپرستار");
 
                     // 1. Recovery
-                    if (d > 1 && trialSchedule.get(p.id)![d - 1] === nShiftId) {
+                    if (d > 1 && isNightCategory(trialSchedule.get(p.id)![d - 1])) {
                         if (strict) return false;
                     }
 
                     // 2. Max Consecutive Nights
-                    if (sId === nShiftId) {
+                    if (isNightCategory(sId)) {
                         let consecutiveNights = 0;
                         for (let i = 1; i <= maxNights; i++) {
-                            if (d - i >= 1 && trialSchedule.get(p.id)![d - i] === nShiftId) {
+                            if (d - i >= 1 && isNightCategory(trialSchedule.get(p.id)![d - i])) {
                                 consecutiveNights++;
                             } else {
                                 break;
@@ -402,7 +411,7 @@ export function generateScheduleDeterministic(params: GenerateScheduleParams): S
                     currentHours.set(candidate.id, currentHours.get(candidate.id)! + getShiftHours(sId, d));
 
                     // Pre-emptively apply recovery for night shift assignments
-                    if (sId === nShiftId && d < daysInMonth) {
+                    if (isNightCategory(sId) && d < daysInMonth) {
                         const scheduleList = trialSchedule.get(candidate.id)!;
                         if (scheduleList[d + 1] === "") {
                             scheduleList[d + 1] = offShiftId;
@@ -470,7 +479,7 @@ export function generateScheduleDeterministic(params: GenerateScheduleParams): S
                 }
 
                 // Night shift recovery violation
-                if (d > 1 && trialSchedule.get(p.id)![d - 1] === nShiftId && shiftId !== offShiftId) {
+                if (d > 1 && isNightCategory(trialSchedule.get(p.id)![d - 1]) && shiftId !== offShiftId) {
                     trialScore += 20000;
                 }
 
@@ -480,10 +489,10 @@ export function generateScheduleDeterministic(params: GenerateScheduleParams): S
                 }
 
                 // Max consecutive nights
-                if (shiftId === nShiftId && d >= maxNights) {
+                if (isNightCategory(shiftId) && d >= maxNights) {
                     let consecutiveNights = 1;
                     for (let i = 1; i <= maxNights; i++) {
-                        if (scheduleList[d - i] === nShiftId) {
+                        if (isNightCategory(scheduleList[d - i])) {
                             consecutiveNights++;
                         } else {
                             break;

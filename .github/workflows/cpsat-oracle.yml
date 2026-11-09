@@ -1,0 +1,40 @@
+# CP-SAT quality oracle — runs ONLY when the roster solver, the sample-data
+# fixtures, or the oracle itself change. Compares the product TS solver
+# against OR-Tools CP-SAT (30s/case) on the golden dep1 case and the custom
+# dailyReqs case; fails the job if the TS solver leaves avoidable violations
+# or >5% ts_score on the table. See tools/cpsat-oracle/README-fa.md.
+name: cpsat-oracle
+
+on:
+  push:
+    branches: [v2-foundation]
+    paths:
+      - 'src/core/scheduling/**'
+      - 'src/fixtures/**'
+      - 'tools/cpsat-oracle/**'
+  pull_request:
+    paths:
+      - 'src/core/scheduling/**'
+      - 'src/fixtures/**'
+      - 'tools/cpsat-oracle/**'
+
+jobs:
+  oracle:
+    runs-on: ubuntu-latest
+    # 2 cases x (TS run ~1s + CP-SAT 30s budget) + installs; generous headroom
+    # for slow runners, still far from a hang.
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: npm ci
+      - name: Run CP-SAT quality oracle
+        # run.sh creates tools/cpsat-oracle/.venv and pip-installs the pinned
+        # ortools from tools/cpsat-oracle/requirements.txt on first use.
+        run: npm run oracle:cpsat
