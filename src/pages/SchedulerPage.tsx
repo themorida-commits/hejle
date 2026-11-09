@@ -184,10 +184,10 @@ export default function SchedulerPage() {
           {st.departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
         </select>
         <button onClick={regenerate} disabled={busy}>{busy ? 'در حال تولید…' : 'تولید خودکار برنامه'}</button>
-        <button onClick={() => navigate('/scheduler/print')}>چاپ فرم چینش</button>
+        <button className="btn-secondary" onClick={() => navigate('/scheduler/print')}>چاپ فرم چینش</button>
         {st.scheduleStatus === 'draft'
           ? <button onClick={() => st.setScheduleStatus('published')}>انتشار برنامه</button>
-          : <button onClick={() => st.setScheduleStatus('draft')}>برگرداندن به پیش‌نویس</button>}
+          : <button className="btn-secondary" onClick={() => st.setScheduleStatus('draft')}>برگرداندن به پیش‌نویس</button>}
         <span>تعارض‌ها: <strong>{fa(conflicts)}</strong> · نقض سخت قواعد: <strong>{fa(violations.filter(v => v.severity === 'hard').length)}</strong></span>
       </div>
       <p style={{ fontSize: 12, color: '#64748b' }}>برای ویرایش دستی روی هر سلول کلیک کنید (چرخش صبح ← عصر ← شب ← آف). برای سرپرستار، طبق قانون ثابت جدول، چرخش فقط صبح و آف است. سه ردیف «نیاز بخش» بالای جدول ورودی مستقیم شماست: عدد هر روز را همان‌جا وارد کنید یا با خانهٔ «همهٔ روزها» یک عدد برای کل ماه بگذارید؛ «تولید خودکار برنامه» دقیقاً با همین نیازها می‌چیند. در وضعیت منتشرشده ویرایش قفل است.</p>
@@ -207,8 +207,8 @@ export default function SchedulerPage() {
           )}
         </div>
       )}
-      <div style={{ overflowX: 'auto', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12 }}>
-        <table style={{ borderCollapse: 'collapse', fontSize: 12, minWidth: 1280 }}>
+      <div className="scroll-slim" style={{ overflow: 'auto', maxHeight: 'calc(100vh - 215px)', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, boxShadow: '0 1px 2px rgb(15 23 42 / 0.05), 0 1px 3px rgb(15 23 42 / 0.06)' }}>
+        <table className="roster-grid" style={{ borderCollapse: 'collapse', fontSize: 12, minWidth: 1280 }}>
           <thead>
             {([['morning', 'تعداد صبح'], ['evening', 'تعداد عصر'], ['night', 'تعداد شب']] as const).map(([shift, label]) => {
               const rowVals = st.dailyReqs[shift];

@@ -28,11 +28,20 @@ export default function Layout() {
   const links = navForRole(dataSource === 'supabase' ? (sessionRole ?? 'staff') : viewRole);
   return (
     <div dir="rtl" style={{ fontFamily: 'Vazirmatn, system-ui, sans-serif', minHeight: '100vh', background: '#f8fafc', color: '#0f172a' }}>
-      <header style={{ display: 'flex', gap: 16, alignItems: 'center', padding: '10px 20px', background: '#0f172a', color: '#fff', flexWrap: 'wrap' }}>
-        <strong style={{ fontSize: 18 }}>حجله — لایهٔ نیروی انسانی بیمارستان</strong>
-        <nav style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+      <header style={{ display: 'flex', gap: 16, alignItems: 'center', padding: '10px 20px', background: '#0f172a', color: '#fff', flexWrap: 'wrap', boxShadow: '0 1px 3px rgb(15 23 42 / 0.25)', position: 'sticky', top: 0, zIndex: 40 }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span aria-hidden style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 34, height: 34, borderRadius: 9, background: '#2563eb', color: '#fff', fontWeight: 800, fontSize: 17, boxShadow: 'inset 0 1px 0 rgb(255 255 255 / 0.25)' }}>ح</span>
+          <span style={{ lineHeight: 1.25 }}>
+            <strong style={{ fontSize: 16, display: 'block' }}>حجله</strong>
+            <span style={{ fontSize: 11, color: '#94a3b8', display: 'block' }}>لایهٔ نیروی انسانی بیمارستان</span>
+          </span>
+        </span>
+        <nav style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
           {links.map(l => (
-            <NavLink key={l.to} to={l.to} style={({ isActive }) => ({ color: isActive ? '#93c5fd' : '#cbd5e1', textDecoration: 'none', fontWeight: isActive ? 700 : 400 })}>
+            <NavLink key={l.to} to={l.to} style={({ isActive }) => ({
+              color: isActive ? '#fff' : '#cbd5e1', textDecoration: 'none', fontWeight: isActive ? 700 : 400,
+              background: isActive ? '#1e293b' : 'transparent', padding: '5px 10px', borderRadius: 8, fontSize: 13.5,
+            })}>
               {l.label}
             </NavLink>
           ))}
