@@ -112,7 +112,10 @@ test('G1-6 قفل دستی: تخصیص‌های دستی کاربر عیناً �
   const out = generateScheduleDeterministic({ ...baseParams, personnel: dep1, currentSchedule: locks, jYear: 1405, jMonth: 7 });
   assert.equal(shiftOn(out, 'p3', 1405, 7, 5), 's-n');
   assert.equal(shiftOn(out, 'p3', 1405, 7, 6), 's-m');
-  assert.equal(scheduleHash(out), '3877593b6c683bb44c164ae1c91a065a21247aa14dc12ba0d7060526b645fc6b');
+  // دور ۱۵: خروجی حل‌کننده برای خانه‌های قفل‌شده isManualEntry را حفظ می‌کند
+  // (قبلاً پرچم دستی در خروجی می‌افتاد)؛ تخصیص‌ها نسبت به هش قبلی بی‌تغییرند —
+  // با هشِ بدون پرچم روی هر دو نسخهٔ حل‌کننده راستی‌آزمایی شد (f9f2386f…).
+  assert.equal(scheduleHash(out), 'bef0e789528cec6b61f7157dce45546b0c8673a8be4dba4bd0be2e782ab92aba');
 });
 
 test('G1-7 درخواست شیفت ترجیحی رعایت می‌شود', () => {

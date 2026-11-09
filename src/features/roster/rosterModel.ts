@@ -123,6 +123,20 @@ export function shiftSymbol(shiftTypes: ShiftType[], id: string | undefined): st
   return shiftTypes.find(s => s.id === id)?.symbol ?? '?';
 }
 
+/**
+ * رنگ متن خوانا روی چیپ رنگی شیفت (همان منطق نسخهٔ قدیمی): روی رنگ‌های روشن
+ * متن slate-900 و روی رنگ‌های تیره متن سفید. آستانه روی روشنایی نسبی (WCAG).
+ */
+export function contrastTextColor(hex: string | undefined): string {
+  if (!hex || !/^#[0-9a-fA-F]{6}$/.test(hex)) return '#fff';
+  const r = parseInt(hex.slice(1, 3), 16) / 255;
+  const g = parseInt(hex.slice(3, 5), 16) / 255;
+  const b = parseInt(hex.slice(5, 7), 16) / 255;
+  const lin = (c: number) => (c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4));
+  const luminance = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
+  return luminance > 0.35 ? '#0f172a' : '#fff';
+}
+
 // چک‌لیست برابری با قابلیت‌های صفحهٔ برنامهٔ نسخهٔ فعلی (از ممیزی ۲ نوامبر) —
 // هر آیتم یا در v2 هست یا صریحاً به فاز بعد افتاده.
 export const PARITY_CHECKLIST = [

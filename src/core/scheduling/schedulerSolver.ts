@@ -87,6 +87,24 @@ export function generateScheduleDeterministic(params: GenerateScheduleParams): S
 
     const maxConsecutiveWorkDays = aiSettings?.maxConsecutiveWorkDays || 6;
 
+    // تنظیمات پیشرفتهٔ تولید (پنل نسخهٔ قدیمی — دور ۱۵): هر سه در پیش‌فرض‌ها
+    // دقیقاً رفتار قبلی حل‌کننده را نگه می‌دارند و فقط با انتخاب سرپرستار اثر می‌گذارند.
+    const distributionAlgorithm = aiSettings?.distributionAlgorithm || 'even';
+    const weekendDistribution = aiSettings?.weekendDistribution || 'even';
+    const minRestHours = aiSettings?.minRestHours ?? 24;
+    const enShift = shiftTypes.find(s => s.symbol === "EN");
+    const enShiftId = enShift?.id || "";
+    // ساعت شروع شیفت‌ها روی محور روز (برای سنجش استراحت پس از شب): صبح ۷، عصر ۱۳، شب/عصر‌وشب ۱۹/۱۳؛
+    // پایان شب و عصر‌وشب ۷ صبح روز بعد است (مطلق: +۳۱ نسبت به شروع همان روز).
+    const shiftStartHour = (shiftId: string): number | null => {
+        if (shiftId === mShiftId) return 7;
+        if (shiftId === eShiftId) return 13;
+        if (shiftId === nShiftId) return 19;
+        if (shiftId === enShiftId) return 13;
+        return null;
+    };
+    const isNightCategory = (shiftId: string) => shiftId === nShiftId || (enShiftId !== "" && shiftId === enShiftId);
+
     // Extract manual locked schedule entries mapped by personnelId-dateStr
     const lockedScheduleMap = new Map<string, string>(); // "personnelId-dateStr" -> shiftTypeId
     if (currentSchedule) {
@@ -292,14 +310,22 @@ export function generateScheduleDeterministic(params: GenerateScheduleParams): S
                 const candidates = eligibles.map(p => {
                     let score = 0;
 
-                    // A. Hours deficit priority
+                    // A. Hours deficit priority (در حالت «تصادفی» وزن عدالت ساعت حذف و شانس حاکم می‌شود)
                     const target = calculateDutyHours(p, globalSettings, holidayDeduction, jYear, jMonth);
                     const current = currentHours.get(p.id) || 0;
                     const deficit = target - current;
-                    score += deficit * 5;
+                    if (distributionAlgorithm === 'random') {
+                        score += lcg.next() * 100;
+                    } else if (distributionAlgorithm === 'seniority') {
+                        // در حالت ارشدیت، بازخورد کسریِ ساعت (که ذاتاً خلاف جهت ارشدیت است،
+                        // چون سنوات ساعت موظفی را کم می‌کند) تضعیف می‌شود تا اولویت واقعی شود.
+                        score += deficit * 1;
+                    } else {
+                        score += deficit * 5;
+                    }
 
                     // B. Preferred Shift Requests
-                    const prefShiftReq = requests.find(r => r.personnelId === p.id && r.requestType === "Preferred Shift" && r.date === dayDateStr);
+                    const prefShiftReq = distributionAlgorithm === 'random' ? undefined : requests.find(r => r.personnelId === p.id && r.requestType === "Preferred Shift" && r.date === dayDateStr);
                     if (prefShiftReq) {
                         if (prefShiftReq.preferredShiftId === sId) {
                             score += 150;
@@ -334,7 +360,10 @@ export function generateScheduleDeterministic(params: GenerateScheduleParams): S
                     const [gy, gm, gd] = jalaliToGregorian(jYear, jMonth, d);
                     const isFri = getPersianDayOfWeek(gy, gm, gd) === "ج";
                     const isOfficialHol = holidaysInMonth.has(d);
-                    if (isFri || isOfficialHol) {
+                    if ((isFri || isOfficialHol) && weekendDistribution === 'seniority') {
+                        // آخر هفته با ارشدها: هرچه سنوات بالاتر، اولویت بیشتر برای شیفت جمعه/تعطیل
+                        score += (p.seniorityLevel || 0) * 40;
+                    } else if ((isFri || isOfficialHol) && weekendDistribution === 'even' && distributionAlgorithm !== 'random') {
                         // Count how many Friday/holiday work shifts this person has worked so far
                         let weekendWorkCount = 0;
                         for (let i = 1; i < d; i++) {
@@ -353,6 +382,11 @@ export function generateScheduleDeterministic(params: GenerateScheduleParams): S
 
                     // F. Randomized Noise for exploration
                     score += lcg.next() * 15;
+
+                    // G. Seniority distribution: شیفت‌های مازاد اول به ارشدها می‌رسد
+                    if (distributionAlgorithm === 'seniority') {
+                        score += (p.seniorityLevel || 0) * 40;
+                    }
 
                     return { p, score };
                 });
@@ -400,12 +434,32 @@ export function generateScheduleDeterministic(params: GenerateScheduleParams): S
             const worked = currentHours.get(p.id) || 0;
             const diff = Math.abs(target - worked);
 
-            // 1. Hour deficit deviation cost
-            trialScore += diff * 15;
+            // 1. Hour deficit deviation cost (در حالت ارشدیت سبک‌تر است، چون
+            // نابرابریِ ساعت آنجا انتخاب آگاهانهٔ سرپرستار است، نه خطا)
+            trialScore += diff * (distributionAlgorithm === 'seniority' ? 5 : 15);
 
             // 2. Walk through days to detect rules violations
+            let lastNightEndAbs = -Infinity;
             for (let d = 1; d <= daysInMonth; d++) {
                 const shiftId = scheduleList[d];
+
+                // استراحت پس از شب (تنظیم «حداقل استراحت بین شیفت»): شروعِ زودتر از
+                // پایان شب + حداقل استراحت، جریمهٔ متناسب می‌گیرد. با پیش‌فرض ۲۴ ساعت و
+                // قاعدهٔ ریکاوری موجود، برای برنامه‌های تولیدی دقیقاً صفر است و فقط وقتی
+                // سرپرستار عدد را بالا ببرد یا خانهٔ دستیِ عصر‌وشب قفل شده باشد اثر می‌گذارد.
+                if (shiftId) {
+                    const startHour = shiftId !== offShiftId ? shiftStartHour(shiftId) : null;
+                    if (startHour !== null) {
+                        const startAbs = (d - 1) * 24 + startHour;
+                        const rest = startAbs - lastNightEndAbs;
+                        if (rest < minRestHours) {
+                            trialScore += 400 * (minRestHours - rest);
+                        }
+                    }
+                    if (isNightCategory(shiftId)) {
+                        lastNightEndAbs = (d - 1) * 24 + 31;
+                    }
+                }
                 const [evalGy, evalGm, evalGd] = jalaliToGregorian(jYear, jMonth, d);
                 const evalDateStr = `${evalGy}-${String(evalGm).padStart(2, "0")}-${String(evalGd).padStart(2, "0")}`;
 
@@ -461,6 +515,20 @@ export function generateScheduleDeterministic(params: GenerateScheduleParams): S
                 if (prefReq && prefReq.preferredShiftId && shiftId !== prefReq.preferredShiftId) {
                     trialScore += 150;
                 }
+
+                // ارشدیت (فقط حالت‌های غیرپیش‌فرض): پاداش آزمونی هم‌جهت با امتیاز نامزدها،
+                // وگرنه جریمهٔ انحراف ساعت در انتخاب بهترین تلاش، جهت ارشدیت را پاک می‌کرد.
+                if (shiftId !== offShiftId) {
+                    if (distributionAlgorithm === 'seniority') {
+                        trialScore -= (p.seniorityLevel || 0) * 8;
+                    }
+                    if (weekendDistribution === 'seniority') {
+                        const isFriW = getPersianDayOfWeek(evalGy, evalGm, evalGd) === "ج";
+                        if (isFriW || holidaysInMonth.has(d)) {
+                            trialScore -= (p.seniorityLevel || 0) * 25;
+                        }
+                    }
+                }
             }
         }
 
@@ -471,8 +539,10 @@ export function generateScheduleDeterministic(params: GenerateScheduleParams): S
             for (const [key, val] of trialSchedule.entries()) {
                 bestSchedule.set(key, [...val]);
             }
-            // Early termination if we find a perfect conflict-free schedule
-            if (trialScore < 300) {
+            // Early termination if we find a perfect conflict-free schedule.
+            // در حالت‌های ارشدیت، پاداش‌های منفیِ امتیاز تلاش مقیاس قدیمی را می‌شکنند و
+            // قطع زودهنگام یعنی اولین تلاشِ خام برنده شود؛ پس آنجا قطع ممنوع است.
+            if (trialScore < 300 && distributionAlgorithm !== 'seniority' && weekendDistribution !== 'seniority') {
                 break;
             }
         }
@@ -491,7 +561,9 @@ export function generateScheduleDeterministic(params: GenerateScheduleParams): S
                     personnelId: p.id,
                     shiftTypeId,
                     date: dateStr,
-                    isManualEntry: false
+                    // خانه‌ای که سرپرستار دستی قفل کرده در خروجی هم دستی می‌ماند تا
+                    // تولید دوباره هم همان قفل‌ها را نگه دارد (دور ۱۵).
+                    isManualEntry: lockedScheduleMap.has(`${p.id}-${dateStr}`)
                 });
             }
         }

@@ -1,7 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore, J_YEAR, J_MONTH } from '../store/appStore';
-import { buildMonthGrid, applyManualEdit, nextManualShiftId, shiftSymbol, hasAnyDailyReq } from '../features/roster/rosterModel';
+import { buildMonthGrid, applyManualEdit, shiftSymbol, hasAnyDailyReq, contrastTextColor } from '../features/roster/rosterModel';
 import {
   LEAVE_CELL, SCREEN_LEAVE_BG, SCREEN_HOLIDAY_BG, weekdayLetters, holidayDayNumbers,
   buildLeaveCellStates, buildLeaveDatesMap, dayCountsByCategory, employmentShort,
@@ -11,7 +11,6 @@ import { detectConflicts } from '../core/scheduling/conflictDetector';
 import { DEFAULT_RULES } from '../core/defaults';
 import { buildEmployeeFacts, evaluateRules, DEFAULT_RULE_CONFIGS } from '../core/rules/engine';
 import { scheduleSolver } from '../services/scheduleSolverClient';
-import { DEFAULT_AI_SETTINGS } from '../core/defaults';
 import { credentialGate } from '../features/credentials/credentialService';
 import { buildSymbolResolver, parseRosterGridCsv, rosterGridTemplateCsv, type RosterImportResult } from '../features/import/rosterImport';
 
@@ -79,10 +78,61 @@ function RosterImportCard() {
   );
 }
 
+/** پنل «تنظیمات پیشرفتهٔ تولید برنامه» — همان چهار گزینهٔ نسخهٔ قدیمی (دور ۱۵). */
+function GenerationSettingsPanel() {
+  const st = useAppStore();
+  const s = st.aiSettings;
+  const set = (patch: Partial<typeof s>) => st.setAiSettings({ ...s, ...patch });
+  const label: CSSProperties = { display: 'flex', flexDirection: 'column', gap: 4, fontSize: 12.5, fontWeight: 600, color: '#334155', minWidth: 180 };
+  const hint: CSSProperties = { fontSize: 11, fontWeight: 400, color: '#64748b' };
+  return (
+    <details style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: '10px 14px', marginBottom: 12 }}>
+      <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>تنظیمات پیشرفتهٔ تولید برنامه</summary>
+      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 10 }}>
+        <label style={label}>
+          الگوریتم توزیع شیفت
+          <select value={s.distributionAlgorithm} onChange={e => set({ distributionAlgorithm: e.target.value as typeof s.distributionAlgorithm })}>
+            <option value="even">توزیع یکنواخت</option>
+            <option value="seniority">اولویت با ارشدیت</option>
+            <option value="random">توزیع تصادفی</option>
+          </select>
+          <span style={hint}>شیفت‌های مازاد چطور بین پرسنل پخش شود.</span>
+        </label>
+        <label style={label}>
+          توزیع شیفت آخر هفته
+          <select value={s.weekendDistribution} onChange={e => set({ weekendDistribution: e.target.value as typeof s.weekendDistribution })}>
+            <option value="even">توزیع یکنواخت</option>
+            <option value="seniority">اولویت با ارشدیت</option>
+            <option value="none">بدون اولویت</option>
+          </select>
+          <span style={hint}>جمعه‌ها و تعطیلات رسمی چطور تقسیم شود.</span>
+        </label>
+        <label style={label}>
+          حداقل استراحت بین شیفت (ساعت)
+          <input type="number" min={0} max={72} value={s.minRestHours}
+            onChange={e => set({ minRestHours: Math.max(0, Math.min(72, Math.floor(Number(e.target.value) || 0))) })} />
+          <span style={hint}>استراحت پس از شیفت شب؛ پیش‌فرض ۲۴ ساعت (ریکاوری).</span>
+        </label>
+        <label style={label}>
+          حداکثر روزهای کاری متوالی
+          <input type="number" min={1} max={14} value={s.maxConsecutiveWorkDays}
+            onChange={e => set({ maxConsecutiveWorkDays: Math.max(1, Math.min(14, Math.floor(Number(e.target.value) || 1))) })} />
+          <span style={hint}>یک فرد حداکثر چند روز پشت سر هم کار کند.</span>
+        </label>
+      </div>
+      <p style={{ fontSize: 12, color: '#64748b', margin: '10px 0 2px' }}>
+        روند کار مثل نسخهٔ قدیمی است: اول خانه‌هایی را که خودتان می‌دانید با کلیک روی هر باکس و انتخاب شیفت پر کنید — آن خانه‌ها «دستی» و قفل‌اند —
+        بعد «تولید خودکار برنامه» بقیهٔ ماه را با همین تنظیمات و نیازهای روزانه می‌چیند و به خانه‌های قفل‌شده دست نمی‌زند.
+      </p>
+    </details>
+  );
+}
+
 export default function SchedulerPage() {
   const st = useAppStore();
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
+  const [picker, setPicker] = useState<{ personnelId: string; dateISO: string } | null>(null);
   const deptPeople = st.personnel.filter(p => p.departmentId === st.departmentId);
   const deptIds = useMemo(() => new Set(deptPeople.map(p => p.id)), [deptPeople]);
   const deptEntries = st.entries.filter(e => deptIds.has(e.personnelId));
@@ -118,22 +168,26 @@ export default function SchedulerPage() {
   const blockedIds = useMemo(() => new Set(gate.blocked.map(b => b.employeeId)), [gate]);
   const nameOf = (id: string) => deptPeople.find(p => p.id === id)?.name ?? id;
 
-  const cycleShift = (personnelId: string, dateISO: string, currentId: string | undefined) => {
+  const openPicker = (personnelId: string, dateISO: string) => {
     if (st.scheduleStatus === 'published') return;
     if (blockedIds.has(personnelId)) return; // قفل صلاحیت
-    const person = deptPeople.find(p => p.id === personnelId);
-    if (!person) return;
-    const next = nextManualShiftId(person.role, currentId);
+    setPicker(cur => (cur && cur.personnelId === personnelId && cur.dateISO === dateISO ? null : { personnelId, dateISO }));
+  };
+
+  const pickShift = (personnelId: string, dateISO: string, shiftTypeId: string) => {
     const others = st.entries.filter(e => !deptIds.has(e.personnelId));
-    st.setEntries([...others, ...applyManualEdit(deptEntries, personnelId, dateISO, next)]);
+    st.setEntries([...others, ...applyManualEdit(deptEntries, personnelId, dateISO, shiftTypeId)]);
+    setPicker(null);
   };
 
   const regenerate = async () => {
     setBusy(true);
     try {
       const fresh = await scheduleSolver.solve({
-        personnel: deptPeople.filter(p => !blockedIds.has(p.id)), shiftTypes: st.shiftTypes, currentSchedule: [], requests: st.requests,
-        rules: DEFAULT_RULES, aiSettings: DEFAULT_AI_SETTINGS, globalSettings: st.globalDutySettings,
+        personnel: deptPeople.filter(p => !blockedIds.has(p.id)), shiftTypes: st.shiftTypes,
+        // خانه‌های دستیِ سرپرستار قفل‌اند: تولید از روی همان‌ها ادامه می‌دهد (دور ۱۵).
+        currentSchedule: deptEntries.filter(e => e.isManualEntry), requests: st.requests,
+        rules: DEFAULT_RULES, aiSettings: st.aiSettings, globalSettings: st.globalDutySettings,
         // نیاز روزانه‌ای که سرپرستار در همین جدول وارد کرده، مبنای تولید است؛
         // همه‌صفر یعنی «عدد نداده‌ام» و منطق پیش‌فرض حل‌کننده تصمیم می‌گیرد.
         dailyReqs: hasAnyDailyReq(st.dailyReqs) ? st.dailyReqs : undefined,
@@ -190,7 +244,8 @@ export default function SchedulerPage() {
           : <button className="btn-secondary" onClick={() => st.setScheduleStatus('draft')}>برگرداندن به پیش‌نویس</button>}
         <span>تعارض‌ها: <strong>{fa(conflicts)}</strong> · نقض سخت قواعد: <strong>{fa(violations.filter(v => v.severity === 'hard').length)}</strong></span>
       </div>
-      <p style={{ fontSize: 12, color: '#64748b' }}>برای ویرایش دستی روی هر سلول کلیک کنید (چرخش صبح ← عصر ← شب ← آف). برای سرپرستار، طبق قانون ثابت جدول، چرخش فقط صبح و آف است. سه ردیف «نیاز بخش» بالای جدول ورودی مستقیم شماست: عدد هر روز را همان‌جا وارد کنید یا با خانهٔ «همهٔ روزها» یک عدد برای کل ماه بگذارید؛ «تولید خودکار برنامه» دقیقاً با همین نیازها می‌چیند. در وضعیت منتشرشده ویرایش قفل است.</p>
+      <p style={{ fontSize: 12, color: '#64748b' }}>روی هر باکس شیفت کلیک کنید تا گزینه‌های شیفت باز شود و انتخاب کنید؛ خانهٔ انتخاب‌شده «دستی» می‌شود و در تولید خودکار قفل می‌ماند. برای سرپرستار، طبق قانون ثابت جدول، فقط صبح و آف قابل انتخاب است. سه ردیف «نیاز بخش» بالای جدول ورودی مستقیم شماست: عدد هر روز را همان‌جا وارد کنید یا با خانهٔ «همهٔ روزها» یک عدد برای کل ماه بگذارید؛ «تولید خودکار برنامه» دقیقاً با همین نیازها می‌چیند. در وضعیت منتشرشده ویرایش قفل است.</p>
+      <GenerationSettingsPanel />
       <RosterImportCard />
       {(gate.blocked.length > 0 || gate.warnings.length > 0) && (
         <div style={{ background: '#f8fafc', border: '1px solid #fde68a', borderRadius: 12, padding: '10px 14px', marginBottom: 12, fontSize: 13 }}>
@@ -267,7 +322,7 @@ export default function SchedulerPage() {
             </tr>
           </thead>
           <tbody>
-            {deptPeople.map(p => {
+            {deptPeople.map((p, rowIdx) => {
               const rec = recOf(p.id);
               const bal = st.leaveBalances[p.id];
               const remaining = bal ? bal.entitled - bal.used : null;
@@ -291,14 +346,59 @@ export default function SchedulerPage() {
                   const leaveCell = !cell.entry && leaveCode ? LEAVE_CELL[leaveCode] : undefined;
                   const bg = (leaveCell ? SCREEN_LEAVE_BG[leaveCode!] : undefined)
                     ?? (!cell.entry && holidays.has(cell.jDay) ? SCREEN_HOLIDAY_BG : cell.isFriday ? '#fff1f2' : undefined);
+                  const shiftObj = cell.entry ? st.shiftTypes.find(s => s.id === cell.entry!.shiftTypeId) : undefined;
+                  const isPickerOpen = picker !== null && picker.personnelId === p.id && picker.dateISO === cell.dateISO;
+                  const isHeadNurse = p.role.includes('سرپرستار');
+                  const openUp = rowIdx >= deptPeople.length - 4;
                   return (
                     <td
                       key={cell.jDay}
-                      onClick={() => cycleShift(p.id, cell.dateISO, cell.entry?.shiftTypeId)}
-                      style={{ padding: 4, textAlign: 'center', cursor: st.scheduleStatus === 'draft' ? 'pointer' : 'default', background: bg, color: cell.entry?.shiftTypeId === 's-n' ? '#7c3aed' : undefined, fontWeight: cell.entry?.isManualEntry ? 800 : 400 }}
+                      style={{ padding: 3, textAlign: 'center', background: bg, position: 'relative' }}
                       title={leaveCell ? `${leaveCell.name} — ${cell.dateISO}` : cell.dateISO}
                     >
-                      {cell.entry ? shiftSymbol(st.shiftTypes, cell.entry.shiftTypeId) : leaveCell ? leaveCell.label : shiftSymbol(st.shiftTypes, undefined)}
+                      <button
+                        type="button"
+                        onClick={() => openPicker(p.id, cell.dateISO)}
+                        title={cell.entry?.isManualEntry ? 'دستی (قفل برای تولید خودکار)' : undefined}
+                        style={{
+                          display: 'block', width: '100%', minWidth: 26, padding: '2px 0', borderRadius: 6, fontSize: 11, fontWeight: 700,
+                          border: 'none', boxShadow: cell.entry?.isManualEntry ? 'inset 0 0 0 2px rgb(15 23 42 / 0.4)' : 'none',
+                          background: shiftObj ? shiftObj.displayColor : 'transparent',
+                          color: shiftObj ? contrastTextColor(shiftObj.displayColor) : '#94a3b8',
+                          cursor: st.scheduleStatus === 'draft' ? 'pointer' : 'default',
+                        }}
+                      >
+                        {cell.entry ? shiftSymbol(st.shiftTypes, cell.entry.shiftTypeId) : leaveCell ? leaveCell.label : shiftSymbol(st.shiftTypes, undefined)}
+                      </button>
+                      {isPickerOpen && (
+                        <>
+                          <span onClick={() => setPicker(null)} style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'transparent' }} />
+                          <span style={{
+                            position: 'absolute', right: 0, [openUp ? 'bottom' : 'top']: 'calc(100% + 4px)', zIndex: 61, width: 236,
+                            background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, boxShadow: '0 8px 20px -6px rgb(15 23 42 / 0.18)',
+                            padding: 8, display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6, textAlign: 'center',
+                          } as CSSProperties}>
+                            {st.shiftTypes.map(s => {
+                              const disabled = isHeadNurse && s.id !== 's-m' && s.id !== 's-off';
+                              return (
+                                <button
+                                  key={s.id} type="button" disabled={disabled}
+                                  onClick={() => pickShift(p.id, cell.dateISO, s.id)}
+                                  title={disabled ? 'قانون ثابت: سرپرستار فقط شیفت صبح دارد' : s.name}
+                                  style={{
+                                    border: 'none', borderRadius: 8, padding: '5px 2px 4px', cursor: disabled ? 'not-allowed' : 'pointer',
+                                    background: s.displayColor, color: contrastTextColor(s.displayColor), opacity: disabled ? 0.3 : 1,
+                                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, boxShadow: 'none',
+                                  }}
+                                >
+                                  <span style={{ fontSize: 11, fontWeight: 800 }}>{s.symbol}</span>
+                                  <span style={{ fontSize: 8.5, fontWeight: 600 }}>{s.name}</span>
+                                </button>
+                              );
+                            })}
+                          </span>
+                        </>
+                      )}
                     </td>
                   );
                 })}

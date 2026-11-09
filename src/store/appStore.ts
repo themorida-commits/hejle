@@ -1,8 +1,8 @@
 import { create } from 'zustand';
 import { MOCK_PERSONNEL } from '../fixtures/sampleData';
-import { DEFAULT_GLOBAL_SETTINGS } from '../core/defaults';
+import { DEFAULT_GLOBAL_SETTINGS, DEFAULT_AI_SETTINGS } from '../core/defaults';
 import { calculateDutyHours } from '../core/duty';
-import type { Department, Personnel, ScheduleEntry, ShiftType, StaffRequest } from '../core/types';
+import type { AiGenerationSettings, Department, Personnel, ScheduleEntry, ShiftType, StaffRequest } from '../core/types';
 import { type LeaveRequest } from '../features/leave/leaveService';
 import { type SwapRequest } from '../features/swaps/swapService';
 import { type WorkRecord } from '../features/workRecords/workRecordService';
@@ -154,6 +154,9 @@ interface AppState {
   dailyRequirements: { morning: number; evening: number; night: number };
   /** نیاز روزانهٔ همین ماه به تفکیک روز — ورودی مستقیم سرپرستار در جدول برنامه. */
   dailyReqs: DailyReqs;
+  /** تنظیمات پیشرفتهٔ تولید برنامه (پنل نسخهٔ قدیمی — دور ۱۵)؛ فعلاً نشست‌محور است. */
+  aiSettings: AiGenerationSettings;
+  setAiSettings: (s: AiGenerationSettings) => void;
   scheduleId: string | null;
   setDailyReq: (shift: DailyReqShift, dayIndex: number, value: number) => void;
   setDailyReqRow: (shift: DailyReqShift, value: number) => void;
@@ -315,6 +318,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   signatures: { matronName: '', chiefName: '' },
   dailyRequirements: { morning: 0, evening: 0, night: 0 },
   dailyReqs: demoState.dailyReqs,
+  aiSettings: DEFAULT_AI_SETTINGS,
+  setAiSettings: (s) => set({ aiSettings: s }),
   scheduleId: demoState.scheduleId,
   setDailyReq: (shift, dayIndex, value) => {
     set((st) => {
