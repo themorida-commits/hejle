@@ -94,6 +94,8 @@ test('A-5 مرج تنبل بخش: بارگذاری بخش دوم پرسنل را
   const cur = {
     personnel: base.personnel, entries: base.entries, leaves: [], workRecords: [],
     nursingRecords: base.nursingRecords,
+    patients: base.patients, admissions: base.admissions, patientAssignments: base.patientAssignments,
+    patientReports: base.patientReports, handovers: base.handovers,
     dutyByEmployee: new Map<string, number>(), leaveBalances: {},
   };
   const dep2Snap = { ...full, employees: full.employees.filter(e => e.wardId === 'dep2'), entries: [], leaves: [], workRecords: [], schedule: null };

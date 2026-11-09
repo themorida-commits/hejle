@@ -14,6 +14,7 @@ export const ALL_NAV: NavItem[] = [
   { to: '/personnel', label: 'پرونده پرسنلی' },
   { to: '/karaneh', label: 'کارانه' },
   { to: '/nursing-services', label: 'خدمات پرستاری' },
+  { to: '/patients', label: 'بیماران بخش' },
   { to: '/accreditation', label: 'اعتباربخشی' },
   { to: '/ai', label: 'دستیار AI' },
   { to: '/settings', label: 'تنظیمات بیمارستان' },
@@ -23,11 +24,11 @@ export const ALL_NAV: NavItem[] = [
 const ROLE_PATHS: Record<string, string[]> = {
   hospital_admin: ALL_NAV.map(n => n.to),
   // مترون: نظارت پرستاری کل بیمارستان + صف تأیید + فرم‌های چاپی از راه برنامهٔ شیفت
-  matron: ['/', '/scheduler', '/leave', '/work-records', '/nursing-services', '/accreditation'],
+  matron: ['/', '/scheduler', '/leave', '/work-records', '/nursing-services', '/patients', '/accreditation'],
   // اداری/منابع انسانی: پرونده و ثبت و خروجی — قلب تپندهٔ کارگزینی
   hr_admin: ['/', '/leave', '/personnel', '/work-records', '/attendance', '/karaneh', '/nursing-services'],
-  ward_manager: ['/', '/scheduler', '/leave', '/work-records', '/attendance', '/personnel', '/nursing-services', '/self-service'],
-  staff: ['/leave', '/self-service'],
+  ward_manager: ['/', '/scheduler', '/leave', '/work-records', '/attendance', '/personnel', '/nursing-services', '/patients', '/self-service'],
+  staff: ['/leave', '/self-service', '/patients'],
 };
 
 /** آیا نقش در سطح کل بیمارستان کار می‌کند (نه یک بخش)؟ */

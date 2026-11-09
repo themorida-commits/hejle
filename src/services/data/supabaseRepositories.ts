@@ -2,8 +2,9 @@
 // سقف پیش‌فرض PostgREST هزار ردیف است و یک ماهِ یک بخش ۴۲ نفره از آن رد می‌شود).
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type {
-  DataRepositories, EmployeeRecord, EntryRecord, LeaveRecord, LeaveTypeRecord,
-  KaranehProfileRecord, NursingPackageRecord, NursingServiceDbRecord,
+  AdmissionRecord, DataRepositories, EmployeeRecord, EntryRecord, HandoverRecord,
+  LeaveRecord, LeaveTypeRecord, KaranehProfileRecord, NursingPackageRecord,
+  NursingServiceDbRecord, PatientAssignmentRecord, PatientRecord, PatientReportRecord,
   ScheduleRecord, ShiftTypeRecord, WardRecord, WorkRecordRecord,
 } from './types';
 import { normalizeHospitalSettings, hospitalSettingsToJson } from './settings';
@@ -73,6 +74,36 @@ const nursingRecord = (r: any): NursingServiceDbRecord => ({
   patientRef: r.patient_ref, packageId: r.package_id, count: r.service_count,
   serviceDate: r.service_date, shift: r.shift, status: r.status,
   confirmedBy: r.confirmed_by, confirmedAt: r.confirmed_at, createdAt: r.created_at,
+});
+const patient = (r: any): PatientRecord => ({
+  id: r.id, hospitalId: r.hospital_id, fullName: r.full_name, nationalCode: r.national_code,
+  fileNo: r.file_no, birthDate: r.birth_date, gender: r.gender,
+});
+const admission = (r: any): AdmissionRecord => ({
+  id: r.id, hospitalId: r.hospital_id, wardId: r.ward_id, patientId: r.patient_id,
+  admittedAt: r.admitted_at, admissionType: r.admission_type, admissionSource: r.admission_source,
+  chiefComplaint: r.chief_complaint, admissionReason: r.admission_reason,
+  diagnosisText: r.diagnosis_text, diagnosisIcd10: r.diagnosis_icd10,
+  attendingName: r.attending_name, attendingCouncilNo: r.attending_council_no,
+  attendingService: r.attending_service, bedLabel: r.bed_label,
+  insuranceType: r.insurance_type, insuranceNo: r.insurance_no, allergySummary: r.allergy_summary,
+  status: r.status, dischargedAt: r.discharged_at, dischargeNote: r.discharge_note, createdBy: r.created_by,
+});
+const patientAssignment = (r: any): PatientAssignmentRecord => ({
+  id: r.id, hospitalId: r.hospital_id, wardId: r.ward_id, admissionId: r.admission_id,
+  employeeId: r.employee_id, role: r.role, shift: r.shift, serviceDate: r.service_date,
+  assignedBy: r.assigned_by, source: r.source,
+});
+const patientReport = (r: any): PatientReportRecord => ({
+  id: r.id, hospitalId: r.hospital_id, wardId: r.ward_id, admissionId: r.admission_id,
+  assignmentId: r.assignment_id, authorEmployeeId: r.author_employee_id, shift: r.shift,
+  reportDate: r.report_date, body: r.body ?? {}, status: r.status, signedAt: r.signed_at,
+});
+const handover = (r: any): HandoverRecord => ({
+  id: r.id, hospitalId: r.hospital_id, wardId: r.ward_id, admissionId: r.admission_id,
+  fromAssignmentId: r.from_assignment_id, toAssignmentId: r.to_assignment_id,
+  giverEmployeeId: r.giver_employee_id, receiverEmployeeId: r.receiver_employee_id,
+  handoverAt: r.handover_at, sbar: r.sbar ?? {}, stateSummary: r.state_summary, acceptedAt: r.accepted_at,
 });
 const karanehProfile = (r: any): KaranehProfileRecord => ({
   id: r.id, hospitalId: r.hospital_id, name: r.name, presetId: r.preset_id,
@@ -285,6 +316,101 @@ export function createSupabaseRepositories(client: SupabaseClient): DataReposito
         if (error) throw new Error(`supabase write failed: ${error.message}`);
       },
     },
+    patients: {
+      async listPatients(hospitalId) {
+        const rows = await fetchAllPages((f, t) =>
+          client.from('patients').select('*').eq('hospital_id', hospitalId).order('full_name').range(f, t));
+        return rows.map(patient);
+      },
+      async listAdmissions(wardId) {
+        const rows = await fetchAllPages((f, t) =>
+          client.from('admissions').select('*').eq('ward_id', wardId).order('admitted_at', { ascending: false }).range(f, t));
+        return rows.map(admission);
+      },
+      async listAssignments(wardId) {
+        const rows = await fetchAllPages((f, t) =>
+          client.from('patient_assignments').select('*').eq('ward_id', wardId).order('service_date').range(f, t));
+        return rows.map(patientAssignment);
+      },
+      async listReports(wardId) {
+        const rows = await fetchAllPages((f, t) =>
+          client.from('nursing_reports').select('*').eq('ward_id', wardId).order('report_date').range(f, t));
+        return rows.map(patientReport);
+      },
+      async listHandovers(wardId) {
+        const rows = await fetchAllPages((f, t) =>
+          client.from('handovers').select('*').eq('ward_id', wardId).order('handover_at').range(f, t));
+        return rows.map(handover);
+      },
+      async createPatient(rec) {
+        const { data, error } = await client.from('patients').insert({
+          hospital_id: rec.hospitalId, full_name: rec.fullName, national_code: rec.nationalCode,
+          file_no: rec.fileNo, birth_date: rec.birthDate, gender: rec.gender,
+        }).select('*').single();
+        if (error) throw new Error(`supabase write failed: ${error.message}`);
+        return patient(data);
+      },
+      async createAdmission(rec) {
+        const { data, error } = await client.from('admissions').insert({
+          hospital_id: rec.hospitalId, ward_id: rec.wardId, patient_id: rec.patientId,
+          admitted_at: rec.admittedAt, admission_type: rec.admissionType, admission_source: rec.admissionSource,
+          chief_complaint: rec.chiefComplaint, admission_reason: rec.admissionReason,
+          diagnosis_text: rec.diagnosisText, diagnosis_icd10: rec.diagnosisIcd10,
+          attending_name: rec.attendingName, attending_council_no: rec.attendingCouncilNo,
+          attending_service: rec.attendingService, bed_label: rec.bedLabel,
+          insurance_type: rec.insuranceType, insurance_no: rec.insuranceNo, allergy_summary: rec.allergySummary,
+          status: rec.status, discharged_at: rec.dischargedAt, discharge_note: rec.dischargeNote, created_by: rec.createdBy,
+        }).select('*').single();
+        if (error) throw new Error(`supabase write failed: ${error.message}`);
+        return admission(data);
+      },
+      async createAssignment(rec) {
+        const { data, error } = await client.from('patient_assignments').insert({
+          hospital_id: rec.hospitalId, ward_id: rec.wardId, admission_id: rec.admissionId,
+          employee_id: rec.employeeId, role: rec.role, shift: rec.shift, service_date: rec.serviceDate,
+          assigned_by: rec.assignedBy, source: rec.source,
+        }).select('*').single();
+        if (error) throw new Error(`supabase write failed: ${error.message}`);
+        return patientAssignment(data);
+      },
+      async createReport(rec) {
+        const { data, error } = await client.from('nursing_reports').insert({
+          hospital_id: rec.hospitalId, ward_id: rec.wardId, admission_id: rec.admissionId,
+          assignment_id: rec.assignmentId, author_employee_id: rec.authorEmployeeId, shift: rec.shift,
+          report_date: rec.reportDate, body: rec.body, status: rec.status, signed_at: rec.signedAt,
+        }).select('*').single();
+        if (error) throw new Error(`supabase write failed: ${error.message}`);
+        return patientReport(data);
+      },
+      async updateReport(id, patch) {
+        const row: Record<string, unknown> = {};
+        if (patch.body !== undefined) row.body = patch.body;
+        if (patch.status !== undefined) row.status = patch.status;
+        if (patch.signedAt !== undefined) row.signed_at = patch.signedAt;
+        const { error } = await client.from('nursing_reports').update(row).eq('id', id);
+        if (error) throw new Error(`supabase write failed: ${error.message}`);
+      },
+      async createHandover(rec) {
+        const { data, error } = await client.from('handovers').insert({
+          hospital_id: rec.hospitalId, ward_id: rec.wardId, admission_id: rec.admissionId,
+          from_assignment_id: rec.fromAssignmentId, to_assignment_id: rec.toAssignmentId,
+          giver_employee_id: rec.giverEmployeeId, receiver_employee_id: rec.receiverEmployeeId,
+          handover_at: rec.handoverAt, sbar: rec.sbar, state_summary: rec.stateSummary, accepted_at: rec.acceptedAt,
+        }).select('*').single();
+        if (error) throw new Error(`supabase write failed: ${error.message}`);
+        return handover(data);
+      },
+      async acceptHandover(id) {
+        const { error } = await client.from('handovers')
+          .update({ accepted_at: new Date().toISOString() }).eq('id', id);
+        if (error) throw new Error(`supabase write failed: ${error.message}`);
+      },
+      async dischargeAdmission(id, status, note, atISO) {
+        const { error } = await client.from('admissions')
+          .update({ status, discharge_note: note, discharged_at: atISO }).eq('id', id);
+        if (error) throw new Error(`supabase write failed: ${error.message}`);
+      },
+    },
   };
 }
 
@@ -293,7 +419,7 @@ export async function loadHospitalSnapshot(
   repos: DataRepositories,
   args: { hospitalId: string; wardId: string; jYear: number; jMonth: number },
 ) {
-  const [wards, employees, shiftTypes, leaveTypes, schedule, leaves, workRecords, nursingPackages, nursingRecords, karanehProfiles, settings] = await Promise.all([
+  const [wards, employees, shiftTypes, leaveTypes, schedule, leaves, workRecords, nursingPackages, nursingRecords, karanehProfiles, settings, patients, admissions, patientAssignments, patientReports, handovers] = await Promise.all([
     repos.org.listWards(args.hospitalId),
     repos.org.listEmployees(args.wardId),
     repos.org.listShiftTypes(args.hospitalId),
@@ -305,7 +431,12 @@ export async function loadHospitalSnapshot(
     repos.nursing.listRecords(args.wardId),
     repos.profiles.listProfiles(args.hospitalId),
     repos.settings.getSettings(args.hospitalId),
+    repos.patients.listPatients(args.hospitalId),
+    repos.patients.listAdmissions(args.wardId),
+    repos.patients.listAssignments(args.wardId),
+    repos.patients.listReports(args.wardId),
+    repos.patients.listHandovers(args.wardId),
   ]);
   const entries = schedule ? await repos.roster.listEntries(schedule.id) : [];
-  return { wards, employees, shiftTypes, leaveTypes, schedule, entries, leaves, workRecords, nursingPackages, nursingRecords, karanehProfiles, settings };
+  return { wards, employees, shiftTypes, leaveTypes, schedule, entries, leaves, workRecords, nursingPackages, nursingRecords, karanehProfiles, settings, patients, admissions, patientAssignments, patientReports, handovers };
 }

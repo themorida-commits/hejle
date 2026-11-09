@@ -26,9 +26,10 @@ test('W2: اداری (HR) میز خودش را دارد — پرونده و کا
   assert.equal(isHospitalLevelRole('hr_admin'), true);
 });
 
-test('W3: مدیر بیمارستان همه را دارد؛ پرستار فقط مرخصی و سلف‌سرویس؛ سرپرستار سطح بخش است', () => {
+test('W3: مدیر بیمارستان همه را دارد؛ پرستار مرخصی و سلف‌سرویس و بیماران خودش؛ سرپرستار سطح بخش است', () => {
   assert.equal(navForRole('hospital_admin').length, ALL_NAV.length);
-  assert.deepEqual(paths('staff').sort(), ['/leave', '/self-service']);
+  // دور ۱۶: پرستار به «بیماران بخش» دسترسی دارد تا گزارش شیفت خودش را بنویسد.
+  assert.deepEqual(paths('staff').sort(), ['/leave', '/patients', '/self-service']);
   assert.equal(isHospitalLevelRole('ward_manager'), false);
   assert.ok(paths('ward_manager').includes('/scheduler'));
 });

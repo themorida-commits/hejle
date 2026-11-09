@@ -4,8 +4,13 @@ import type { LeaveRequest } from '../../features/leave/leaveService';
 import type { WorkRecord } from '../../features/workRecords/workRecordService';
 import type { NursingPackage, NursingServiceRecord } from '../../features/nursingServices/nursingService';
 import type {
+  Patient, Admission, PatientAssignment, NursingReport, NursingReportBody, Handover, SbarNote,
+} from '../../features/patients/patientService';
+import { emptyReportBody } from '../../features/patients/patientService';
+import type {
   EmployeeRecord, ShiftTypeRecord, EntryRecord, LeaveRecord, WorkRecordRecord,
   NursingPackageRecord, NursingServiceDbRecord,
+  PatientRecord, AdmissionRecord, PatientAssignmentRecord, PatientReportRecord, HandoverRecord,
 } from './types';
 
 export function nursingPackageToDomain(r: NursingPackageRecord): NursingPackage {
@@ -149,5 +154,114 @@ export function workRecordToRecord(w: WorkRecord, ctx: { id: string; hospitalId:
       ...(w.lateMinutes != null ? { lateMinutes: w.lateMinutes } : {}),
     },
     status: w.status,
+  };
+}
+
+// ── پروندهٔ بیمار (مایگریشن ۰۰۱۳): رکورد دیتابیس ↔ دامنه ─────────────────────
+export function patientToDomain(r: PatientRecord): Patient {
+  return {
+    id: r.id, fullName: r.fullName, fileNo: r.fileNo,
+    ...(r.nationalCode ? { nationalCode: r.nationalCode } : {}),
+    ...(r.birthDate ? { birthDateISO: r.birthDate } : {}),
+    ...(r.gender ? { gender: r.gender } : {}),
+  };
+}
+export function patientToDb(p: Patient, hospitalId: string): Omit<PatientRecord, 'id'> {
+  return {
+    hospitalId, fullName: p.fullName, fileNo: p.fileNo,
+    nationalCode: p.nationalCode ?? null, birthDate: p.birthDateISO ?? null, gender: p.gender ?? null,
+  };
+}
+export function admissionToDomain(r: AdmissionRecord): Admission {
+  return {
+    id: r.id, wardId: r.wardId, patientId: r.patientId, admittedAtISO: r.admittedAt,
+    admissionType: r.admissionType, admissionReason: r.admissionReason, attendingName: r.attendingName,
+    status: r.status,
+    ...(r.admissionSource ? { admissionSource: r.admissionSource } : {}),
+    ...(r.chiefComplaint ? { chiefComplaint: r.chiefComplaint } : {}),
+    ...(r.diagnosisText ? { diagnosisText: r.diagnosisText } : {}),
+    ...(r.diagnosisIcd10 ? { diagnosisIcd10: r.diagnosisIcd10 } : {}),
+    ...(r.attendingCouncilNo ? { attendingCouncilNo: r.attendingCouncilNo } : {}),
+    ...(r.attendingService ? { attendingService: r.attendingService } : {}),
+    ...(r.bedLabel ? { bedLabel: r.bedLabel } : {}),
+    ...(r.insuranceType ? { insuranceType: r.insuranceType } : {}),
+    ...(r.insuranceNo ? { insuranceNo: r.insuranceNo } : {}),
+    ...(r.allergySummary ? { allergySummary: r.allergySummary } : {}),
+    ...(r.dischargedAt ? { dischargedAtISO: r.dischargedAt } : {}),
+    ...(r.dischargeNote ? { dischargeNote: r.dischargeNote } : {}),
+  };
+}
+export function admissionToDb(a: Admission, hospitalId: string, createdBy: string | null): Omit<AdmissionRecord, 'id'> {
+  return {
+    hospitalId, wardId: a.wardId, patientId: a.patientId, admittedAt: a.admittedAtISO,
+    admissionType: a.admissionType, admissionSource: a.admissionSource ?? null,
+    chiefComplaint: a.chiefComplaint ?? null, admissionReason: a.admissionReason,
+    diagnosisText: a.diagnosisText ?? null, diagnosisIcd10: a.diagnosisIcd10 ?? null,
+    attendingName: a.attendingName, attendingCouncilNo: a.attendingCouncilNo ?? null,
+    attendingService: a.attendingService ?? null, bedLabel: a.bedLabel ?? null,
+    insuranceType: a.insuranceType ?? null, insuranceNo: a.insuranceNo ?? null,
+    allergySummary: a.allergySummary ?? null, status: a.status,
+    dischargedAt: a.dischargedAtISO ?? null, dischargeNote: a.dischargeNote ?? null, createdBy,
+  };
+}
+export function assignmentToDomain(r: PatientAssignmentRecord): PatientAssignment {
+  return {
+    id: r.id, admissionId: r.admissionId, employeeId: r.employeeId, role: r.role,
+    shift: r.shift, dateISO: r.serviceDate, source: r.source,
+    ...(r.assignedBy ? { assignedBy: r.assignedBy } : {}),
+  };
+}
+export function assignmentToDb(a: PatientAssignment, hospitalId: string, wardId: string): Omit<PatientAssignmentRecord, 'id'> {
+  return {
+    hospitalId, wardId, admissionId: a.admissionId, employeeId: a.employeeId, role: a.role,
+    shift: a.shift, serviceDate: a.dateISO, assignedBy: a.assignedBy ?? null, source: a.source,
+  };
+}
+export function reportBodyFromJson(json: Record<string, unknown>): NursingReportBody {
+  const base = emptyReportBody();
+  const str = (k: keyof NursingReportBody) => (typeof json[k] === 'string' ? (json[k] as string) : base[k] as string);
+  const num = (k: 'braden' | 'morse') => (typeof json[k] === 'number' ? (json[k] as number) : undefined);
+  return {
+    assessment: str('assessment'), diagnoses: str('diagnoses'), actions: str('actions'),
+    response: str('response'), vitals: str('vitals'), followups: str('followups'), incidents: str('incidents'),
+    ...(num('braden') !== undefined ? { braden: num('braden') } : {}),
+    ...(num('morse') !== undefined ? { morse: num('morse') } : {}),
+  };
+}
+export function reportToDomain(r: PatientReportRecord): NursingReport {
+  return {
+    id: r.id, admissionId: r.admissionId, authorEmployeeId: r.authorEmployeeId,
+    shift: r.shift, dateISO: r.reportDate, body: reportBodyFromJson(r.body), status: r.status,
+    ...(r.assignmentId ? { assignmentId: r.assignmentId } : {}),
+    ...(r.signedAt ? { signedAtISO: r.signedAt } : {}),
+  };
+}
+export function reportToDb(r: NursingReport, hospitalId: string, wardId: string): Omit<PatientReportRecord, 'id'> {
+  return {
+    hospitalId, wardId, admissionId: r.admissionId, assignmentId: r.assignmentId ?? null,
+    authorEmployeeId: r.authorEmployeeId, shift: r.shift, reportDate: r.dateISO,
+    body: { ...r.body }, status: r.status, signedAt: r.signedAtISO ?? null,
+  };
+}
+export function handoverToDomain(r: HandoverRecord): Handover {
+  const s = r.sbar ?? {};
+  const str = (k: keyof SbarNote) => (typeof s[k] === 'string' ? (s[k] as string) : '');
+  return {
+    id: r.id, admissionId: r.admissionId, giverEmployeeId: r.giverEmployeeId,
+    receiverEmployeeId: r.receiverEmployeeId, atISO: r.handoverAt,
+    sbar: { situation: str('situation'), background: str('background'), assessment: str('assessment'), recommendation: str('recommendation') },
+    ...(r.fromAssignmentId ? { fromAssignmentId: r.fromAssignmentId } : {}),
+    ...(r.toAssignmentId ? { toAssignmentId: r.toAssignmentId } : {}),
+    ...(r.stateSummary ? { stateSummary: r.stateSummary } : {}),
+    ...(r.acceptedAt ? { acceptedAtISO: r.acceptedAt } : {}),
+  };
+}
+export function handoverToDb(h: Handover, hospitalId: string, wardId: string): Omit<HandoverRecord, 'id'> {
+  return {
+    hospitalId, wardId, admissionId: h.admissionId,
+    fromAssignmentId: h.fromAssignmentId ?? null, toAssignmentId: h.toAssignmentId ?? null,
+    giverEmployeeId: h.giverEmployeeId, receiverEmployeeId: h.receiverEmployeeId,
+    handoverAt: h.atISO, sbar: { ...h.sbar }, stateSummary: h.stateSummary ?? null,
+    acceptedAt: h.acceptedAtISO ?? null,
   };
 }

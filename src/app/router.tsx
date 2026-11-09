@@ -11,6 +11,8 @@ import AttendancePage from '../pages/AttendancePage';
 import PersonnelPage from '../pages/PersonnelPage';
 import KaranehPage from '../pages/KaranehPage';
 import NursingServicesPage from '../pages/NursingServicesPage';
+import PatientsPage from '../pages/PatientsPage';
+import PatientFilePage from '../pages/PatientFilePage';
 import AccreditationPage from '../pages/AccreditationPage';
 import AiAssistantPage from '../pages/AiAssistantPage';
 import SettingsPage from '../pages/SettingsPage';
@@ -36,6 +38,8 @@ export const router = createBrowserRouter([
       { path: '/personnel', element: <PersonnelPage /> },
       { path: '/karaneh', element: <KaranehPage /> },
       { path: '/nursing-services', element: <NursingServicesPage /> },
+      { path: '/patients', element: <PatientsPage /> },
+      { path: '/patients/:admissionId', element: <PatientFilePage /> },
       { path: '/accreditation', element: <AccreditationPage /> },
       { path: '/ai', element: <AiAssistantPage /> },
       { path: '/settings', element: <SettingsPage /> },

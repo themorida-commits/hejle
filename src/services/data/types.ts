@@ -147,6 +147,55 @@ export interface KaranehProfileRepository {
   setDefaultProfile(hospitalId: string, id: string): Promise<void>;
 }
 
+// ── پروندهٔ بیمار (مایگریشن ۰۰۱۳) — لایهٔ پاسخگویی اپیزود؛ رکوردها آیینهٔ جداول‌اند.
+export interface PatientRecord {
+  id: string; hospitalId: string; fullName: string; nationalCode: string | null;
+  fileNo: string; birthDate: string | null; gender: 'female' | 'male' | null;
+}
+export interface AdmissionRecord {
+  id: string; hospitalId: string; wardId: string; patientId: string;
+  admittedAt: string; admissionType: 'emergency' | 'elective' | 'transfer';
+  admissionSource: string | null; chiefComplaint: string | null; admissionReason: string;
+  diagnosisText: string | null; diagnosisIcd10: string | null;
+  attendingName: string; attendingCouncilNo: string | null; attendingService: string | null;
+  bedLabel: string | null; insuranceType: string | null; insuranceNo: string | null;
+  allergySummary: string | null;
+  status: 'admitted' | 'discharged' | 'transferred' | 'deceased' | 'lama';
+  dischargedAt: string | null; dischargeNote: string | null; createdBy: string | null;
+}
+export interface PatientAssignmentRecord {
+  id: string; hospitalId: string; wardId: string; admissionId: string; employeeId: string;
+  role: 'responsible' | 'associate' | 'charge';
+  shift: 'morning' | 'evening' | 'night'; serviceDate: string;
+  assignedBy: string | null; source: 'roster' | 'manual' | 'handover';
+}
+export interface PatientReportRecord {
+  id: string; hospitalId: string; wardId: string; admissionId: string; assignmentId: string | null;
+  authorEmployeeId: string; shift: 'morning' | 'evening' | 'night'; reportDate: string;
+  body: Record<string, unknown>; status: 'draft' | 'signed'; signedAt: string | null;
+}
+export interface HandoverRecord {
+  id: string; hospitalId: string; wardId: string; admissionId: string;
+  fromAssignmentId: string | null; toAssignmentId: string | null;
+  giverEmployeeId: string; receiverEmployeeId: string; handoverAt: string;
+  sbar: Record<string, unknown>; stateSummary: string | null; acceptedAt: string | null;
+}
+export interface PatientsRepository {
+  listPatients(hospitalId: string): Promise<PatientRecord[]>;
+  listAdmissions(wardId: string): Promise<AdmissionRecord[]>;
+  listAssignments(wardId: string): Promise<PatientAssignmentRecord[]>;
+  listReports(wardId: string): Promise<PatientReportRecord[]>;
+  listHandovers(wardId: string): Promise<HandoverRecord[]>;
+  createPatient(rec: Omit<PatientRecord, 'id'>): Promise<PatientRecord>;
+  createAdmission(rec: Omit<AdmissionRecord, 'id'>): Promise<AdmissionRecord>;
+  createAssignment(rec: Omit<PatientAssignmentRecord, 'id'>): Promise<PatientAssignmentRecord>;
+  createReport(rec: Omit<PatientReportRecord, 'id'>): Promise<PatientReportRecord>;
+  updateReport(id: string, patch: Partial<Pick<PatientReportRecord, 'body' | 'status' | 'signedAt'>>): Promise<void>;
+  createHandover(rec: Omit<HandoverRecord, 'id'>): Promise<HandoverRecord>;
+  acceptHandover(id: string): Promise<void>;
+  dischargeAdmission(id: string, status: AdmissionRecord['status'], note: string | null, atISO: string): Promise<void>;
+}
+
 export interface DataRepositories {
   org: OrgRepository;
   roster: RosterRepository;
@@ -155,6 +204,7 @@ export interface DataRepositories {
   nursing: NursingRepository;
   profiles: KaranehProfileRepository;
   settings: SettingsRepository;
+  patients: PatientsRepository;
 }
 
 /** عکس کامل دادهٔ یک بیمارستان برای هیدراته‌کردن استور. */
@@ -171,4 +221,9 @@ export interface HospitalSnapshot {
   nursingRecords: NursingServiceDbRecord[];
   karanehProfiles: KaranehProfileRecord[];
   settings: HospitalSettingsRecord;
+  patients: PatientRecord[];
+  admissions: AdmissionRecord[];
+  patientAssignments: PatientAssignmentRecord[];
+  patientReports: PatientReportRecord[];
+  handovers: HandoverRecord[];
 }

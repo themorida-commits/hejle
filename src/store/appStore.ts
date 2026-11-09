@@ -15,7 +15,12 @@ import { createRepositories, currentDataSource, loadHospitalSnapshot } from '../
 import {
   employeeToPersonnel, shiftTypeToDomain, entryToDomain, leaveToDomain, leaveRequestToDb, workRecordToDomain,
   nursingPackageToDomain, nursingRecordToDomain, nursingRecordToDb, personnelToEmployeeRecord,
+  patientToDomain, patientToDb, admissionToDomain, admissionToDb, assignmentToDomain, assignmentToDb,
+  reportToDomain, reportToDb, handoverToDomain, handoverToDb,
 } from '../services/data/mappers';
+import type {
+  Patient, Admission, PatientAssignment, NursingReport, Handover,
+} from '../features/patients/patientService';
 import type { HospitalSnapshot, HospitalSettingsRecord, KaranehProfileRecord } from '../services/data/types';
 import type { GlobalDutySettings } from '../core/types';
 import { useSessionStore } from './session';
@@ -52,6 +57,11 @@ export function snapshotToState(snap: HospitalSnapshot) {
     ),
     nursingPackages: snap.nursingPackages.map(nursingPackageToDomain),
     nursingRecords: snap.nursingRecords.map(nursingRecordToDomain),
+    patients: snap.patients.map(patientToDomain),
+    admissions: snap.admissions.map(admissionToDomain),
+    patientAssignments: snap.patientAssignments.map(assignmentToDomain),
+    patientReports: snap.patientReports.map(reportToDomain),
+    handovers: snap.handovers.map(handoverToDomain),
     karanehProfiles: snap.karanehProfiles,
     approvalChain: snap.settings.approvalChain,
     chainPresetId: snap.settings.chainPresetId,
@@ -70,12 +80,22 @@ export function mergeWardIntoState(
   cur: {
     personnel: Personnel[]; entries: ScheduleEntry[]; leaves: LeaveRequest[]; workRecords: WorkRecord[];
     nursingRecords: NursingServiceRecord[];
+    patients: Patient[]; admissions: Admission[]; patientAssignments: PatientAssignment[];
+    patientReports: NursingReport[]; handovers: Handover[];
     dutyByEmployee: Map<string, number>; leaveBalances: Record<string, { entitled: number; used: number }>;
   },
   snap: HospitalSnapshot,
 ) {
   const mapped = snapshotToState(snap);
   const newIds = new Set(mapped.personnel.map(p => p.id));
+  // پروندهٔ بیمار: بیماران سطح بیمارستان‌اند (جایگزینی کامل)؛ بقیه بخش‌محورند —
+  // اپیزودهای بخش تازه‌بارگذاری‌شده جای قبلی‌های همان بخش را می‌گیرند.
+  const loadedWardId = snap.employees[0]?.wardId ?? mapped.admissions[0]?.wardId ?? null;
+  const staleAdmIds = new Set(cur.admissions.filter(a => a.wardId === loadedWardId).map(a => a.id));
+  const keptAdmissions = cur.admissions.filter(a => a.wardId !== loadedWardId);
+  const keptAssignments = cur.patientAssignments.filter(a => !staleAdmIds.has(a.admissionId));
+  const keptReports = cur.patientReports.filter(r => !staleAdmIds.has(r.admissionId));
+  const keptHandovers = cur.handovers.filter(h => !staleAdmIds.has(h.admissionId));
   const duty = new Map(cur.dutyByEmployee);
   for (const p of mapped.personnel) {
     if (!duty.has(p.id)) duty.set(p.id, calculateDutyHours(p, snap.settings.globalDuty, 0, J_YEAR, J_MONTH));
@@ -90,6 +110,11 @@ export function mergeWardIntoState(
     leaves: [...cur.leaves.filter(l => !newIds.has(l.employeeId)), ...mapped.leaves],
     workRecords: [...cur.workRecords.filter(w => !newIds.has(w.employeeId)), ...mapped.workRecords],
     nursingRecords: [...cur.nursingRecords.filter(r => !newIds.has(r.employeeId)), ...mapped.nursingRecords],
+    patients: mapped.patients,
+    admissions: [...keptAdmissions, ...mapped.admissions],
+    patientAssignments: [...keptAssignments, ...mapped.patientAssignments],
+    patientReports: [...keptReports, ...mapped.patientReports],
+    handovers: [...keptHandovers, ...mapped.handovers],
     dutyByEmployee: duty,
     leaveBalances: balances,
     // نیاز روزانه و شناسهٔ برنامه متعلق به بخش تازه‌بارگذاری‌شده است، نه بخش قبلی.
@@ -140,6 +165,19 @@ interface AppState {
   nursingPackages: NursingPackage[];
   addNursingRecord: (r: NursingServiceRecord) => void;
   confirmNursingRecord: (id: string, by: string) => void;
+  /** پروندهٔ بیمار — لایهٔ پاسخگویی اپیزود (دور ۱۶). */
+  patients: Patient[];
+  admissions: Admission[];
+  patientAssignments: PatientAssignment[];
+  patientReports: NursingReport[];
+  handovers: Handover[];
+  admitPatient: (p: Patient, a: Admission) => void;
+  addPatientAssignment: (a: PatientAssignment) => void;
+  addPatientReport: (r: NursingReport) => void;
+  signPatientReport: (id: string) => void;
+  addHandover: (h: Handover) => void;
+  acceptHandover: (id: string) => void;
+  dischargeAdmission: (id: string, status: Admission['status'], note?: string) => void;
   addPersonnelBulk: (list: Personnel[]) => void;
   importEntries: (list: ScheduleEntry[]) => void;
   karanehProfiles: KaranehProfileRecord[];
@@ -227,18 +265,24 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({ loadedWards: [...st.loadedWards, wardId] });
     const repos = createRepositories('supabase');
     const hospitalId = useSessionStore.getState().hospitalId ?? undefined;
-    const [employees, schedule, leaves, workRecords, nursingRecords, nursingPackages] = await Promise.all([
+    const [employees, schedule, leaves, workRecords, nursingRecords, nursingPackages, patients, admissions, patientAssignments, patientReports, handovers] = await Promise.all([
       repos.org.listEmployees(wardId),
       repos.roster.getSchedule(wardId, J_YEAR, J_MONTH),
       repos.leave.listLeaveRequests(wardId),
       repos.workRecords.listWorkRecords(wardId, J_YEAR, J_MONTH),
       repos.nursing.listRecords(wardId),
       hospitalId ? repos.nursing.listPackages(hospitalId) : Promise.resolve([]),
+      hospitalId ? repos.patients.listPatients(hospitalId) : Promise.resolve([]),
+      repos.patients.listAdmissions(wardId),
+      repos.patients.listAssignments(wardId),
+      repos.patients.listReports(wardId),
+      repos.patients.listHandovers(wardId),
     ]);
     const entries = schedule ? await repos.roster.listEntries(schedule.id) : [];
     const partial: HospitalSnapshot = {
       wards: [], employees, shiftTypes: [], leaveTypes: [], schedule, entries, leaves, workRecords,
       nursingPackages, nursingRecords, karanehProfiles: [],
+      patients, admissions, patientAssignments, patientReports, handovers,
       settings: {
         approvalChain: st.approvalChain, chainPresetId: st.chainPresetId,
         signatures: st.signatures, dailyRequirements: st.dailyRequirements, rosterNote: st.rosterNote,
@@ -261,6 +305,11 @@ export const useAppStore = create<AppState>((set, get) => ({
   leaves: demoState.leaves,
   swaps: [],
   workRecords: demoState.workRecords,
+  patients: demoState.patients,
+  admissions: demoState.admissions,
+  patientAssignments: demoState.patientAssignments,
+  patientReports: demoState.patientReports,
+  handovers: demoState.handovers,
   attendanceEvents: seedAttendance(demoState.entries),
   credentials: seedDemoCredentials(
     demoState.personnel.filter(p => p.departmentId === 'dep1').map(p => p.id),
@@ -420,6 +469,106 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (get().dataSource === 'supabase') {
       void createRepositories('supabase').nursing.confirmRecord(id, by)
         .catch(err => console.error('nursing confirm persist failed', err));
+    }
+  },
+  admitPatient: (p, a) => {
+    set((st) => ({ patients: [...st.patients, p], admissions: [...st.admissions, a] }));
+    if (get().dataSource === 'supabase') {
+      const hospitalId = useSessionStore.getState().hospitalId;
+      if (hospitalId) {
+        const repos = createRepositories('supabase');
+        void repos.patients.createPatient(patientToDb(p, hospitalId))
+          .then(savedP => {
+            const domainP = patientToDomain(savedP);
+            set((st) => ({
+              patients: st.patients.map(x => (x.id === p.id ? domainP : x)),
+              admissions: st.admissions.map(x => (x.id === a.id ? { ...x, patientId: domainP.id } : x)),
+            }));
+            return repos.patients.createAdmission(admissionToDb({ ...a, patientId: domainP.id }, hospitalId, get().currentEmployeeId ?? null));
+          })
+          .then(savedA => {
+            const domainA = admissionToDomain(savedA);
+            set((st) => ({ admissions: st.admissions.map(x => (x.id === a.id ? domainA : x)) }));
+          })
+          .catch(err => console.error('admission persist failed', err));
+      }
+    }
+  },
+  addPatientAssignment: (a) => {
+    set((st) => ({ patientAssignments: [...st.patientAssignments, a] }));
+    if (get().dataSource === 'supabase') {
+      const hospitalId = useSessionStore.getState().hospitalId;
+      const adm = get().admissions.find(x => x.id === a.admissionId);
+      if (hospitalId && adm) {
+        void createRepositories('supabase').patients.createAssignment(assignmentToDb(a, hospitalId, adm.wardId))
+          .then(saved => {
+            const domain = assignmentToDomain(saved);
+            set((st) => ({ patientAssignments: st.patientAssignments.map(x => (x.id === a.id ? domain : x)) }));
+          })
+          .catch(err => console.error('assignment persist failed', err));
+      }
+    }
+  },
+  addPatientReport: (r) => {
+    set((st) => ({ patientReports: [...st.patientReports, r] }));
+    if (get().dataSource === 'supabase') {
+      const hospitalId = useSessionStore.getState().hospitalId;
+      const adm = get().admissions.find(x => x.id === r.admissionId);
+      if (hospitalId && adm) {
+        void createRepositories('supabase').patients.createReport(reportToDb(r, hospitalId, adm.wardId))
+          .then(saved => {
+            const domain = reportToDomain(saved);
+            set((st) => ({ patientReports: st.patientReports.map(x => (x.id === r.id ? domain : x)) }));
+          })
+          .catch(err => console.error('patient report persist failed', err));
+      }
+    }
+  },
+  signPatientReport: (id) => {
+    const signedAtISO = new Date().toISOString();
+    set((st) => ({
+      patientReports: st.patientReports.map(r =>
+        r.id === id ? { ...r, status: 'signed' as const, signedAtISO } : r),
+    }));
+    if (get().dataSource === 'supabase') {
+      void createRepositories('supabase').patients.updateReport(id, { status: 'signed', signedAt: signedAtISO })
+        .catch(err => console.error('patient report sign persist failed', err));
+    }
+  },
+  addHandover: (h) => {
+    set((st) => ({ handovers: [...st.handovers, h] }));
+    if (get().dataSource === 'supabase') {
+      const hospitalId = useSessionStore.getState().hospitalId;
+      const adm = get().admissions.find(x => x.id === h.admissionId);
+      if (hospitalId && adm) {
+        void createRepositories('supabase').patients.createHandover(handoverToDb(h, hospitalId, adm.wardId))
+          .then(saved => {
+            const domain = handoverToDomain(saved);
+            set((st) => ({ handovers: st.handovers.map(x => (x.id === h.id ? domain : x)) }));
+          })
+          .catch(err => console.error('handover persist failed', err));
+      }
+    }
+  },
+  acceptHandover: (id) => {
+    const acceptedAtISO = new Date().toISOString();
+    set((st) => ({
+      handovers: st.handovers.map(h => (h.id === id ? { ...h, acceptedAtISO } : h)),
+    }));
+    if (get().dataSource === 'supabase') {
+      void createRepositories('supabase').patients.acceptHandover(id)
+        .catch(err => console.error('handover accept persist failed', err));
+    }
+  },
+  dischargeAdmission: (id, status, note) => {
+    const atISO = new Date().toISOString();
+    set((st) => ({
+      admissions: st.admissions.map(a =>
+        a.id === id ? { ...a, status, dischargedAtISO: atISO, ...(note ? { dischargeNote: note } : {}) } : a),
+    }));
+    if (get().dataSource === 'supabase') {
+      void createRepositories('supabase').patients.dischargeAdmission(id, status, note ?? null, atISO)
+        .catch(err => console.error('discharge persist failed', err));
     }
   },
   addPersonnelBulk: (list) => {

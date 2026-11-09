@@ -157,6 +157,7 @@ test('D-K1 پروفایل کارانهٔ دمو: سید پیش‌فرض وزار
 test('D-Q1 ماندهٔ استحقاقی از سهمیهٔ خود بیمارستان می‌آید (دمو ۲۶، پروفایل ارتش ۳۰)', async () => {
   const emptyCur = () => ({
     personnel: [], entries: [], leaves: [], workRecords: [], nursingRecords: [],
+    patients: [], admissions: [], patientAssignments: [], patientReports: [], handovers: [],
     dutyByEmployee: new Map<string, number>(), leaveBalances: {} as Record<string, { entitled: number; used: number }>,
   });
   const snap = buildDemoSnapshot();
