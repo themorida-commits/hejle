@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore, J_YEAR, J_MONTH } from '../store/appStore';
-import { buildMonthGrid, applyManualEdit, nextManualShiftId, shiftSymbol } from '../features/roster/rosterModel';
+import { buildMonthGrid, applyManualEdit, nextManualShiftId, shiftSymbol, hasAnyDailyReq } from '../features/roster/rosterModel';
 import {
   LEAVE_CELL, SCREEN_LEAVE_BG, SCREEN_HOLIDAY_BG, weekdayLetters, holidayDayNumbers,
   buildLeaveCellStates, buildLeaveDatesMap, dayCountsByCategory, employmentShort,
@@ -134,6 +134,9 @@ export default function SchedulerPage() {
       const fresh = await scheduleSolver.solve({
         personnel: deptPeople.filter(p => !blockedIds.has(p.id)), shiftTypes: st.shiftTypes, currentSchedule: [], requests: st.requests,
         rules: DEFAULT_RULES, aiSettings: DEFAULT_AI_SETTINGS, globalSettings: st.globalDutySettings,
+        // نیاز روزانه‌ای که سرپرستار در همین جدول وارد کرده، مبنای تولید است؛
+        // همه‌صفر یعنی «عدد نداده‌ام» و منطق پیش‌فرض حل‌کننده تصمیم می‌گیرد.
+        dailyReqs: hasAnyDailyReq(st.dailyReqs) ? st.dailyReqs : undefined,
         jYear: J_YEAR, jMonth: J_MONTH,
       });
       const others = st.entries.filter(e => !deptIds.has(e.personnelId));
@@ -187,7 +190,7 @@ export default function SchedulerPage() {
           : <button onClick={() => st.setScheduleStatus('draft')}>برگرداندن به پیش‌نویس</button>}
         <span>تعارض‌ها: <strong>{fa(conflicts)}</strong> · نقض سخت قواعد: <strong>{fa(violations.filter(v => v.severity === 'hard').length)}</strong></span>
       </div>
-      <p style={{ fontSize: 12, color: '#68707a' }}>برای ویرایش دستی روی هر سلول کلیک کنید (چرخش صبح ← عصر ← شب ← آف). برای سرپرستار، طبق قانون ثابت جدول، چرخش فقط صبح و آف است. در وضعیت منتشرشده ویرایش قفل است.</p>
+      <p style={{ fontSize: 12, color: '#68707a' }}>برای ویرایش دستی روی هر سلول کلیک کنید (چرخش صبح ← عصر ← شب ← آف). برای سرپرستار، طبق قانون ثابت جدول، چرخش فقط صبح و آف است. سه ردیف «نیاز بخش» بالای جدول ورودی مستقیم شماست: عدد هر روز را همان‌جا وارد کنید یا با خانهٔ «همهٔ روزها» یک عدد برای کل ماه بگذارید؛ «تولید خودکار برنامه» دقیقاً با همین نیازها می‌چیند. در وضعیت منتشرشده ویرایش قفل است.</p>
       <RosterImportCard />
       {(gate.blocked.length > 0 || gate.warnings.length > 0) && (
         <div style={{ background: '#fdf6ec', border: '1px solid #ecd9ae', borderRadius: 12, padding: '10px 14px', marginBottom: 12, fontSize: 13 }}>
@@ -207,16 +210,41 @@ export default function SchedulerPage() {
       <div style={{ overflowX: 'auto', background: '#fff', border: '1px solid #e3ddd2', borderRadius: 12 }}>
         <table style={{ borderCollapse: 'collapse', fontSize: 12, minWidth: 1280 }}>
           <thead>
-            {([['تعداد صبح', st.dailyRequirements.morning], ['تعداد عصر', st.dailyRequirements.evening], ['تعداد شب', st.dailyRequirements.night]] as const).map(([label, v]) => (
-              <tr key={label}>
-                <th colSpan={5} style={{ background: '#f3efe7', padding: 3, textAlign: 'right', fontSize: 11, color: '#68707a' }}>{label} (نیاز بخش)</th>
+            {([['morning', 'تعداد صبح'], ['evening', 'تعداد عصر'], ['night', 'تعداد شب']] as const).map(([shift, label]) => {
+              const rowVals = st.dailyReqs[shift];
+              const uniform = rowVals.length > 0 && rowVals.every(v => v === rowVals[0]);
+              return (
+              <tr key={shift}>
+                <th colSpan={5} style={{ background: '#f3efe7', padding: 3, textAlign: 'right', fontSize: 11, color: '#68707a', whiteSpace: 'nowrap' }}>
+                  {label} (نیاز بخش)
+                  {' · همهٔ روزها: '}
+                  <input
+                    type="number" min={0} max={99}
+                    value={uniform ? rowVals[0] : ''}
+                    placeholder="—"
+                    disabled={st.scheduleStatus === 'published'}
+                    title="یک عدد برای همهٔ روزهای ماه"
+                    onChange={e => st.setDailyReqRow(shift, Number(e.target.value))}
+                    style={{ width: 44, fontSize: 11, textAlign: 'center', border: '1px solid #d8d2c4', borderRadius: 6, background: '#fff', padding: '1px 2px' }}
+                  />
+                </th>
                 {Array.from({ length: dayCount }, (_, i) => (
-                  <th key={i} style={{ padding: 3, fontSize: 11, background: '#f3efe7', color: '#68707a' }}>{v > 0 ? fa(v) : ''}</th>
+                  <th key={i} style={{ padding: 1, background: '#f3efe7' }}>
+                    <input
+                      type="number" min={0} max={99}
+                      value={st.dailyReqs[shift][i] ?? 0}
+                      disabled={st.scheduleStatus === 'published'}
+                      title={`${label} — روز ${fa(i + 1)}`}
+                      onChange={e => st.setDailyReq(shift, i, Number(e.target.value))}
+                      style={{ width: '100%', minWidth: 26, fontSize: 11, textAlign: 'center', border: 'none', background: 'transparent', color: '#374151', padding: 1 }}
+                    />
+                  </th>
                 ))}
                 <th style={{ background: '#f3efe7' }}></th>
                 <th style={{ background: '#f3efe7' }}></th>
               </tr>
-            ))}
+              );
+            })}
             <tr>
               <th colSpan={5} style={{ position: 'sticky', right: 0, background: '#f3efe7', padding: 6, textAlign: 'right' }}></th>
               {letters.slice(0, dayCount).map((l, i) => (

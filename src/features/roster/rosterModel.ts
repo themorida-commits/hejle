@@ -68,6 +68,56 @@ export function nextManualShiftId(role: string, currentId: string | undefined): 
   return order[(order.indexOf(currentId ?? 's-off') + 1) % order.length]!;
 }
 
+/** نیاز روزانهٔ بخش به تفکیک روز ماه — همان سه ردیف بالای جدول برنامه و فرم چاپی. */
+export interface DailyReqs {
+  morning: number[];
+  evening: number[];
+  night: number[];
+}
+
+export type DailyReqShift = keyof DailyReqs;
+
+/** مقدار سالم یک خانهٔ نیاز: عدد صحیح بین ۰ تا ۹۹؛ هر چیز دیگری صفر می‌شود. */
+export const clampReqValue = (v: unknown): number => {
+  const n = typeof v === 'number' ? v : Number(v);
+  if (!Number.isFinite(n)) return 0;
+  return Math.min(99, Math.max(0, Math.floor(n)));
+};
+
+/** ساخت آرایه‌های ماه از روی سه‌تایی پیش‌فرض تنظیمات بیمارستان (مقدار ثابت همهٔ روزها). */
+export function buildDailyReqs(
+  triple: { morning: number; evening: number; night: number },
+  days: number,
+): DailyReqs {
+  const fill = (v: number) => Array.from({ length: days }, () => clampReqValue(v));
+  return { morning: fill(triple.morning), evening: fill(triple.evening), night: fill(triple.night) };
+}
+
+/**
+ * نرمال‌سازی نیازهای ذخیره‌شده (jsonb روی رکورد برنامه): آرایهٔ ذخیره‌شده برای
+ * هر شیفت بر سه‌تایی پیش‌فرض مقدم است؛ خانهٔ گمشده/خراب از پیش‌فرض همان شیفت
+ * پر می‌شود و طول دقیقاً به روزهای ماه بریده/کشیده می‌شود.
+ */
+export function normalizeDailyReqs(
+  raw: Partial<Record<DailyReqShift, unknown>> | null | undefined,
+  days: number,
+  triple: { morning: number; evening: number; night: number },
+): DailyReqs {
+  const base = buildDailyReqs(triple, days);
+  if (!raw) return base;
+  const out = { ...base };
+  (Object.keys(base) as DailyReqShift[]).forEach(k => {
+    const arr = raw[k];
+    if (!Array.isArray(arr)) return;
+    out[k] = Array.from({ length: days }, (_, i) => (i < arr.length ? clampReqValue(arr[i]) : base[k][i]!));
+  });
+  return out;
+}
+
+/** آیا سرپرستار عددی وارد کرده است؟ (صفرها یعنی «تصمیم با منطق پیش‌فرض حل‌کننده».) */
+export const hasAnyDailyReq = (r: DailyReqs): boolean =>
+  r.morning.some(v => v > 0) || r.evening.some(v => v > 0) || r.night.some(v => v > 0);
+
 export function shiftSymbol(shiftTypes: ShiftType[], id: string | undefined): string {
   if (!id) return '·';
   return shiftTypes.find(s => s.id === id)?.symbol ?? '?';

@@ -19,6 +19,10 @@ import {
 import type { HospitalSnapshot, HospitalSettingsRecord, KaranehProfileRecord } from '../services/data/types';
 import type { GlobalDutySettings } from '../core/types';
 import { useSessionStore } from './session';
+import {
+  normalizeDailyReqs, clampReqValue, type DailyReqs, type DailyReqShift,
+} from '../features/roster/rosterModel';
+import { getDaysInJalaliMonth } from '../core/jalali';
 
 // استور فاز ۱ — از لایهٔ داده تغذیه می‌شود: حالت دمو از DemoRepositories و
 // حالت supabase از loadHospitalSnapshot؛ هر دو از همان مپرها رد می‌شوند.
@@ -42,6 +46,10 @@ export function snapshotToState(snap: HospitalSnapshot) {
     leaves: snap.leaves.map(leaveToDomain),
     workRecords: snap.workRecords.map(w => workRecordToDomain(w, nameOf)),
     scheduleStatus: (snap.schedule?.status ?? 'draft') as 'draft' | 'published',
+    scheduleId: snap.schedule?.id ?? null,
+    dailyReqs: normalizeDailyReqs(
+      snap.schedule?.dailyRequirements, getDaysInJalaliMonth(J_YEAR, J_MONTH), snap.settings.dailyRequirements,
+    ),
     nursingPackages: snap.nursingPackages.map(nursingPackageToDomain),
     nursingRecords: snap.nursingRecords.map(nursingRecordToDomain),
     karanehProfiles: snap.karanehProfiles,
@@ -84,6 +92,10 @@ export function mergeWardIntoState(
     nursingRecords: [...cur.nursingRecords.filter(r => !newIds.has(r.employeeId)), ...mapped.nursingRecords],
     dutyByEmployee: duty,
     leaveBalances: balances,
+    // نیاز روزانه و شناسهٔ برنامه متعلق به بخش تازه‌بارگذاری‌شده است، نه بخش قبلی.
+    scheduleId: mapped.scheduleId,
+    dailyReqs: mapped.dailyReqs,
+    scheduleStatus: mapped.scheduleStatus,
   };
 }
 
@@ -140,6 +152,11 @@ interface AppState {
   /** نام‌های امضای فرم چاپی + نیاز روزانهٔ بخش + توضیحات ماه (از تنظیمات بیمارستان). */
   signatures: { matronName: string; chiefName: string };
   dailyRequirements: { morning: number; evening: number; night: number };
+  /** نیاز روزانهٔ همین ماه به تفکیک روز — ورودی مستقیم سرپرستار در جدول برنامه. */
+  dailyReqs: DailyReqs;
+  scheduleId: string | null;
+  setDailyReq: (shift: DailyReqShift, dayIndex: number, value: number) => void;
+  setDailyReqRow: (shift: DailyReqShift, value: number) => void;
   rosterNote: string;
   responsibilityWeights: Record<string, number>;
   saveHospitalSettings: (s: HospitalSettingsRecord) => Promise<boolean>;
@@ -297,6 +314,30 @@ export const useAppStore = create<AppState>((set, get) => ({
   chainPresetId: null,
   signatures: { matronName: '', chiefName: '' },
   dailyRequirements: { morning: 0, evening: 0, night: 0 },
+  dailyReqs: demoState.dailyReqs,
+  scheduleId: demoState.scheduleId,
+  setDailyReq: (shift, dayIndex, value) => {
+    set((st) => {
+      const arr = [...st.dailyReqs[shift]];
+      arr[dayIndex] = clampReqValue(value);
+      return { dailyReqs: { ...st.dailyReqs, [shift]: arr } };
+    });
+    const st = get();
+    if (st.dataSource === 'supabase' && st.scheduleId) {
+      createRepositories('supabase').roster.setDailyRequirements(st.scheduleId, st.dailyReqs)
+        .catch(err => console.error('daily requirements persist failed', err));
+    }
+  },
+  setDailyReqRow: (shift, value) => {
+    set((st) => ({
+      dailyReqs: { ...st.dailyReqs, [shift]: st.dailyReqs[shift].map(() => clampReqValue(value)) },
+    }));
+    const st = get();
+    if (st.dataSource === 'supabase' && st.scheduleId) {
+      createRepositories('supabase').roster.setDailyRequirements(st.scheduleId, st.dailyReqs)
+        .catch(err => console.error('daily requirements persist failed', err));
+    }
+  },
   rosterNote: '',
   responsibilityWeights: {},
   globalDutySettings: demoState.globalDutySettings,

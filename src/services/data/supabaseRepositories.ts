@@ -46,6 +46,7 @@ const leaveType = (r: any): LeaveTypeRecord => ({
 });
 const schedule = (r: any): ScheduleRecord => ({
   id: r.id, hospitalId: r.hospital_id, wardId: r.ward_id, jYear: r.j_year, jMonth: r.j_month, status: r.status,
+  dailyRequirements: (r.daily_requirements ?? null) as ScheduleRecord['dailyRequirements'],
 });
 const entry = (r: any): EntryRecord => ({
   id: r.id, scheduleId: r.schedule_id, hospitalId: r.hospital_id, wardId: r.ward_id,
@@ -152,6 +153,10 @@ export function createSupabaseRepositories(client: SupabaseClient): DataReposito
       },
       async setScheduleStatus(scheduleId, status) {
         const { error } = await client.from('schedules').update({ status }).eq('id', scheduleId);
+        if (error) throw new Error(`supabase write failed: ${error.message}`);
+      },
+      async setDailyRequirements(scheduleId, reqs) {
+        const { error } = await client.from('schedules').update({ daily_requirements: reqs }).eq('id', scheduleId);
         if (error) throw new Error(`supabase write failed: ${error.message}`);
       },
     },

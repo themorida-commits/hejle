@@ -56,6 +56,8 @@ export interface LeaveTypeRecord {
 export interface ScheduleRecord {
   id: string; hospitalId: string; wardId: string; jYear: number; jMonth: number;
   status: 'draft' | 'published';
+  /** نیاز روزانهٔ بخش برای همین ماه (jsonb روی schedules؛ مایگریشن ۰۰۱۲) — قبل از اعمال مایگریشن null است. */
+  dailyRequirements?: { morning?: unknown; evening?: unknown; night?: unknown } | null;
 }
 export interface EntryRecord {
   id: string; scheduleId: string; hospitalId: string; wardId: string; employeeId: string;
@@ -110,6 +112,8 @@ export interface RosterRepository {
   listEntries(scheduleId: string): Promise<EntryRecord[]>;
   upsertEntries(entries: EntryRecord[]): Promise<void>;
   setScheduleStatus(scheduleId: string, status: 'draft' | 'published'): Promise<void>;
+  /** ذخیرهٔ نیاز روزانهٔ بخش روی همان رکورد برنامه (ورودی مستقیم سرپرستار در جدول). */
+  setDailyRequirements(scheduleId: string, reqs: { morning: number[]; evening: number[]; night: number[] }): Promise<void>;
 }
 export interface LeaveRepository {
   listLeaveRequests(wardId: string): Promise<LeaveRecord[]>;

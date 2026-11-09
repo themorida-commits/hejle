@@ -148,6 +148,9 @@ export function createDemoRepositories(seed: HospitalSnapshot = buildDemoSnapsho
       async setScheduleStatus(scheduleId, status) {
         if (state.schedule?.id === scheduleId) state.schedule.status = status;
       },
+      async setDailyRequirements(scheduleId, reqs) {
+        if (state.schedule?.id === scheduleId) state.schedule.dailyRequirements = reqs;
+      },
     },
     leave: {
       async listLeaveRequests(wardId) { return state.leaves.filter(l => l.wardId === wardId); },

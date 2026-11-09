@@ -58,13 +58,13 @@ export default function PrintRosterPage() {
     ?? (st.dataSource === 'demo' ? 'بیمارستان دمو' : '…………');
   const headNurse = deptPeople.find(p => p.role.includes('سرپرستار'))?.name ?? '';
   const monthName = MONTHS.find(m => m.value === J_MONTH)?.name ?? '';
-  const req = st.dailyRequirements;
-
-  const reqRow = (label: string, value: number) => (
+  // نیاز روزانه از ورودی مستقیم سرپرستار در جدول برنامه می‌آید (به‌تفکیک روز)؛
+  // سه‌تایی تنظیمات فقط مقدار اولیهٔ همان آرایه‌هاست.
+  const reqRow = (label: string, values: number[]) => (
     <tr>
       <th colSpan={6} style={head}>{label}</th>
       {Array.from({ length: days }, (_, i) => (
-        <th key={i} style={head}>{value > 0 ? fa(value) : ''}</th>
+        <th key={i} style={head}>{(values[i] ?? 0) > 0 ? fa(values[i]!) : ''}</th>
       ))}
       <th style={head}></th>
       <th style={head}></th>
@@ -111,9 +111,9 @@ export default function PrintRosterPage() {
         </h1>
         <table style={{ borderCollapse: 'collapse', width: '100%', tableLayout: 'fixed' }}>
           <thead>
-            {reqRow('تعداد صبح', req.morning)}
-            {reqRow('تعداد عصر', req.evening)}
-            {reqRow('تعداد شب', req.night)}
+            {reqRow('تعداد صبح', st.dailyReqs.morning)}
+            {reqRow('تعداد عصر', st.dailyReqs.evening)}
+            {reqRow('تعداد شب', st.dailyReqs.night)}
             <tr>
               <th colSpan={6} style={head}></th>
               {letters.map((l, i) => (
