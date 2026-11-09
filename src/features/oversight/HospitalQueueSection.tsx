@@ -64,7 +64,7 @@ export default function HospitalQueueSection({ actorRole, variant }: { actorRole
 
   if (variant === 'panel') {
     return (
-      <section style={{ background: '#fff', border: '1px solid #e3ddd2', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+      <section style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 16, marginBottom: 16 }}>
         <h2 style={{ marginTop: 0, fontSize: 16 }}>میز کار من — {ROLE_FA[actorRole] ?? actorRole} (کل بیمارستان)</h2>
         <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', fontSize: 14 }}>
           <span>در گام من: <strong>{faNum(queue.mine.length)}</strong></span>
@@ -92,7 +92,7 @@ export default function HospitalQueueSection({ actorRole, variant }: { actorRole
   const table = (items: HospitalQueue['mine'], showStep: boolean) => (
     <table style={{ borderCollapse: 'collapse', width: '100%', fontSize: 13, background: '#fff' }}>
       <thead>
-        <tr style={{ textAlign: 'right', color: '#68707a' }}>
+        <tr style={{ textAlign: 'right', color: '#64748b' }}>
           <th style={{ padding: '6px 8px' }}>نام</th><th style={{ padding: '6px 8px' }}>بخش</th>
           <th style={{ padding: '6px 8px' }}>نوع</th><th style={{ padding: '6px 8px' }}>بازه</th>
           <th style={{ padding: '6px 8px' }}>مدت</th>
@@ -108,13 +108,13 @@ export default function HospitalQueueSection({ actorRole, variant }: { actorRole
     <section style={{ marginBottom: 20 }}>
       <h2>صف کل بیمارستان — {ROLE_FA[actorRole] ?? actorRole}</h2>
       <h3 style={{ fontSize: 14 }}>در گام من ({faNum(queue.mine.length)})</h3>
-      {queue.mine.length ? table(queue.mine, false) : <p style={{ color: '#68707a', fontSize: 13 }}>چیزی در گام شما نیست.</p>}
+      {queue.mine.length ? table(queue.mine, false) : <p style={{ color: '#64748b', fontSize: 13 }}>چیزی در گام شما نیست.</p>}
       <h3 style={{ fontSize: 14 }}>همهٔ در انتظارهای بیمارستان ({faNum(queue.pending.length)})</h3>
-      {queue.pending.length ? table(queue.pending, true) : <p style={{ color: '#68707a', fontSize: 13 }}>درخواستی در انتظار نیست.</p>}
+      {queue.pending.length ? table(queue.pending, true) : <p style={{ color: '#64748b', fontSize: 13 }}>درخواستی در انتظار نیست.</p>}
       {actorRole === 'hr_admin' && (
         <>
           <h3 style={{ fontSize: 14 }}>بایگانی ثبت اداری — نهایی‌شده‌های ۳۰ روز اخیر ({faNum(queue.finalizedRecent.length)})</h3>
-          {queue.finalizedRecent.length ? table(queue.finalizedRecent, false) : <p style={{ color: '#68707a', fontSize: 13 }}>موردی نیست.</p>}
+          {queue.finalizedRecent.length ? table(queue.finalizedRecent, false) : <p style={{ color: '#64748b', fontSize: 13 }}>موردی نیست.</p>}
         </>
       )}
     </section>

@@ -55,17 +55,17 @@ export default function NursingServicesPage() {
   };
 
   const card = (title: string, value: string, hint: string, danger = false) => (
-    <div style={{ background: '#fff', border: `1px solid ${danger ? '#e5b4ae' : '#e3ddd2'}`, borderRadius: 12, padding: 14, minWidth: 170 }}>
-      <div style={{ fontSize: 12, color: '#68707a' }}>{title}</div>
-      <div style={{ fontSize: 22, fontWeight: 800, color: danger ? '#b3402f' : '#173f3a', margin: '4px 0' }}>{value}</div>
-      <div style={{ fontSize: 12, color: '#68707a' }}>{hint}</div>
+    <div style={{ background: '#fff', border: `1px solid ${danger ? '#fda4af' : '#e2e8f0'}`, borderRadius: 12, padding: 14, minWidth: 170 }}>
+      <div style={{ fontSize: 12, color: '#64748b' }}>{title}</div>
+      <div style={{ fontSize: 22, fontWeight: 800, color: danger ? '#e11d48' : '#1e293b', margin: '4px 0' }}>{value}</div>
+      <div style={{ fontSize: 12, color: '#64748b' }}>{hint}</div>
     </div>
   );
 
   return (
     <div>
       <h1>ثبت خدمات پرستاری و داشبورد کسورات — مهر ۱۴۰۵</h1>
-      <p style={{ color: '#68707a', fontSize: 13, maxWidth: 760 }}>
+      <p style={{ color: '#64748b', fontSize: 13, maxWidth: 760 }}>
         هر خدمت ثبت‌شده، درآمد تعرفه‌ای بیمارستان است؛ هر شیفتِ بدون ثبت، کسور بیمه در آینده.
         ثبت با پرستار است، تأیید با سرپرستار تا دو روز — بعد از آن خودکار تأیید می‌شود (دستورالعمل بازتوزیع گروه پرستاری).
       </p>
@@ -75,7 +75,7 @@ export default function NursingServicesPage() {
           <input type="number" value={kRial} onChange={e => setKRial(Number(e.target.value) || 0)}
             style={{ marginInlineStart: 6, width: 120, padding: 6, borderRadius: 8, border: '1px solid #ddd' }} />
         </label>
-        <span style={{ fontSize: 12, color: '#68707a' }}>پارامتر سالانهٔ مصوبه است؛ مقدار فعلی مثال ۱۴۰۲ است و هر سال با ابلاغ تازه به‌روز می‌شود.</span>
+        <span style={{ fontSize: 12, color: '#64748b' }}>پارامتر سالانهٔ مصوبه است؛ مقدار فعلی مثال ۱۴۰۲ است و هر سال با ابلاغ تازه به‌روز می‌شود.</span>
       </div>
 
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
@@ -85,7 +85,7 @@ export default function NursingServicesPage() {
         {card('ثبت‌های در انتظار تأیید', faNum(records.filter(r => effectiveStatus(r, nowISO) === 'recorded').length), 'پس از دو روز خودکار تأیید می‌شوند')}
       </div>
 
-      <div style={{ background: '#fff', border: '1px solid #e3ddd2', borderRadius: 12, padding: 14, marginBottom: 16 }}>
+      <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 14, marginBottom: 16 }}>
         <strong style={{ fontSize: 14 }}>ثبت خدمت تازه</strong>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10, alignItems: 'end' }}>
           <label style={{ fontSize: 12 }}>بستهٔ خدمت
@@ -114,9 +114,9 @@ export default function NursingServicesPage() {
         </div>
       </div>
 
-      <div style={{ overflowX: 'auto', background: '#fff', border: '1px solid #e3ddd2', borderRadius: 12 }}>
+      <div style={{ overflowX: 'auto', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12 }}>
         <table style={{ borderCollapse: 'collapse', fontSize: 13, minWidth: 760, width: '100%' }}>
-          <thead><tr style={{ background: '#f3efe7' }}>
+          <thead><tr style={{ background: '#f1f5f9' }}>
             {['تاریخ', 'پرستار', 'بیمار', 'بسته', 'تعداد', 'K', 'نوبت', 'وضعیت', ''].map(h => <th key={h} style={{ padding: 8 }}>{h}</th>)}
           </tr></thead>
           <tbody>

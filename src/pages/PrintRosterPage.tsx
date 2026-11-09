@@ -99,7 +99,7 @@ export default function PrintRosterPage() {
       <div className="no-print" style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
         <button onClick={() => navigate('/scheduler')}>بازگشت به برنامهٔ شیفت</button>
         <button onClick={() => window.print()} style={{ padding: '7px 18px' }}>چاپ فرم (A3 افقی)</button>
-        <span style={{ fontSize: 12, color: '#68707a' }}>
+        <span style={{ fontSize: 12, color: '#64748b' }}>
           این فرم از دادهٔ زندهٔ {monthName} {fa(J_YEAR)} ساخته می‌شود؛ اعداد کارکرد همان اعداد صفحهٔ «کارکرد ماهانه» است.
         </span>
       </div>
@@ -117,7 +117,7 @@ export default function PrintRosterPage() {
             <tr>
               <th colSpan={6} style={head}></th>
               {letters.map((l, i) => (
-                <th key={i} style={{ ...head, color: l === 'ج' ? '#b3402f' : undefined }}>{l}</th>
+                <th key={i} style={{ ...head, color: l === 'ج' ? '#e11d48' : undefined }}>{l}</th>
               ))}
               <th style={head}></th>
               <th style={head}></th>
@@ -154,7 +154,7 @@ export default function PrintRosterPage() {
                     const leaveCode = leaveStates.get(`${p.id}|${c.dateISO}`);
                     const leaveCell = leaveCode ? LEAVE_CELL[leaveCode] : undefined;
                     const isHoliday = holidays.has(c.jDay);
-                    const bg = leaveCell?.bg ?? (isHoliday && !c.entry ? HOLIDAY_BG : c.isFriday ? '#fdf2f2' : undefined);
+                    const bg = leaveCell?.bg ?? (isHoliday && !c.entry ? HOLIDAY_BG : c.isFriday ? '#fff1f2' : undefined);
                     return (
                       <td key={c.jDay} style={{ ...cell, background: bg, fontWeight: c.entry?.isManualEntry ? 700 : 400 }}>
                         {c.entry ? shiftSymbol(st.shiftTypes, c.entry.shiftTypeId) : leaveCell ? leaveCell.label : ''}

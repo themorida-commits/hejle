@@ -69,7 +69,7 @@ export const MOCK_SHIFT_TYPES: ShiftType[] = [
   { id: 's-sh', name: 'استعلاجی', symbol: 'SH', displayColor: '#f43f5e', realDuration: 7, calculatedValue: 7, fridayCalculatedValue: 7, holidayCalculatedValue: 7, departmentIds: ['dep1', 'dep2', 'dep3'] },
   { id: 's-mi', name: 'ماموریت', symbol: 'MI', displayColor: '#8b5cf6', realDuration: 7, calculatedValue: 7, fridayCalculatedValue: 7, holidayCalculatedValue: 7, departmentIds: ['dep1', 'dep2', 'dep3'] },
   { id: 's-h', name: 'مرخصی استحقاقی', symbol: 'H', displayColor: '#10b981', realDuration: 0, calculatedValue: 0, fridayCalculatedValue: 0, holidayCalculatedValue: 0, departmentIds: ['dep1', 'dep2', 'dep3'], description: 'مرخصی استحقاقی' },
-  { id: 's-off', name: 'اف', symbol: '-', displayColor: '#e5e7eb', realDuration: 0, calculatedValue: 0, fridayCalculatedValue: 0, holidayCalculatedValue: 0, departmentIds: ['dep1', 'dep2', 'dep3'], description: 'آف یا تعطیل' },
+  { id: 's-off', name: 'اف', symbol: '-', displayColor: '#e2e8f0', realDuration: 0, calculatedValue: 0, fridayCalculatedValue: 0, holidayCalculatedValue: 0, departmentIds: ['dep1', 'dep2', 'dep3'], description: 'آف یا تعطیل' },
 ];
 
 export const INITIAL_SCHEDULE: ScheduleEntry[] = [];

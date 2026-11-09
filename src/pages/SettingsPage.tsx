@@ -70,19 +70,19 @@ export default function SettingsPage() {
     <div>
       <h1>تنظیمات بیمارستان</h1>
       {!canEdit && (
-        <p style={{ background: '#fdf3e7', border: '1px solid #e3ddd2', borderRadius: 10, padding: 12 }}>
+        <p style={{ background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: 10, padding: 12 }}>
           شما فقط مشاهده می‌کنید؛ ویرایش این تنظیمات با «مدیر بیمارستان» است.
         </p>
       )}
 
-      <section style={{ background: '#fff', border: '1px solid #e3ddd2', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+      <section style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 16, marginBottom: 16 }}>
         <h2 style={{ marginTop: 0, fontSize: 16 }}>زنجیرهٔ تأیید مرخصی</h2>
-        <p style={{ color: '#68707a', fontSize: 13 }}>
+        <p style={{ color: '#64748b', fontSize: 13 }}>
           درخواست مرخصی به‌ترتیب از این نقش‌ها رد می‌شود و فقط با تأیید گام آخر نهایی می‌شود؛ رد در هر گام نهایی است.
           مدیر بیمارستان به‌عنوان مقام مافوق در هر گامی می‌تواند اقدام کند و تأیید مرخصی خود شخص همیشه ممنوع است.
         </p>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
-          <span style={{ fontSize: 13, color: '#68707a' }}>شروع از پیش‌فرض بخشی:</span>
+          <span style={{ fontSize: 13, color: '#64748b' }}>شروع از پیش‌فرض بخشی:</span>
           {CHAIN_PRESETS.map(p => (
             <button key={p.id} disabled={!canEdit} onClick={() => { setChain([...p.chain]); setPresetId(p.id); }}>
               {p.label}
@@ -94,7 +94,7 @@ export default function SettingsPage() {
             ? CHAIN_PRESETS.find(p => p.id === presetId) ?? null
             : matchChainPreset(chain);
           return (
-            <p style={{ background: '#f6f8f7', border: '1px solid #e3ddd2', borderRadius: 10, padding: 10, fontSize: 13 }}>
+            <p style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, padding: 10, fontSize: 13 }}>
               {matched
                 ? <>پیش‌فرض «{matched.label}»: {matched.note}</>
                 : 'زنجیرهٔ سفارشی — با هیچ‌یک از پیش‌فرض‌های بخشی یکسان نیست. برای نیروهای مسلح، سقف روزهای هر گام را حتماً از آیین‌نامهٔ داخلی بیمارستان بگیرید؛ پیش‌فرض عمومی وجود ندارد.'}
@@ -118,9 +118,9 @@ export default function SettingsPage() {
         )}
       </section>
 
-      <section style={{ background: '#fff', border: '1px solid #e3ddd2', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+      <section style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 16, marginBottom: 16 }}>
         <h2 style={{ marginTop: 0, fontSize: 16 }}>جدول کاهش ساعت موظفی — سابقه (قانون بهره‌وری)</h2>
-        <p style={{ color: '#68707a', fontSize: 13 }}>
+        <p style={{ color: '#64748b', fontSize: 13 }}>
           در قانون، کاهش به‌صورت «ساعت در هفته» است (سابقهٔ ۰ تا ۴ سال: ۱ ساعت، تا سقف ۵ ساعت برای ۱۶ سال به بالا)
           و این‌جا معادل ماهانه‌اش از ساعت موظفی ماه کم می‌شود. سقف مجموع کاهش هفتگی طبق قانون ۸ ساعت است.
           جدول هر بیمارستان جداست تا آیین‌نامهٔ داخلی همان مرکز (مثلاً نسخهٔ لشکری) عیناً وارد شود.
@@ -155,9 +155,9 @@ export default function SettingsPage() {
         </div>
       </section>
 
-      <section style={{ background: '#fff', border: '1px solid #e3ddd2', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+      <section style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 16, marginBottom: 16 }}>
         <h2 style={{ marginTop: 0, fontSize: 16 }}>فرم چاپی چینش شیفت — امضاها، نیاز روزانه و توضیحات</h2>
-        <p style={{ color: '#68707a', fontSize: 13 }}>
+        <p style={{ color: '#64748b', fontSize: 13 }}>
           این سه قلم روی خروجی چاپی رسمی برنامه (فرم چینش) می‌نشیند: نام‌های امضا، نیاز ایستادهٔ روزانهٔ بخش
           (ردیف‌های «تعداد صبح/عصر/شب» بالای فرم؛ صفر یعنی آن ردیف خالی چاپ شود) و متن توضیحات ماه.
           امضای سوم فرم، «سرپرستار بخش»، خودکار از پرسنل همان بخش خوانده می‌شود.
@@ -190,9 +190,9 @@ export default function SettingsPage() {
         </label>
       </section>
 
-      <section style={{ background: '#fff', border: '1px solid #e3ddd2', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+      <section style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 16, marginBottom: 16 }}>
         <h2 style={{ marginTop: 0, fontSize: 16 }}>جدول وزن‌های مسئولیتی کارانه — مخصوص همین بیمارستان</h2>
-        <p style={{ color: '#68707a', fontSize: 13 }}>
+        <p style={{ color: '#64748b', fontSize: 13 }}>
           امتیاز نقش‌های غیرمستقیم کارانه، ضریبی از میانهٔ امتیاز پرستاران مستقیم همان بخش است.
           ستون «پیش‌فرض سند» اعداد دستورالعمل وزارت بهداشت است؛ هر عددی را که عوض کنی فقط روی
           بیمارستان شما اعمال می‌شود و بقیه از پیش‌فرض می‌خوانند. بیمارستان‌های ارتش و خصوصی
@@ -200,7 +200,7 @@ export default function SettingsPage() {
         </p>
         <table style={{ borderCollapse: 'collapse', fontSize: 13 }}>
           <thead>
-            <tr style={{ textAlign: 'right', color: '#68707a' }}>
+            <tr style={{ textAlign: 'right', color: '#64748b' }}>
               <th style={{ padding: '4px 8px' }}>آیتم مسئولیتی</th>
               <th style={{ padding: '4px 8px' }}>پیش‌فرض سند</th>
               <th style={{ padding: '4px 8px' }}>وزن این بیمارستان</th>

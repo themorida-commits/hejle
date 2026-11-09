@@ -24,20 +24,20 @@ export default function LoginPage() {
   };
 
   return (
-    <div dir="rtl" style={{ fontFamily: 'Vazirmatn, system-ui, sans-serif', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#faf7f2', color: '#1d2733' }}>
-      <form onSubmit={submit} style={{ background: '#fff', border: '1px solid #e4ddd2', borderRadius: 12, padding: 28, width: 340, display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <strong style={{ fontSize: 20, color: '#0f4c4c' }}>حجله</strong>
-        <span style={{ fontSize: 13, color: '#5a6a72' }}>لایهٔ نیروی انسانی بیمارستان — ورود کاربران</span>
+    <div dir="rtl" style={{ fontFamily: 'Vazirmatn, system-ui, sans-serif', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', color: '#0f172a' }}>
+      <form onSubmit={submit} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 28, width: 340, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <strong style={{ fontSize: 20, color: '#0f172a' }}>حجله</strong>
+        <span style={{ fontSize: 13, color: '#64748b' }}>لایهٔ نیروی انسانی بیمارستان — ورود کاربران</span>
         <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13 }}>
           ایمیل
-          <input type="email" required value={email} onChange={e => setEmail(e.target.value)} style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #cfc8ba', direction: 'ltr', textAlign: 'left' }} />
+          <input type="email" required value={email} onChange={e => setEmail(e.target.value)} style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #cbd5e1', direction: 'ltr', textAlign: 'left' }} />
         </label>
         <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13 }}>
           رمز عبور
-          <input type="password" required value={password} onChange={e => setPassword(e.target.value)} style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #cfc8ba', direction: 'ltr', textAlign: 'left' }} />
+          <input type="password" required value={password} onChange={e => setPassword(e.target.value)} style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #cbd5e1', direction: 'ltr', textAlign: 'left' }} />
         </label>
-        {error && <div style={{ color: '#b3261e', fontSize: 13 }}>{error}</div>}
-        <button type="submit" disabled={busy} style={{ background: '#0f4c4c', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 0', fontSize: 14, cursor: busy ? 'wait' : 'pointer' }}>
+        {error && <div style={{ color: '#e11d48', fontSize: 13 }}>{error}</div>}
+        <button type="submit" disabled={busy} style={{ background: '#2563eb', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 0', fontSize: 14, cursor: busy ? 'wait' : 'pointer' }}>
           {busy ? 'در حال ورود…' : 'ورود'}
         </button>
       </form>

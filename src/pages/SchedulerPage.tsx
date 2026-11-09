@@ -42,15 +42,15 @@ function RosterImportCard() {
   };
   const fa = (n: number) => n.toLocaleString('fa-IR');
   return (
-    <details style={{ background: '#fff', border: '1px solid #e3ddd2', borderRadius: 12, padding: '10px 14px', marginBottom: 12 }}>
+    <details style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: '10px 14px', marginBottom: 12 }}>
       <summary style={{ cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>ورود برنامهٔ موجود بخش از فایل (برای اجرای موازی)</summary>
-      <p style={{ fontSize: 12, color: '#68707a', margin: '8px 0' }}>
+      <p style={{ fontSize: 12, color: '#64748b', margin: '8px 0' }}>
         فایل شبکه‌ای برنامه (سطر = نفر، ستون = روزهای ماه) را انتخاب کنید. نمادهای قابل قبول: نماد شیفت (M/E/N…)، نام فارسی (صبح/عصر/شب) و «آف» برای استراحت.
         سلول‌های واردشده روی برنامهٔ فعلی این ماه می‌نشینند و دستی علامت می‌خورند.
       </p>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         <button onClick={downloadTemplate}>دانلود قالب شبکه‌ای بخش</button>
-        <label style={{ border: '1px solid #ccc', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontSize: 13, background: '#f8f6f1' }}>
+        <label style={{ border: '1px solid #ccc', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontSize: 13, background: '#f8fafc' }}>
           انتخاب فایل (Excel / CSV)
           <input type="file" accept=".csv,.xlsx,.xls" style={{ display: 'none' }} onChange={e => void onFile(e.target.files?.[0])} />
         </label>
@@ -62,19 +62,19 @@ function RosterImportCard() {
             {preview.warnings.length > 0 && <> · {fa(preview.warnings.length)} نماد ناشناخته</>}
           </div>
           {preview.errors.length > 0 && (
-            <ul style={{ color: '#b3402f', margin: '6px 0' }}>
+            <ul style={{ color: '#e11d48', margin: '6px 0' }}>
               {preview.errors.slice(0, 6).map((e, i) => <li key={i}>ردیف {fa(e.row)}: {e.message}</li>)}
             </ul>
           )}
           {preview.warnings.length > 0 && (
-            <div style={{ color: '#8a5a00', fontSize: 12 }}>
+            <div style={{ color: '#b45309', fontSize: 12 }}>
               نمادهای ناشناخته: {preview.warnings.slice(0, 6).map(w => `«${w.token}» (ردیف ${fa(w.row)}، روز ${fa(w.day)})`).join(' · ')}
             </div>
           )}
           {preview.entries.length > 0 && <button onClick={() => { st.importEntries(preview.entries); setApplied(preview.entries.length); setPreview(null); }} style={{ marginTop: 6, padding: '7px 16px' }}>اعمال روی برنامهٔ این ماه</button>}
         </div>
       )}
-      {applied > 0 && <div style={{ marginTop: 6, fontSize: 13, color: '#1e6b3a' }}>{fa(applied)} شیفت از فایل روی برنامه نشست.</div>}
+      {applied > 0 && <div style={{ marginTop: 6, fontSize: 13, color: '#16a34a' }}>{fa(applied)} شیفت از فایل روی برنامه نشست.</div>}
     </details>
   );
 }
@@ -190,24 +190,24 @@ export default function SchedulerPage() {
           : <button onClick={() => st.setScheduleStatus('draft')}>برگرداندن به پیش‌نویس</button>}
         <span>تعارض‌ها: <strong>{fa(conflicts)}</strong> · نقض سخت قواعد: <strong>{fa(violations.filter(v => v.severity === 'hard').length)}</strong></span>
       </div>
-      <p style={{ fontSize: 12, color: '#68707a' }}>برای ویرایش دستی روی هر سلول کلیک کنید (چرخش صبح ← عصر ← شب ← آف). برای سرپرستار، طبق قانون ثابت جدول، چرخش فقط صبح و آف است. سه ردیف «نیاز بخش» بالای جدول ورودی مستقیم شماست: عدد هر روز را همان‌جا وارد کنید یا با خانهٔ «همهٔ روزها» یک عدد برای کل ماه بگذارید؛ «تولید خودکار برنامه» دقیقاً با همین نیازها می‌چیند. در وضعیت منتشرشده ویرایش قفل است.</p>
+      <p style={{ fontSize: 12, color: '#64748b' }}>برای ویرایش دستی روی هر سلول کلیک کنید (چرخش صبح ← عصر ← شب ← آف). برای سرپرستار، طبق قانون ثابت جدول، چرخش فقط صبح و آف است. سه ردیف «نیاز بخش» بالای جدول ورودی مستقیم شماست: عدد هر روز را همان‌جا وارد کنید یا با خانهٔ «همهٔ روزها» یک عدد برای کل ماه بگذارید؛ «تولید خودکار برنامه» دقیقاً با همین نیازها می‌چیند. در وضعیت منتشرشده ویرایش قفل است.</p>
       <RosterImportCard />
       {(gate.blocked.length > 0 || gate.warnings.length > 0) && (
-        <div style={{ background: '#fdf6ec', border: '1px solid #ecd9ae', borderRadius: 12, padding: '10px 14px', marginBottom: 12, fontSize: 13 }}>
+        <div style={{ background: '#f8fafc', border: '1px solid #fde68a', borderRadius: 12, padding: '10px 14px', marginBottom: 12, fontSize: 13 }}>
           {gate.blocked.length > 0 && (
-            <div style={{ color: '#8a5a00' }}>
+            <div style={{ color: '#b45309' }}>
               <strong>قفل صلاحیت — از برنامه کنار گذاشته شدند:</strong>{' '}
               {gate.blocked.map(b => `${nameOf(b.employeeId)} (${b.reasons.join('؛ ')})`).join(' · ')}
             </div>
           )}
           {gate.warnings.length > 0 && (
-            <div style={{ color: '#68707a', marginTop: gate.blocked.length ? 6 : 0 }}>
+            <div style={{ color: '#64748b', marginTop: gate.blocked.length ? 6 : 0 }}>
               هشدار مدارک: {gate.warnings.map(w => `${nameOf(w.employeeId)}: ${w.reasons.join('؛ ')}`).join(' · ')}
             </div>
           )}
         </div>
       )}
-      <div style={{ overflowX: 'auto', background: '#fff', border: '1px solid #e3ddd2', borderRadius: 12 }}>
+      <div style={{ overflowX: 'auto', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12 }}>
         <table style={{ borderCollapse: 'collapse', fontSize: 12, minWidth: 1280 }}>
           <thead>
             {([['morning', 'تعداد صبح'], ['evening', 'تعداد عصر'], ['night', 'تعداد شب']] as const).map(([shift, label]) => {
@@ -215,7 +215,7 @@ export default function SchedulerPage() {
               const uniform = rowVals.length > 0 && rowVals.every(v => v === rowVals[0]);
               return (
               <tr key={shift}>
-                <th colSpan={5} style={{ background: '#f3efe7', padding: 3, textAlign: 'right', fontSize: 11, color: '#68707a', whiteSpace: 'nowrap' }}>
+                <th colSpan={5} style={{ background: '#f1f5f9', padding: 3, textAlign: 'right', fontSize: 11, color: '#64748b', whiteSpace: 'nowrap' }}>
                   {label} (نیاز بخش)
                   {' · همهٔ روزها: '}
                   <input
@@ -225,45 +225,45 @@ export default function SchedulerPage() {
                     disabled={st.scheduleStatus === 'published'}
                     title="یک عدد برای همهٔ روزهای ماه"
                     onChange={e => st.setDailyReqRow(shift, Number(e.target.value))}
-                    style={{ width: 44, fontSize: 11, textAlign: 'center', border: '1px solid #d8d2c4', borderRadius: 6, background: '#fff', padding: '1px 2px' }}
+                    style={{ width: 44, fontSize: 11, textAlign: 'center', border: '1px solid #cbd5e1', borderRadius: 6, background: '#fff', padding: '1px 2px' }}
                   />
                 </th>
                 {Array.from({ length: dayCount }, (_, i) => (
-                  <th key={i} style={{ padding: 1, background: '#f3efe7' }}>
+                  <th key={i} style={{ padding: 1, background: '#f1f5f9' }}>
                     <input
                       type="number" min={0} max={99}
                       value={st.dailyReqs[shift][i] ?? 0}
                       disabled={st.scheduleStatus === 'published'}
                       title={`${label} — روز ${fa(i + 1)}`}
                       onChange={e => st.setDailyReq(shift, i, Number(e.target.value))}
-                      style={{ width: '100%', minWidth: 26, fontSize: 11, textAlign: 'center', border: 'none', background: 'transparent', color: '#374151', padding: 1 }}
+                      style={{ width: '100%', minWidth: 26, fontSize: 11, textAlign: 'center', border: 'none', background: 'transparent', color: '#334155', padding: 1 }}
                     />
                   </th>
                 ))}
-                <th style={{ background: '#f3efe7' }}></th>
-                <th style={{ background: '#f3efe7' }}></th>
+                <th style={{ background: '#f1f5f9' }}></th>
+                <th style={{ background: '#f1f5f9' }}></th>
               </tr>
               );
             })}
             <tr>
-              <th colSpan={5} style={{ position: 'sticky', right: 0, background: '#f3efe7', padding: 6, textAlign: 'right' }}></th>
+              <th colSpan={5} style={{ position: 'sticky', right: 0, background: '#f1f5f9', padding: 6, textAlign: 'right' }}></th>
               {letters.slice(0, dayCount).map((l, i) => (
-                <th key={i} style={{ padding: 2, fontSize: 10, background: '#f3efe7', color: l === 'ج' ? '#b3402f' : '#68707a' }}>{l}</th>
+                <th key={i} style={{ padding: 2, fontSize: 10, background: '#f1f5f9', color: l === 'ج' ? '#e11d48' : '#64748b' }}>{l}</th>
               ))}
-              <th style={{ background: '#f3efe7' }}></th>
-              <th style={{ background: '#f3efe7' }}></th>
+              <th style={{ background: '#f1f5f9' }}></th>
+              <th style={{ background: '#f1f5f9' }}></th>
             </tr>
             <tr>
-              <th style={{ position: 'sticky', right: 0, background: '#f3efe7', padding: 6, textAlign: 'right' }}>نام</th>
-              <th style={{ background: '#f3efe7', padding: 4, whiteSpace: 'nowrap' }}>سمت</th>
-              <th style={{ background: '#f3efe7', padding: 4 }}>وضعیت</th>
-              <th style={{ background: '#f3efe7', padding: 4, whiteSpace: 'nowrap' }}>موظفی ماه</th>
-              <th style={{ background: '#f3efe7', padding: 4, whiteSpace: 'nowrap' }}>طلب/بدهی</th>
+              <th style={{ position: 'sticky', right: 0, background: '#f1f5f9', padding: 6, textAlign: 'right' }}>نام</th>
+              <th style={{ background: '#f1f5f9', padding: 4, whiteSpace: 'nowrap' }}>سمت</th>
+              <th style={{ background: '#f1f5f9', padding: 4 }}>وضعیت</th>
+              <th style={{ background: '#f1f5f9', padding: 4, whiteSpace: 'nowrap' }}>موظفی ماه</th>
+              <th style={{ background: '#f1f5f9', padding: 4, whiteSpace: 'nowrap' }}>طلب/بدهی</th>
               {Array.from({ length: dayCount }, (_, i) => (
-                <th key={i} style={{ padding: 4, background: grid.get(deptPeople[0]?.id ?? '')?.[i]?.isFriday ? '#fde8e8' : '#f3efe7' }}>{fa(i + 1)}</th>
+                <th key={i} style={{ padding: 4, background: grid.get(deptPeople[0]?.id ?? '')?.[i]?.isFriday ? '#fff1f2' : '#f1f5f9' }}>{fa(i + 1)}</th>
               ))}
-              <th style={{ background: '#f3efe7', padding: 4, whiteSpace: 'nowrap' }}>مجموع ساعت</th>
-              <th style={{ background: '#f3efe7', padding: 4, whiteSpace: 'nowrap' }}>کسر/اضافه</th>
+              <th style={{ background: '#f1f5f9', padding: 4, whiteSpace: 'nowrap' }}>مجموع ساعت</th>
+              <th style={{ background: '#f1f5f9', padding: 4, whiteSpace: 'nowrap' }}>کسر/اضافه</th>
             </tr>
           </thead>
           <tbody>
@@ -272,11 +272,11 @@ export default function SchedulerPage() {
               const bal = st.leaveBalances[p.id];
               const remaining = bal ? bal.entitled - bal.used : null;
               const diff = rec ? rec.workedHours - rec.dutyHours : 0;
-              const infoTd = { padding: 6, whiteSpace: 'nowrap', color: '#3c4450', textAlign: 'center' } as const;
+              const infoTd = { padding: 6, whiteSpace: 'nowrap', color: '#334155', textAlign: 'center' } as const;
               return (
               <tr key={p.id}>
                 <td style={{ position: 'sticky', right: 0, background: '#fff', padding: 6, whiteSpace: 'nowrap', fontWeight: 600 }}>
-                  {p.name}{blockedIds.has(p.id) && <span style={{ color: '#b3402f', fontSize: 11 }}> · قفل صلاحیت</span>}
+                  {p.name}{blockedIds.has(p.id) && <span style={{ color: '#e11d48', fontSize: 11 }}> · قفل صلاحیت</span>}
                 </td>
                 <td style={infoTd}>{p.role}</td>
                 <td style={infoTd}>{employmentShort(p.employmentStatus)}</td>
@@ -286,7 +286,7 @@ export default function SchedulerPage() {
                   const leaveCode = leaveStates.get(`${p.id}|${cell.dateISO}`);
                   const leaveCell = !cell.entry && leaveCode ? LEAVE_CELL[leaveCode] : undefined;
                   const bg = (leaveCell ? SCREEN_LEAVE_BG[leaveCode!] : undefined)
-                    ?? (!cell.entry && holidays.has(cell.jDay) ? SCREEN_HOLIDAY_BG : cell.isFriday ? '#fff5f5' : undefined);
+                    ?? (!cell.entry && holidays.has(cell.jDay) ? SCREEN_HOLIDAY_BG : cell.isFriday ? '#fff1f2' : undefined);
                   return (
                     <td
                       key={cell.jDay}
@@ -299,7 +299,7 @@ export default function SchedulerPage() {
                   );
                 })}
                 <td style={{ ...infoTd, fontWeight: 600 }}>{rec ? fa(rec.workedHours) : ''}</td>
-                <td style={{ ...infoTd, fontWeight: 600, color: diff > 0 ? '#1e6b3a' : diff < 0 ? '#b3402f' : undefined }}>
+                <td style={{ ...infoTd, fontWeight: 600, color: diff > 0 ? '#16a34a' : diff < 0 ? '#e11d48' : undefined }}>
                   {rec ? `${diff > 0 ? '+' : ''}${fa(diff)}` : ''}
                 </td>
               </tr>
@@ -309,12 +309,12 @@ export default function SchedulerPage() {
           <tfoot>
             {([['تعداد صبح', counts.morning], ['تعداد عصر', counts.evening], ['تعداد شب', counts.night]] as const).map(([label, arr]) => (
               <tr key={label}>
-                <td colSpan={5} style={{ position: 'sticky', right: 0, background: '#f3efe7', padding: 6, fontWeight: 700, whiteSpace: 'nowrap' }}>{label}</td>
+                <td colSpan={5} style={{ position: 'sticky', right: 0, background: '#f1f5f9', padding: 6, fontWeight: 700, whiteSpace: 'nowrap' }}>{label}</td>
                 {arr.slice(0, dayCount).map((v, i) => (
-                  <td key={i} style={{ padding: 4, textAlign: 'center', background: '#f3efe7', fontWeight: 600 }}>{v > 0 ? fa(v) : ''}</td>
+                  <td key={i} style={{ padding: 4, textAlign: 'center', background: '#f1f5f9', fontWeight: 600 }}>{v > 0 ? fa(v) : ''}</td>
                 ))}
-                <td style={{ background: '#f3efe7' }}></td>
-                <td style={{ background: '#f3efe7' }}></td>
+                <td style={{ background: '#f1f5f9' }}></td>
+                <td style={{ background: '#f1f5f9' }}></td>
               </tr>
             ))}
           </tfoot>
@@ -323,7 +323,7 @@ export default function SchedulerPage() {
       {deptPeople.length > 0 && deptEntries.length === 0 && <p>برای این بخش هنوز برنامه‌ای نیست؛ «تولید خودکار برنامه» را بزنید.</p>}
 
       {st.viewRole === 'ward_manager' && st.swaps.some(s => s.status === 'accepted' && deptIds.has(s.fromEmployeeId)) && (
-        <section style={{ marginTop: 20, background: '#fff', border: '1px solid #e3ddd2', borderRadius: 12, padding: 16 }}>
+        <section style={{ marginTop: 20, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 16 }}>
           <h2 style={{ marginTop: 0 }}>جابه‌جایی‌های در انتظار تأیید نهایی</h2>
           {st.swaps.filter(s => s.status === 'accepted' && deptIds.has(s.fromEmployeeId)).map(s => (
             <div key={s.id} style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>

@@ -56,7 +56,7 @@ function PhysicianCalculator() {
         <span>Q = <strong>{(q * 100).toLocaleString('fa-IR')}٪</strong></span>
         <span>کارانهٔ پزشک P = <strong>{fa(p)} میلیون ریال</strong> ({fa(p * 1e6)} ریال)</span>
       </div>
-      <p style={{ fontSize: 12, color: '#68707a', marginBottom: 0 }}>در نسخهٔ جاری دستورالعمل سقف ریالی فردی حذف شده است؛ ترمزها سقف جمعی ۶۳٪ و پلکان نزولی‌اند.</p>
+      <p style={{ fontSize: 12, color: '#64748b', marginBottom: 0 }}>در نسخهٔ جاری دستورالعمل سقف ریالی فردی حذف شده است؛ ترمزها سقف جمعی ۶۳٪ و پلکان نزولی‌اند.</p>
     </div>
   );
 }
@@ -147,9 +147,9 @@ function MohKaranehSection() {
   const input = { padding: 6, borderRadius: 8, border: '1px solid #ddd', width: 130, marginInlineStart: 6 } as const;
 
   return (
-    <div style={{ background: '#fff', border: '1px solid #cfe0da', borderRadius: 12, padding: 16, marginBottom: 20 }}>
+    <div style={{ background: '#fff', border: '1px solid #dbeafe', borderRadius: 12, padding: 16, marginBottom: 20 }}>
       <h2 style={{ marginTop: 0, fontSize: 17 }}>محاسبه با قالب وزارت بهداشت — ویرایش ۱۴۰۴</h2>
-      <p style={{ color: '#68707a', fontSize: 13, maxWidth: 780 }}>
+      <p style={{ color: '#64748b', fontSize: 13, maxWidth: 780 }}>
         قالب پیش‌فرض اسناد جاری وزارت بهداشت (سهم‌ها و ضرایب عین دستورالعمل)؛ هر بیمارستان پروفایل پارامتر خودش را دارد و می‌تواند اعداد را با مصوبهٔ داخلی‌اش جایگزین کند.
         تسهیم پرستاری این بخش از روی <strong>ثبت‌های واقعی خدمات همین بخش</strong> محاسبه می‌شود: ثبت خدمت ← درآمد تعرفه‌ای ← استخر ۸۵٪ گروه پرستاری ← امتیاز کمی/کیفی.
       </p>
@@ -172,7 +172,7 @@ function MohKaranehSection() {
         </div>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ borderCollapse: 'collapse', fontSize: 13, minWidth: 640, width: '100%' }}>
-            <thead><tr style={{ background: '#eef4f1' }}>
+            <thead><tr style={{ background: '#f1f5f9' }}>
               {['پرستار', 'امتیاز کمی (پس از سقف)', 'ضریب کیفی', 'امتیاز نهایی', 'سهم ٪', 'مبلغ کارانه (ریال)'].map(h => <th key={h} style={{ padding: 7 }}>{h}</th>)}
             </tr></thead>
             <tbody>
@@ -190,13 +190,13 @@ function MohKaranehSection() {
             </tbody>
           </table>
         </div>
-        <p style={{ fontSize: 12, color: '#68707a', marginBottom: 0 }}>
+        <p style={{ fontSize: 12, color: '#64748b', marginBottom: 0 }}>
           فیش هر پرستار اجزای امتیازش را شفاف نشان می‌دهد و اضافه‌کار جدا از کارانه می‌آید — همان شفافیتی که سند بازتوزیع الزام می‌کند. امتیاز کیفی این نما ۱٫۰ است؛ در بهره‌برداری، از ارزیابی دوره‌ای بیمارستان می‌آید.
         </p>
       </div>
       <div style={{ borderTop: '1px dashed #ddd', paddingTop: 12, marginTop: 12 }}>
         <strong style={{ fontSize: 14 }}>پروفایل پارامتر این بیمارستان</strong>
-        <span style={{ fontSize: 12, color: '#68707a', marginInlineStart: 8 }}>از پریست نوع مرکز شروع کنید؛ هر مرکز فقط مصوبهٔ داخلی خودش را جایگزین می‌کند. پروفایل‌ها در دیتابیس بیمارستان ذخیره و بین مدیران مشترک‌اند.</span>
+        <span style={{ fontSize: 12, color: '#64748b', marginInlineStart: 8 }}>از پریست نوع مرکز شروع کنید؛ هر مرکز فقط مصوبهٔ داخلی خودش را جایگزین می‌کند. پروفایل‌ها در دیتابیس بیمارستان ذخیره و بین مدیران مشترک‌اند.</span>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginTop: 10, fontSize: 13 }}>
           <select value={activeProfileId ?? ''} onChange={e => loadDbProfile(e.target.value)} style={{ padding: 6, borderRadius: 8, border: '1px solid #ddd' }}>
             <option value="">— پروفایل ذخیره‌شده —</option>
@@ -217,7 +217,7 @@ function MohKaranehSection() {
               style={{
                 padding: '6px 12px', fontSize: 12, borderRadius: 999,
                 border: profile.presetId === pr.id ? '2px solid #0F4C4C' : '1px solid #ccc',
-                background: profile.presetId === pr.id ? '#eef6f3' : '#fff', cursor: 'pointer',
+                background: profile.presetId === pr.id ? '#f1f5f9' : '#fff', cursor: 'pointer',
               }}
             >
               {pr.label}
@@ -225,7 +225,7 @@ function MohKaranehSection() {
           ))}
         </div>
         {KARANEH_PRESETS.filter(pr => pr.id === profile.presetId).map(pr => (
-          <p key={pr.id} style={{ fontSize: 12, color: '#8a5a00', background: '#fdf6ec', borderRadius: 8, padding: '6px 10px', marginTop: 8 }}>{pr.note}</p>
+          <p key={pr.id} style={{ fontSize: 12, color: '#b45309', background: '#f8fafc', borderRadius: 8, padding: '6px 10px', marginTop: 8 }}>{pr.note}</p>
         ))}
         <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', marginTop: 10, fontSize: 13 }}>
           <label>سهم گروه پرستاری از درآمد بسته‌ها (٪)
@@ -279,14 +279,14 @@ export default function KaranehPage() {
     <div>
       <MohKaranehSection />
       <h1>برگهٔ کارانه — مهر ۱۴۰۵</h1>
-      <p style={{ color: '#68707a', fontSize: 13 }}>
+      <p style={{ color: '#64748b', fontSize: 13 }}>
         مؤلفه‌های شفاف کارانه از کارکرد و حضور — فرمول نهایی کارانه سیاست بیمارستان است و این برگه «ورودی» آن است، نه خود فرمول.
         {records.length === 0 && ' اول از صفحهٔ کارکرد، محاسبهٔ ماه را انجام بده.'}
       </p>
       <button onClick={exportCsv} disabled={!rows.length} style={{ marginBottom: 12 }}>خروجی CSV برگهٔ کارانه</button>
-      <div style={{ overflowX: 'auto', background: '#fff', border: '1px solid #e3ddd2', borderRadius: 12 }}>
+      <div style={{ overflowX: 'auto', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12 }}>
         <table style={{ borderCollapse: 'collapse', fontSize: 13, minWidth: 900 }}>
-          <thead><tr style={{ background: '#f3efe7' }}>
+          <thead><tr style={{ background: '#f1f5f9' }}>
             {['نام', 'جمع پرداختی', 'شب', 'تعطیل', 'اضافه‌کار', 'حضور', 'غیبت', 'تأخیر (دقیقه)', 'شاخص حضور ٪', 'مرخصی'].map(h => <th key={h} style={{ padding: 8 }}>{h}</th>)}
           </tr></thead>
           <tbody>

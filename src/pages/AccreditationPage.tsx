@@ -5,10 +5,10 @@ import { buildEmployeeFacts, evaluateRules, DEFAULT_RULE_CONFIGS } from '../core
 import { wardRecordingHealth } from '../features/nursingServices/nursingService';
 
 const STATUS_STYLE: Record<MetricStatus, { bg: string; color: string; label: string }> = {
-  ok: { bg: '#e7f4ec', color: '#1e6b3a', label: 'مطلوب' },
-  warn: { bg: '#fdf3e0', color: '#8a5a00', label: 'نیازمند توجه' },
-  risk: { bg: '#fdeceb', color: '#b3402f', label: 'پرریسک' },
-  nodata: { bg: '#eef0f2', color: '#68707a', label: 'دادهٔ ناکافی' },
+  ok: { bg: '#f0fdf4', color: '#16a34a', label: 'مطلوب' },
+  warn: { bg: '#fffbeb', color: '#b45309', label: 'نیازمند توجه' },
+  risk: { bg: '#fff1f2', color: '#e11d48', label: 'پرریسک' },
+  nodata: { bg: '#f1f5f9', color: '#64748b', label: 'دادهٔ ناکافی' },
 };
 const shiftMap: Record<string, 'morning' | 'evening' | 'night'> = { 's-m': 'morning', 's-e': 'evening', 's-n': 'night' };
 
@@ -59,17 +59,17 @@ export default function AccreditationPage() {
   return (
     <div>
       <h1>گزارش آمادگی اعتباربخشی — {deptName}</h1>
-      <p style={{ color: '#68707a', fontSize: 13, maxWidth: 780 }}>
+      <p style={{ color: '#64748b', fontSize: 13, maxWidth: 780 }}>
         سنجه‌های محور مدیریت خدمات پرستاری، زنده از داده‌های همین سیستم: صلاحیت و مهارت‌سنجی، برنامه‌ریزی نیرو، مستندسازی و آموزش.
         خلاصه: <strong>{fa(report.overall.ok)}</strong> مطلوب · <strong>{fa(report.overall.warn)}</strong> نیازمند توجه · <strong>{fa(report.overall.risk)}</strong> پرریسک · <strong>{fa(report.overall.nodata)}</strong> دادهٔ ناکافی
         <button onClick={download} style={{ marginInlineStart: 12 }}>دانلود گزارش (Markdown)</button>
       </p>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 14 }}>
         {report.sections.map(s => (
-          <section key={s.id} style={{ background: '#fff', border: '1px solid #e3ddd2', borderRadius: 12, padding: 16 }}>
+          <section key={s.id} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 16 }}>
             <h2 style={{ fontSize: 15, marginTop: 0 }}>{s.title}</h2>
             {s.metrics.map((m, i) => (
-              <div key={i} style={{ borderTop: i ? '1px solid #f0ead9' : 'none', padding: '9px 0' }}>
+              <div key={i} style={{ borderTop: i ? '1px solid #e2e8f0' : 'none', padding: '9px 0' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'center' }}>
                   <span style={{ fontSize: 13 }}>{m.label}</span>
                   <span style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -79,13 +79,13 @@ export default function AccreditationPage() {
                     </span>
                   </span>
                 </div>
-                {m.note && <div style={{ fontSize: 12, color: '#68707a', marginTop: 3 }}>{m.note}</div>}
+                {m.note && <div style={{ fontSize: 12, color: '#64748b', marginTop: 3 }}>{m.note}</div>}
               </div>
             ))}
           </section>
         ))}
       </div>
-      <p style={{ fontSize: 12, color: '#68707a' }}>
+      <p style={{ fontSize: 12, color: '#64748b' }}>
         این گزارش «خودارزیابی آمادگی» است و جایگزین ارزیابی رسمی ارزیابان اعتباربخشی نیست؛ ارزشش در این است که پیش از بازدید، نقاط پرریسک را از روی دادهٔ واقعی نشان می‌دهد.
       </p>
     </div>

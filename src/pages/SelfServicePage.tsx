@@ -38,25 +38,25 @@ export default function SelfServicePage() {
   return (
     <div style={{ maxWidth: 640, margin: '0 auto' }}>
       <h1>سلف‌سرویس — {me?.name}</h1>
-      <section style={{ background: '#fff', border: '1px solid #e3ddd2', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+      <section style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 16, marginBottom: 16 }}>
         <h2 style={{ marginTop: 0 }}>ماندهٔ مرخصی استحقاقی</h2>
         <div style={{ fontSize: 24, fontWeight: 800 }}>{fa(balance.entitled - balance.used)} روز</div>
-        <div style={{ fontSize: 12, color: '#68707a' }}>از {fa(balance.entitled)} روز سالانه · مصرف‌شده: {fa(balance.used)} روز</div>
+        <div style={{ fontSize: 12, color: '#64748b' }}>از {fa(balance.entitled)} روز سالانه · مصرف‌شده: {fa(balance.used)} روز</div>
       </section>
 
-      <section style={{ background: '#fff', border: '1px solid #e3ddd2', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+      <section style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 16, marginBottom: 16 }}>
         <h2 style={{ marginTop: 0 }}>برنامهٔ من — مهر ۱۴۰۵</h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 6 }}>
           {row.map(cell => (
-            <div key={cell.jDay} style={{ border: '1px solid #eee', borderRadius: 8, padding: 6, textAlign: 'center', background: cell.isFriday ? '#fff5f5' : '#fff' }}>
-              <div style={{ fontSize: 11, color: '#68707a' }}>{fa(cell.jDay)}</div>
+            <div key={cell.jDay} style={{ border: '1px solid #eee', borderRadius: 8, padding: 6, textAlign: 'center', background: cell.isFriday ? '#fff1f2' : '#fff' }}>
+              <div style={{ fontSize: 11, color: '#64748b' }}>{fa(cell.jDay)}</div>
               <div style={{ fontWeight: 700, color: cell.entry?.shiftTypeId === 's-n' ? '#7c3aed' : undefined }}>{shiftSymbol(st.shiftTypes, cell.entry?.shiftTypeId)}</div>
             </div>
           ))}
         </div>
       </section>
 
-      <section style={{ background: '#fff', border: '1px solid #e3ddd2', borderRadius: 12, padding: 16 }}>
+      <section style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 16 }}>
         <h2 style={{ marginTop: 0 }}>جابه‌جایی شیفت</h2>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
           روز <input type="number" min={1} max={30} value={swapDay} onChange={e => setSwapDay(Number(e.target.value))} style={{ width: 60 }} />
@@ -81,7 +81,7 @@ export default function SelfServicePage() {
           ))}
           {mySwaps.length === 0 && <li>درخواستی ندارید.</li>}
         </ul>
-        <p style={{ fontSize: 12, color: '#68707a' }}>بعد از پذیرش طرف مقابل، تأیید نهایی با سرپرستار است و از صفحهٔ برنامه اعمال می‌شود.</p>
+        <p style={{ fontSize: 12, color: '#64748b' }}>بعد از پذیرش طرف مقابل، تأیید نهایی با سرپرستار است و از صفحهٔ برنامه اعمال می‌شود.</p>
       </section>
     </div>
   );

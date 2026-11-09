@@ -75,11 +75,11 @@ export default function AttendancePage() {
   return (
     <div>
       <h1>حضور و غیاب — مهر ۱۴۰۵</h1>
-      <p style={{ color: '#68707a', fontSize: 13 }}>
+      <p style={{ color: '#64748b', fontSize: 13 }}>
         تطبیق رویدادهای ورود/خروج با برنامهٔ شیفت (قطعی و قابل توضیح). رویدادها: {fa(deptEvents.length)} · روزهای غیبت: {fa(days.filter(d => d.status === 'absent').length)} · ناقص: {fa(days.filter(d => d.status === 'incomplete').length)}
       </p>
 
-      <section style={{ background: '#fff', border: '1px solid #e3ddd2', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+      <section style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 16, marginBottom: 16 }}>
         <h2 style={{ marginTop: 0 }}>ثبت دستی رویداد</h2>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
           <select value={empId} onChange={e => setEmpId(e.target.value)}>
@@ -103,9 +103,9 @@ export default function AttendancePage() {
         </div>
       </section>
 
-      <div style={{ overflowX: 'auto', background: '#fff', border: '1px solid #e3ddd2', borderRadius: 12 }}>
+      <div style={{ overflowX: 'auto', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12 }}>
         <table style={{ borderCollapse: 'collapse', fontSize: 13, minWidth: 800 }}>
-          <thead><tr style={{ background: '#f3efe7' }}>
+          <thead><tr style={{ background: '#f1f5f9' }}>
             {['نام', 'حضور', 'غیبت', 'مرخصی', 'ناقص', 'کارکرد واقعی (ساعت)', 'تأخیر (دقیقه)', 'اضافه‌کار (ساعت)'].map(h => <th key={h} style={{ padding: 8 }}>{h}</th>)}
           </tr></thead>
           <tbody>
@@ -121,7 +121,7 @@ export default function AttendancePage() {
           </tbody>
         </table>
       </div>
-      <p style={{ fontSize: 12, color: '#68707a', marginTop: 8 }}>ساعت شروع اسمی شیفت‌ها (صبح ۷، عصر ۱۴، شب ۱۹) پارامتر است و از تنظیمات بیمارستان خوانده خواهد شد؛ قالب ستون‌های فایل دستگاه با قالب قاصدکِ بیمارستان (پرسش Q3) قطعی می‌شود — نگاشت ستون در آداپتور قابل تغییر است.</p>
+      <p style={{ fontSize: 12, color: '#64748b', marginTop: 8 }}>ساعت شروع اسمی شیفت‌ها (صبح ۷، عصر ۱۴، شب ۱۹) پارامتر است و از تنظیمات بیمارستان خوانده خواهد شد؛ قالب ستون‌های فایل دستگاه با قالب قاصدکِ بیمارستان (پرسش Q3) قطعی می‌شود — نگاشت ستون در آداپتور قابل تغییر است.</p>
     </div>
   );
 }

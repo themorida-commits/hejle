@@ -1,12 +1,12 @@
 * { box-sizing: border-box; }
-body { margin: 0; font-family: Vazirmatn, system-ui, 'Segoe UI', Tahoma, sans-serif; background: #faf7f2; }
+body { margin: 0; font-family: Vazirmatn, system-ui, 'Segoe UI', Tahoma, sans-serif; background: #f8fafc; }
 button {
-  font-family: inherit; cursor: pointer; border: 1px solid #0f4c4c; background: #0f4c4c;
+  font-family: inherit; cursor: pointer; border: 1px solid #2563eb; background: #2563eb;
   color: #fff; border-radius: 8px; padding: 6px 14px; font-size: 13px;
 }
 button:disabled { opacity: 0.45; cursor: default; }
-button:hover:not(:disabled) { background: #0a3838; }
-select, input { font-family: inherit; padding: 6px 8px; border: 1px solid #cfc8ba; border-radius: 8px; font-size: 13px; background: #fff; }
+button:hover:not(:disabled) { background: #1d4ed8; }
+select, input { font-family: inherit; padding: 6px 8px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 13px; background: #fff; }
 h1 { font-size: 22px; }
 h2 { font-size: 17px; }
 table th { font-weight: 700; }

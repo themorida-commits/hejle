@@ -44,15 +44,15 @@ function PersonnelImportCard() {
   const fa = (n: number) => n.toLocaleString('fa-IR');
 
   return (
-    <section style={{ background: '#fff', border: '1px solid #cfe0da', borderRadius: 12, padding: 14, marginBottom: 16 }}>
+    <section style={{ background: '#fff', border: '1px solid #dbeafe', borderRadius: 12, padding: 14, marginBottom: 16 }}>
       <strong style={{ fontSize: 14 }}>ورود لیست پرسنل بخش {deptName} از فایل</strong>
-      <p style={{ fontSize: 12, color: '#68707a', margin: '6px 0 10px' }}>
+      <p style={{ fontSize: 12, color: '#64748b', margin: '6px 0 10px' }}>
         فایل اکسل یا CSV لیست پرسنل را انتخاب کنید؛ پیش‌نمایش و خطاها قبل از اعمال نشان داده می‌شود و هیچ ردیفی بی‌صدا حذف نمی‌شود.
         قالب آماده را می‌توانید به بیمارستان بدهید تا همان را پر کند.
       </p>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         <button onClick={downloadTemplate}>دانلود قالب CSV</button>
-        <label style={{ border: '1px solid #ccc', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontSize: 13, background: '#f8f6f1' }}>
+        <label style={{ border: '1px solid #ccc', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontSize: 13, background: '#f8fafc' }}>
           انتخاب فایل (Excel / CSV)
           <input type="file" accept=".csv,.xlsx,.xls" style={{ display: 'none' }} onChange={e => void onFile(e.target.files?.[0])} />
         </label>
@@ -66,13 +66,13 @@ function PersonnelImportCard() {
             {preview.errors.length > 0 && <> · خطادار: <strong>{fa(preview.errors.length)}</strong> ردیف</>}
           </div>
           {preview.errors.length > 0 && (
-            <ul style={{ color: '#b3402f', margin: '6px 0' }}>
+            <ul style={{ color: '#e11d48', margin: '6px 0' }}>
               {preview.errors.slice(0, 8).map((e, i) => <li key={i}>ردیف {fa(e.row)}: {e.message}</li>)}
             </ul>
           )}
           {preview.personnel.length > 0 && (
             <>
-              <div style={{ fontSize: 12, color: '#68707a', margin: '6px 0' }}>
+              <div style={{ fontSize: 12, color: '#64748b', margin: '6px 0' }}>
                 نمونه: {preview.personnel.slice(0, 3).map(p => `${p.name} (${p.personnelCode})`).join(' · ')}
               </div>
               <button onClick={apply} style={{ padding: '7px 16px' }}>اعمال ورود به بخش</button>
@@ -80,7 +80,7 @@ function PersonnelImportCard() {
           )}
         </div>
       )}
-      {applied > 0 && <div style={{ marginTop: 8, fontSize: 13, color: '#1e6b3a' }}>{fa(applied)} نفر به بخش اضافه شدند.</div>}
+      {applied > 0 && <div style={{ marginTop: 8, fontSize: 13, color: '#16a34a' }}>{fa(applied)} نفر به بخش اضافه شدند.</div>}
     </section>
   );
 }
@@ -105,7 +105,7 @@ export default function PersonnelPage() {
 
   const badge = (c: (typeof deptCreds)[number]) => {
     const s = credentialStatus(c, TODAY);
-    const color = s === 'expired' ? '#b91c1c' : s === 'expiring' ? '#b45309' : '#15803d';
+    const color = s === 'expired' ? '#be123c' : s === 'expiring' ? '#b45309' : '#15803d';
     return <span style={{ color, fontWeight: 700 }}>{STATUS_FA[s]}</span>;
   };
 
@@ -129,15 +129,15 @@ export default function PersonnelPage() {
           ['در آستانهٔ انقضا (۶۰ روز)', compliance.expiring],
           ['منقضی', compliance.expired],
         ].map(([label, v]) => (
-          <div key={label as string} style={{ background: '#fff', border: '1px solid #e3ddd2', borderRadius: 12, padding: '10px 16px', minWidth: 130 }}>
-            <div style={{ fontSize: 12, color: '#68707a' }}>{label}</div>
+          <div key={label as string} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: '10px 16px', minWidth: 130 }}>
+            <div style={{ fontSize: 12, color: '#64748b' }}>{label}</div>
             <div style={{ fontSize: 22, fontWeight: 800 }}>{fa(v as number)}</div>
           </div>
         ))}
       </div>
 
       {compliance.attention.length > 0 && (
-        <section style={{ background: '#fdf3e7', border: '1px solid #e3ddd2', borderRadius: 12, padding: 14, marginBottom: 16 }}>
+        <section style={{ background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: 12, padding: 14, marginBottom: 16 }}>
           <strong>نیازمند پیگیری:</strong>
           <ul style={{ margin: '8px 0 0' }}>
             {compliance.attention.map(a => (
@@ -151,11 +151,11 @@ export default function PersonnelPage() {
         <select value={person?.id ?? ''} onChange={e => setSelected(e.target.value)}>
           {deptPeople.map(p => <option key={p.id} value={p.id}>{p.name} — {p.role}</option>)}
         </select>
-        {person && <span style={{ fontSize: 13, color: '#68707a' }}>کد پرسنلی {person.personnelCode} · وضعیت {person.employmentStatus} · شروع {person.employmentDate ?? '—'}</span>}
+        {person && <span style={{ fontSize: 13, color: '#64748b' }}>کد پرسنلی {person.personnelCode} · وضعیت {person.employmentStatus} · شروع {person.employmentDate ?? '—'}</span>}
       </div>
 
-      <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff', border: '1px solid #e3ddd2', marginBottom: 16 }}>
-        <thead><tr style={{ background: '#f3efe7' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff', border: '1px solid #e2e8f0', marginBottom: 16 }}>
+        <thead><tr style={{ background: '#f1f5f9' }}>
           <th style={{ padding: 8, textAlign: 'right' }}>مدرک</th><th>نوع</th><th>صادرکننده</th><th>انقضا</th><th>وضعیت</th>
         </tr></thead>
         <tbody>
@@ -169,7 +169,7 @@ export default function PersonnelPage() {
         </tbody>
       </table>
 
-      <section style={{ background: '#fff', border: '1px solid #e3ddd2', borderRadius: 12, padding: 16 }}>
+      <section style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 16 }}>
         <h2 style={{ marginTop: 0 }}>ثبت مدرک تازه برای {person?.name}</h2>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
           <select value={kind} onChange={e => setKind(e.target.value as CredentialKind)}>

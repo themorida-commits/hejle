@@ -49,18 +49,18 @@ export default function AiAssistantPage() {
   return (
     <div style={{ maxWidth: 760, margin: '0 auto' }}>
       <h1>دستیار توضیح‌دهندهٔ AI</h1>
-      <p style={{ color: '#68707a', fontSize: 13 }}>توضیح نقض‌های قواعد و منطق برنامه به زبان ساده — تصمیم‌ها با موتور قطعی و تأیید انسان است، نه مدل.</p>
+      <p style={{ color: '#64748b', fontSize: 13 }}>توضیح نقض‌های قواعد و منطق برنامه به زبان ساده — تصمیم‌ها با موتور قطعی و تأیید انسان است، نه مدل.</p>
       <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
         <button onClick={() => void ask('نقض‌های سخت این ماه را به زبان ساده توضیح بده و بگو کدام مهم‌تر است.')}>توضیح نقض‌های این ماه</button>
         <button onClick={() => void ask('قانون ارتقای بهره‌وری چه محدودیت‌هایی روی برنامه می‌گذارد؟ بر اساس دادهٔ همین بخش خلاصه کن.')}>محدودیت‌های قانون بهره‌وری در این بخش</button>
       </div>
-      <div style={{ background: '#fff', border: '1px solid #e3ddd2', borderRadius: 12, padding: 16, minHeight: 240, marginBottom: 12 }}>
+      <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 16, minHeight: 240, marginBottom: 12 }}>
         {messages.map((m, i) => (
           <div key={i} style={{ marginBottom: 12, textAlign: m.role === 'user' ? 'left' : 'right' }}>
-            <span style={{ display: 'inline-block', background: m.role === 'user' ? '#eef4f3' : '#faf3e3', borderRadius: 10, padding: '8px 12px', maxWidth: '85%', whiteSpace: 'pre-wrap', textAlign: 'right' }}>{m.text}</span>
+            <span style={{ display: 'inline-block', background: m.role === 'user' ? '#f1f5f9' : '#f1f5f9', borderRadius: 10, padding: '8px 12px', maxWidth: '85%', whiteSpace: 'pre-wrap', textAlign: 'right' }}>{m.text}</span>
           </div>
         ))}
-        {messages.length === 0 && <p style={{ color: '#68707a' }}>سؤالت را بپرس یا یکی از دکمه‌های بالا را بزن.</p>}
+        {messages.length === 0 && <p style={{ color: '#64748b' }}>سؤالت را بپرس یا یکی از دکمه‌های بالا را بزن.</p>}
         {busy && <p>در حال فکر کردن…</p>}
       </div>
       <div style={{ display: 'flex', gap: 8 }}>

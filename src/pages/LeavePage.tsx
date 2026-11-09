@@ -133,7 +133,7 @@ export default function LeavePage() {
     <div>
       <h1>مرخصی‌ها — مهر ۱۴۰۵</h1>
       <HospitalQueueSection actorRole={actorRole} variant="full" />
-      <section style={{ background: '#fff', border: '1px solid #e3ddd2', borderRadius: 12, padding: 16, marginBottom: 20 }}>
+      <section style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 16, marginBottom: 20 }}>
         <h2 style={{ marginTop: 0 }}>ثبت درخواست تازه (به نام {nameOf(st.currentEmployeeId)})</h2>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
           <select value={type} onChange={e => setType(e.target.value)}>
@@ -150,7 +150,7 @@ export default function LeavePage() {
             <>
               از ساعت <input type="time" value={fromTime} onChange={e => setFromTime(e.target.value)} />
               تا ساعت <input type="time" value={toTime} onChange={e => setToTime(e.target.value)} />
-              <span style={{ fontSize: 12, color: '#68707a' }}>({hourlyHours > 0 ? hourlyHours.toLocaleString('fa-IR') : '—'} ساعت)</span>
+              <span style={{ fontSize: 12, color: '#64748b' }}>({hourlyHours > 0 ? hourlyHours.toLocaleString('fa-IR') : '—'} ساعت)</span>
             </>
           )}
           <input placeholder="دلیل (اختیاری)" value={reason} onChange={e => setReason(e.target.value)} style={{ minWidth: 200 }} />
@@ -162,13 +162,13 @@ export default function LeavePage() {
           )}
           <button onClick={submit}>ثبت درخواست</button>
         </div>
-        <p style={{ fontSize: 12, color: '#68707a' }}>
+        <p style={{ fontSize: 12, color: '#64748b' }}>
           ماندهٔ فعلی شما: {((st.leaveBalances[st.currentEmployeeId]?.entitled ?? 26) - (st.leaveBalances[st.currentEmployeeId]?.used ?? 0)).toLocaleString('fa-IR')} روز
         </p>
       </section>
 
-      <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff', border: '1px solid #e3ddd2' }}>
-        <thead><tr style={{ background: '#f3efe7' }}>
+      <table style={{ width: '100%', borderCollapse: 'collapse', background: '#fff', border: '1px solid #e2e8f0' }}>
+        <thead><tr style={{ background: '#f1f5f9' }}>
           <th style={{ padding: 8, textAlign: 'right' }}>نام</th><th>نوع</th><th>بازه</th><th>وضعیت</th><th>عملیات</th>
         </tr></thead>
         <tbody>
@@ -181,12 +181,12 @@ export default function LeavePage() {
               </td>
               <td>{STATUS_FA[l.status]}
                 {l.status === 'pending' && st.approvalChain.length > 1 && (
-                  <div style={{ fontSize: 12, color: '#68707a' }}>
+                  <div style={{ fontSize: 12, color: '#64748b' }}>
                     گام {((l.approvalStep ?? 0) + 1).toLocaleString('fa-IR')} از {st.approvalChain.length.toLocaleString('fa-IR')} — نوبت {ROLE_FA[chainStepRole(st.approvalChain, l) ?? ''] ?? ''}
                   </div>
                 )}
                 {(l.approvals?.length ?? 0) > 0 && (
-                  <div style={{ fontSize: 12, color: '#68707a' }}>
+                  <div style={{ fontSize: 12, color: '#64748b' }}>
                     {l.approvals!.map((a, i) => (
                       <div key={i}>{ROLE_FA[a.role] ?? a.role}: {a.decision === 'approved' ? 'تأیید' : 'رد'} ({a.at})</div>
                     ))}
@@ -209,7 +209,7 @@ export default function LeavePage() {
       </table>
 
       {sim && (
-        <section style={{ background: sim.ok ? '#eefbf0' : '#fdf3e7', border: '1px solid #e3ddd2', borderRadius: 12, padding: 16, marginTop: 16 }}>
+        <section style={{ background: sim.ok ? '#f0fdf4' : '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: 12, padding: 16, marginTop: 16 }}>
           <h3 style={{ marginTop: 0 }}>نتیجهٔ شبیه‌سازی پوشش</h3>
           <p>{sim.summary}</p>
           <p style={{ fontSize: 13 }}>{sim.balanceMessage}</p>

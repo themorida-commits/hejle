@@ -27,12 +27,12 @@ export default function Layout() {
   // هر نقش فقط میز کار خودش را می‌بیند (مترون و اداری هم میز جدا دارند)
   const links = navForRole(dataSource === 'supabase' ? (sessionRole ?? 'staff') : viewRole);
   return (
-    <div dir="rtl" style={{ fontFamily: 'Vazirmatn, system-ui, sans-serif', minHeight: '100vh', background: '#faf7f2', color: '#1d2733' }}>
-      <header style={{ display: 'flex', gap: 16, alignItems: 'center', padding: '10px 20px', background: '#0f4c4c', color: '#fff', flexWrap: 'wrap' }}>
+    <div dir="rtl" style={{ fontFamily: 'Vazirmatn, system-ui, sans-serif', minHeight: '100vh', background: '#f8fafc', color: '#0f172a' }}>
+      <header style={{ display: 'flex', gap: 16, alignItems: 'center', padding: '10px 20px', background: '#0f172a', color: '#fff', flexWrap: 'wrap' }}>
         <strong style={{ fontSize: 18 }}>حجله — لایهٔ نیروی انسانی بیمارستان</strong>
         <nav style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           {links.map(l => (
-            <NavLink key={l.to} to={l.to} style={({ isActive }) => ({ color: isActive ? '#ffd9a0' : '#e8f0ee', textDecoration: 'none', fontWeight: isActive ? 700 : 400 })}>
+            <NavLink key={l.to} to={l.to} style={({ isActive }) => ({ color: isActive ? '#93c5fd' : '#cbd5e1', textDecoration: 'none', fontWeight: isActive ? 700 : 400 })}>
               {l.label}
             </NavLink>
           ))}
@@ -50,7 +50,7 @@ export default function Layout() {
               </select>
             )}
             <span style={{ direction: 'ltr' }}>{sessionEmail ?? ''}</span>
-            <button onClick={() => void signOut()} style={{ background: 'transparent', color: '#ffd9a0', border: '1px solid #ffd9a0', borderRadius: 6, padding: '3px 12px', cursor: 'pointer', fontSize: 13 }}>خروج</button>
+            <button onClick={() => void signOut()} style={{ background: 'transparent', color: '#93c5fd', border: '1px solid #93c5fd', borderRadius: 6, padding: '3px 12px', cursor: 'pointer', fontSize: 13 }}>خروج</button>
           </span>
         ) : (
           <span style={{ marginInlineStart: 'auto', display: 'flex', gap: 8, alignItems: 'center', fontSize: 13 }}>

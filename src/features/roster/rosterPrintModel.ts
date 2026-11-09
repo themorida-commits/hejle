@@ -9,15 +9,15 @@ import { isoFromJalali, type LeaveRequest } from '../leave/leaveService';
 
 /** برچسب و رنگ سلول برای هر نوع مرخصی — همان راهنمای رنگ فرم کاغذی. */
 export const LEAVE_CELL: Record<string, { label: string; bg: string; name: string }> = {
-  annual: { label: 'مر', bg: '#fecaca', name: 'مرخصی استحقاقی' },
+  annual: { label: 'مر', bg: '#fecdd3', name: 'مرخصی استحقاقی' },
   sick: { label: 'اس', bg: '#bbf7d0', name: 'استعلاجی' },
-  incentive: { label: 'تش', bg: '#fbcfe8', name: 'تشویقی' },
+  incentive: { label: 'تش', bg: '#fecdd3', name: 'تشویقی' },
   enroute: { label: 'تر', bg: '#ddd6fe', name: 'تو راهی' },
   mission: { label: 'مأ', bg: '#dbeafe', name: 'مأموریت' },
   maternity: { label: 'زا', bg: '#fde68a', name: 'زایمان' },
-  unpaid: { label: 'ب ح', bg: '#e5e7eb', name: 'بدون حقوق' },
+  unpaid: { label: 'ب ح', bg: '#e2e8f0', name: 'بدون حقوق' },
   marriage: { label: 'از', bg: '#fde68a', name: 'ازدواج' },
-  bereavement: { label: 'ف ب', bg: '#e5e7eb', name: 'فوت بستگان' },
+  bereavement: { label: 'ف ب', bg: '#e2e8f0', name: 'فوت بستگان' },
   hajj: { label: 'حج', bg: '#fde68a', name: 'حج' },
 };
 
@@ -29,18 +29,18 @@ export const HOLIDAY_BG = '#fef08a'; // زرد تعطیلی در راهنمای 
  * نه رنگ‌های خام نسخهٔ کاغذی. خروجی چاپ از LEAVE_CELL و HOLIDAY_BG استفاده می‌کند.
  */
 export const SCREEN_LEAVE_BG: Record<string, string> = {
-  annual: '#fde8e8',
-  sick: '#e3f2e6',
-  incentive: '#fbe9f4',
+  annual: '#fff1f2',
+  sick: '#f0fdf4',
+  incentive: '#fff1f2',
   enroute: '#eae7fb',
   mission: '#e7edfb',
-  maternity: '#fdf3d7',
-  unpaid: '#efede8',
-  marriage: '#fdf3d7',
-  bereavement: '#efede8',
-  hajj: '#fdf3d7',
+  maternity: '#fffbeb',
+  unpaid: '#f1f5f9',
+  marriage: '#fffbeb',
+  bereavement: '#f1f5f9',
+  hajj: '#fffbeb',
 };
-export const SCREEN_HOLIDAY_BG = '#fdf6d8';
+export const SCREEN_HOLIDAY_BG = '#fffbeb';
 
 /** حروف روزهای هفته برای هر روز ماه (ش ی د س چ پ ج). */
 export function weekdayLetters(jYear: number, jMonth: number): string[] {

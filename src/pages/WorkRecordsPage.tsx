@@ -76,7 +76,7 @@ export default function WorkRecordsPage() {
   return (
     <div>
       <h1>کارکرد ماهانه — مهر ۱۴۰۵</h1>
-      <p style={{ color: '#68707a', fontSize: 13 }}>خروجی این صفحه «ورودی واحد حقوق» است (نه حقوق کامل): ساعت‌ها با ضرایب قانون بهره‌وری — شب ×۱٫۵ و عصر ×۱٫۲.</p>
+      <p style={{ color: '#64748b', fontSize: 13 }}>خروجی این صفحه «ورودی واحد حقوق» است (نه حقوق کامل): ساعت‌ها با ضرایب قانون بهره‌وری — شب ×۱٫۵ و عصر ×۱٫۲.</p>
       <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
         <button onClick={() => compute(false)}>محاسبهٔ کارکرد از برنامه</button>
         <button onClick={() => compute(true)}>محاسبه با حضور واقعی</button>
@@ -84,7 +84,7 @@ export default function WorkRecordsPage() {
         <button onClick={downloadCsv} disabled={records.length === 0}>خروجی CSV برای واحد حقوق</button>
       </div>
       {records.length > 0 && (
-        <section style={{ background: '#fff', border: '1px solid #cfe0da', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+        <section style={{ background: '#fff', border: '1px solid #dbeafe', borderRadius: 12, padding: 16, marginBottom: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
             <h2 style={{ margin: 0, fontSize: 16 }}>گزارش تجمیعی بخش {wardName}</h2>
             <button onClick={downloadSummaryCsv}>خروجی CSV تجمیعی</button>
@@ -98,15 +98,15 @@ export default function WorkRecordsPage() {
             <span>سهم شب از کارکرد: <strong>{fa(summary.nightSharePct)}٪</strong></span>
             <span>مرخصی: <strong>{fa(summary.totalLeaveDays)}</strong> روز + <strong>{fa(summary.totalHourlyLeaveHours)}</strong> ساعت ساعتی</span>
           </div>
-          <p style={{ fontSize: 12, color: '#68707a', marginBottom: 0 }}>
+          <p style={{ fontSize: 12, color: '#64748b', marginBottom: 0 }}>
             توزیع شب‌کاری — بیشترین‌ها: {summary.topNight.map(t => `${t.employeeName} (${fa(t.nightHours)} ساعت)`).join('، ') || '—'}.
             معادل پرداختی «هزینهٔ بخش در سطح ساعت» است؛ مبلغ ریالی از واحد حقوق می‌آید، نه از این نما.
           </p>
         </section>
       )}
-      <div style={{ overflowX: 'auto', background: '#fff', border: '1px solid #e3ddd2', borderRadius: 12 }}>
+      <div style={{ overflowX: 'auto', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12 }}>
         <table style={{ borderCollapse: 'collapse', fontSize: 13, minWidth: 1000 }}>
-          <thead><tr style={{ background: '#f3efe7' }}>
+          <thead><tr style={{ background: '#f1f5f9' }}>
             {['نام', 'موظفی', 'کارکرد', 'صبح', 'عصر', 'شب', 'تعطیل', 'مرخصی (روز)', 'اضافه‌کار', 'جمع پرداختی', 'واقعی', 'اختلاف', 'غیبت', 'وضعیت'].map(h => <th key={h} style={{ padding: 8 }}>{h}</th>)}
           </tr></thead>
           <tbody>

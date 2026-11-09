@@ -6,10 +6,10 @@ import HospitalQueueSection from '../features/oversight/HospitalQueueSection';
 
 function Card({ title, value, hint }: { title: string; value: string; hint?: string }) {
   return (
-    <div style={{ background: '#fff', border: '1px solid #e3ddd2', borderRadius: 12, padding: 16, minWidth: 180 }}>
-      <div style={{ fontSize: 13, color: '#68707a' }}>{title}</div>
+    <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 16, minWidth: 180 }}>
+      <div style={{ fontSize: 13, color: '#64748b' }}>{title}</div>
       <div style={{ fontSize: 28, fontWeight: 800, marginTop: 6 }}>{value}</div>
-      {hint && <div style={{ fontSize: 12, color: '#68707a', marginTop: 4 }}>{hint}</div>}
+      {hint && <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>{hint}</div>}
     </div>
   );
 }
