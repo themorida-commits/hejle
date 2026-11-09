@@ -872,7 +872,7 @@
  },
  "provenanceHeader": {
   "generatedBy": "tools/cpsat-oracle/export_fixtures.ts",
-  "generatedAt": "2026-11-09T19:39:51.146Z",
+  "generatedAt": "2026-11-09T20:01:42.331Z",
   "gitCommit": "ec920d520546f73454fca97996bb4174751ae613",
   "goldenCase": "G1-2",
   "expectedGoldenHash": "9d390ab1974812343b74b393f12e73cca4bf5342a5bf47479cdd190faa2f52b1",

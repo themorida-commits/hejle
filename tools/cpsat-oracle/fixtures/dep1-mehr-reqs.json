@@ -1066,11 +1066,11 @@
  },
  "provenanceHeader": {
   "generatedBy": "tools/cpsat-oracle/export_fixtures.ts",
-  "generatedAt": "2026-11-09T19:39:52.040Z",
+  "generatedAt": "2026-11-09T20:01:43.268Z",
   "gitCommit": "ec920d520546f73454fca97996bb4174751ae613",
   "goldenCase": "G1-8",
-  "expectedGoldenHash": "fecbaa52db3ef81944b66aa96d0b143b7d20df33b90cdef3168a6e2729cb8ce7",
-  "tsHashAtExport": "fecbaa52db3ef81944b66aa96d0b143b7d20df33b90cdef3168a6e2729cb8ce7",
+  "expectedGoldenHash": "484f8f23d77e46d49e93510d3983dbc0c10ea1cd60ff437efef996ec4c594760",
+  "tsHashAtExport": "484f8f23d77e46d49e93510d3983dbc0c10ea1cd60ff437efef996ec4c594760",
   "hashMatchesGolden": true,
   "productSources": [
    "src/core/scheduling/schedulerSolver.ts",

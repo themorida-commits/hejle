@@ -261,6 +261,21 @@ export function generateScheduleDeterministic(params: GenerateScheduleParams): S
                         if (strict) return false;
                     }
 
+                    // 1b. توالی عصر ← صبح در مسیر نیاز روزانهٔ سفارشی (دور ۲۱):
+                    // در این مسیر فشار پوشش (مثلاً صبحِ ۵نفره) جریمهٔ نرمِ امتیاز
+                    // نامزدها (−۱۵۰) را خنثی می‌کرد و حل‌کننده جفت عصر→صبحِ قابل
+                    // اجتناب تولید می‌کرد (اسپایک CP-SAT: ‏۴ نقض، ‏۳۰۰×۴ امتیاز).
+                    // پس مثل ریکاوریِ شب، در حالت strict «سخت» مسدود می‌شود؛ مسیر
+                    // پیش‌فرض دست نخورده می‌ماند چون آنجا همین جفت‌ها تولید
+                    // نمی‌شوند و هش‌های طلایی‌اش نباید جابه‌جا شوند. قفل دستی
+                    // همچنان مقدم است: خانهٔ قفل‌شده از پیش پر شده و این بررسی
+                    // فقط روی تولید اثر دارد؛ اگر استخر strict خالی شود، fallback
+                    // آرام (relaxed) همان رفتار قبلی را نگه می‌دارد و آشکارساز
+                    // تعارض، جفتِ ناشی از قفل را اجباری گزارش می‌کند.
+                    if (hasCustomReqs && sId === mShiftId && d > 1 && trialSchedule.get(p.id)![d - 1] === eShiftId) {
+                        if (strict) return false;
+                    }
+
                     // 2. Max Consecutive Nights
                     if (isNightCategory(sId)) {
                         let consecutiveNights = 0;
@@ -281,6 +296,16 @@ export function generateScheduleDeterministic(params: GenerateScheduleParams): S
                             if (nextShift !== "" && nextShift !== offShiftId) {
                                 if (strict) return false;
                             }
+                        }
+                    }
+
+                    // 2b. نگاه‌به‌جلو عصر ← صبح (دور ۲۱، قرینهٔ نگاه‌به‌جلوی شب در
+                    // مسیر نیاز سفارشی): اگر فردا از پیش با قفل دستی روی صبح
+                    // نشسته، امروز عصر به همان فرد داده نمی‌شود تا جفتِ اجباری
+                    // ساخته نشود؛ خود قفل‌ها دست نمی‌خورند و مقدم می‌مانند.
+                    if (hasCustomReqs && sId === eShiftId && d < daysInMonth) {
+                        if (trialSchedule.get(p.id)![d + 1] === mShiftId) {
+                            if (strict) return false;
                         }
                     }
 

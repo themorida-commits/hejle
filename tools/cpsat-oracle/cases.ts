@@ -54,7 +54,7 @@ export const ORACLE_CASES: OracleCase[] = [
     name: 'dep1-mehr-reqs',
     goldenCase: 'G1-8',
     expectedGoldenHash:
-      'fecbaa52db3ef81944b66aa96d0b143b7d20df33b90cdef3168a6e2729cb8ce7',
+      '484f8f23d77e46d49e93510d3983dbc0c10ea1cd60ff437efef996ec4c594760',
     departmentId: 'dep1',
     jYear: 1405,
     jMonth: 7,
