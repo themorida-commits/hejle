@@ -29,6 +29,7 @@ export default function SelfServicePage() {
     const res = createSwap({
       id: `sw-${Date.now()}`, fromEmployeeId: st.currentEmployeeId, toEmployeeId: swapWith,
       dateISO: isoFromJalali(J_YEAR, J_MONTH, swapDay), entries: st.entries,
+      personnel: st.personnel, shiftTypes: st.shiftTypes,
     });
     if (!res.ok) { alert(res.error); return; }
     st.addSwap(res.swap);

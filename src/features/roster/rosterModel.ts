@@ -57,6 +57,17 @@ export function applyManualEdit(
   );
 }
 
+/**
+ * چرخهٔ ویرایش دستی سلول. برای سرپرستار، طبق قانون ثابت جدول، فقط «صبح» و
+ * «آف» در چرخه می‌ماند و امکان چرخش به عصر/شب از خود رابط گرفته می‌شود.
+ */
+export function nextManualShiftId(role: string, currentId: string | undefined): string {
+  const order = role.includes('سرپرستار')
+    ? ['s-m', 's-off']
+    : ['s-m', 's-e', 's-n', 's-off'];
+  return order[(order.indexOf(currentId ?? 's-off') + 1) % order.length]!;
+}
+
 export function shiftSymbol(shiftTypes: ShiftType[], id: string | undefined): string {
   if (!id) return '·';
   return shiftTypes.find(s => s.id === id)?.symbol ?? '?';

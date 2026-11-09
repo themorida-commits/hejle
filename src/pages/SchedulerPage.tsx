@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore, J_YEAR, J_MONTH } from '../store/appStore';
-import { buildMonthGrid, applyManualEdit, shiftSymbol } from '../features/roster/rosterModel';
+import { buildMonthGrid, applyManualEdit, nextManualShiftId, shiftSymbol } from '../features/roster/rosterModel';
 import {
   LEAVE_CELL, SCREEN_LEAVE_BG, SCREEN_HOLIDAY_BG, weekdayLetters, holidayDayNumbers,
   buildLeaveCellStates, buildLeaveDatesMap, dayCountsByCategory, employmentShort,
@@ -121,8 +121,9 @@ export default function SchedulerPage() {
   const cycleShift = (personnelId: string, dateISO: string, currentId: string | undefined) => {
     if (st.scheduleStatus === 'published') return;
     if (blockedIds.has(personnelId)) return; // قفل صلاحیت
-    const order = ['s-m', 's-e', 's-n', 's-off'];
-    const next = order[(order.indexOf(currentId ?? 's-off') + 1) % order.length]!;
+    const person = deptPeople.find(p => p.id === personnelId);
+    if (!person) return;
+    const next = nextManualShiftId(person.role, currentId);
     const others = st.entries.filter(e => !deptIds.has(e.personnelId));
     st.setEntries([...others, ...applyManualEdit(deptEntries, personnelId, dateISO, next)]);
   };
@@ -186,7 +187,7 @@ export default function SchedulerPage() {
           : <button onClick={() => st.setScheduleStatus('draft')}>برگرداندن به پیش‌نویس</button>}
         <span>تعارض‌ها: <strong>{fa(conflicts)}</strong> · نقض سخت قواعد: <strong>{fa(violations.filter(v => v.severity === 'hard').length)}</strong></span>
       </div>
-      <p style={{ fontSize: 12, color: '#68707a' }}>برای ویرایش دستی روی هر سلول کلیک کنید (چرخش صبح ← عصر ← شب ← آف). در وضعیت منتشرشده ویرایش قفل است.</p>
+      <p style={{ fontSize: 12, color: '#68707a' }}>برای ویرایش دستی روی هر سلول کلیک کنید (چرخش صبح ← عصر ← شب ← آف). برای سرپرستار، طبق قانون ثابت جدول، چرخش فقط صبح و آف است. در وضعیت منتشرشده ویرایش قفل است.</p>
       <RosterImportCard />
       {(gate.blocked.length > 0 || gate.warnings.length > 0) && (
         <div style={{ background: '#fdf6ec', border: '1px solid #ecd9ae', borderRadius: 12, padding: '10px 14px', marginBottom: 12, fontSize: 13 }}>
@@ -301,7 +302,7 @@ export default function SchedulerPage() {
               <span>{st.personnel.find(p => p.id === s.fromEmployeeId)?.name} ↔ {st.personnel.find(p => p.id === s.toEmployeeId)?.name} · {s.dateISO}</span>
               <button onClick={() => {
                 import('../features/swaps/swapService').then(({ approveSwap }) => {
-                  const res = approveSwap(s, st.entries, st.currentEmployeeId);
+                  const res = approveSwap(s, st.entries, st.currentEmployeeId, { personnel: st.personnel, shiftTypes: st.shiftTypes });
                   if (!res.ok) { alert(res.error); return; }
                   st.updateSwap(res.swap);
                   st.setEntries(res.entries);

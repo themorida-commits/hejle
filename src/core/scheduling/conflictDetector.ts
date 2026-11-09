@@ -78,14 +78,14 @@ export function detectConflicts(
                 }
             }
 
-            // 3. Role specific rules (Interconnected with Calendar)
-            const headNurseRule = rules.find(r => r.type === 'head_nurse_morning');
-            if (headNurseRule?.isEnabled && p.role.includes('سرپرستار')) {
+            // 3. قانون ثابت سرپرستار (مستقل از فعال/غیرفعال‌بودن رکورد قاعده):
+            // تنها شیفت کاری مجاز برای سرپرستار، شیفت صبح است.
+            if (p.role.includes('سرپرستار')) {
                 if ((isFriday || isOfficialHoliday) && entry.shiftTypeId !== offShiftId) {
                     addCellConflict(p.id, date, 'سرپرستار باید در جمعه‌ها و تعطیلات رسمی آف باشد', 'CRITICAL');
                 }
                 if (!isFriday && !isOfficialHoliday && entry.shiftTypeId !== morningShiftId && entry.shiftTypeId !== offShiftId) {
-                    addCellConflict(p.id, date, 'سرپرستار در روزهای عادی باید در شیفت صبح باشد', headNurseRule.priority);
+                    addCellConflict(p.id, date, 'قانون ثابت: سرپرستار فقط شیفت صبح دارد', 'CRITICAL');
                 }
             }
         });

@@ -64,9 +64,9 @@ export const DEFAULT_RULES: CustomRule[] = [
   {
     id: 'rule-head-nurse',
     type: 'head_nurse_morning',
-    description: 'سرپرستار همیشه شیفت صبح می‌باشد مگر با تغییر دستی.',
+    description: 'قانون ثابت جدول برنامهٔ شیفت: سرپرستار فقط شیفت صبح دارد؛ شیفت عصر، شب و ترکیبی برای او ثبت نمی‌شود.',
     isEnabled: true,
-    priority: 'IMPORTANT',
+    priority: 'CRITICAL',
     category: 'PATIENT_SAFETY',
   },
   {

@@ -81,8 +81,9 @@ export function generateScheduleDeterministic(params: GenerateScheduleParams): S
     const maxConsecutiveNightsRule = rules.find(r => r.type === "max_consecutive_nights");
     const maxNights = maxConsecutiveNightsRule?.isEnabled ? (maxConsecutiveNightsRule.value || 2) : 2;
 
-    const headNurseRule = rules.find(r => r.type === "head_nurse_morning");
-    const isHeadNurseEnabled = headNurseRule?.isEnabled ?? false;
+    // قانون ثابت جدول برنامهٔ شیفت (تصمیم سعید، ۲۰۲۶-۱۱-۰۸): سرپرستار فقط
+    // شیفت صبح دارد. این ناوردا به وجود یا فعال‌بودن رکورد قاعده وابسته نیست.
+    const isHeadNurseEnabled = true;
 
     const maxConsecutiveWorkDays = aiSettings?.maxConsecutiveWorkDays || 6;
 
