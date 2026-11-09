@@ -7,6 +7,7 @@ import {
   isoFromJalali, leaveDurationDays, type LeaveRequest, type CoverageSimulation,
 } from '../features/leave/leaveService';
 import HospitalQueueSection from '../features/oversight/HospitalQueueSection';
+import { buildLeaveTriage, type LeaveTriageBrief } from '../features/agents/leaveTriage';
 
 const MINIMUMS = { morning: 3, evening: 2, night: 1 };
 const STATUS_FA: Record<LeaveRequest['status'], string> = {
@@ -27,6 +28,9 @@ export default function LeavePage() {
   const [toDay, setToDay] = useState(12);
   const [reason, setReason] = useState('');
   const [sim, setSim] = useState<CoverageSimulation | null>(null);
+  // تریاژ ایجنت (Zone C — دور ۱۸): پیشنهاد مستدل روی پیش‌نویس می‌نشیند؛ اقدام
+  // فقط از همان دکمه‌های تأیید/رد موجود و با تصمیم انسان انجام می‌شود.
+  const [triage, setTriage] = useState<{ brief: LeaveTriageBrief; draftId: string } | null>(null);
   const [mode, setMode] = useState<'daily' | 'hourly'>('daily');
   const [fromTime, setFromTime] = useState('08:00');
   const [toTime, setToTime] = useState('11:00');
@@ -103,6 +107,22 @@ export default function LeavePage() {
       jYear: J_YEAR, jMonth: J_MONTH, dutyHoursByEmployee: st.dutyByEmployee,
       minimums: MINIMUMS, balance: st.leaveBalances[req.employeeId],
     }));
+  };
+
+  const runTriage = (req: LeaveRequest) => {
+    const brief = buildLeaveTriage({
+      request: req, personnel: deptPeople, entries: deptEntries, shiftTypes: st.shiftTypes,
+      dailyReqs: st.dailyReqs, hasSchedule: deptEntries.length > 0,
+      leaveBalances: st.leaveBalances, approvalChain: st.approvalChain,
+      jYear: J_YEAR, jMonth: J_MONTH,
+    });
+    st.recordAgentRun('leave_triage', { requestId: req.id },
+      { suggestion: brief.suggestion, reasons: brief.reasons.length }, []);
+    const draft = st.createAgentDraft('leave_triage', {
+      requestId: req.id, employeeId: req.employeeId, suggestion: brief.suggestion,
+      reasons: brief.reasons, coverage: brief.coverage, quota: brief.quota,
+    });
+    setTriage({ brief, draftId: draft.id });
   };
 
   const approve = (req: LeaveRequest) => {
@@ -196,6 +216,7 @@ export default function LeavePage() {
               <td style={{ display: 'flex', gap: 6, padding: 8 }}>
                 {l.status === 'pending' && <>
                   <button onClick={() => runSim(l)}>شبیه‌سازی پوشش</button>
+                  <button onClick={() => runTriage(l)}>پیشنهاد ایجنت</button>
                   {canActOnLeave(st.approvalChain, l, actor).ok && <>
                     <button onClick={() => approve(l)}>تأیید</button>
                     <button onClick={() => reject(l)}>رد</button>
@@ -207,6 +228,56 @@ export default function LeavePage() {
           {myLeaves.length === 0 && <tr><td colSpan={5} style={{ padding: 12 }}>هنوز درخواستی ثبت نشده است.</td></tr>}
         </tbody>
       </table>
+
+      {triage && (() => {
+        const req = st.leaves.find(l => l.id === triage.brief.requestId);
+        const b = triage.brief;
+        const canAct = req ? canActOnLeave(st.approvalChain, req, actor).ok : false;
+        const chip = b.suggestion === 'approve'
+          ? { text: 'پیشنهاد ایجنت: تأیید', bg: '#dcfce7', color: '#15803d' }
+          : b.suggestion === 'reject'
+            ? { text: 'پیشنهاد ایجنت: رد', bg: '#ffe4e6', color: '#be123c' }
+            : { text: 'پیشنهاد ایجنت: بررسی انسانی', bg: '#fef9c3', color: '#a16207' };
+        const followSuggestion = () => {
+          if (!req) return;
+          if (b.suggestion === 'approve') approve(req);
+          else if (b.suggestion === 'reject') reject(req);
+          st.decideAgentDraft(triage.draftId, 'approved');
+          setTriage(null);
+        };
+        const dismiss = () => { st.decideAgentDraft(triage.draftId, 'rejected'); setTriage(null); };
+        return (
+          <section style={{ background: '#fff', border: '1px solid #c7d2fe', borderRadius: 12, padding: 16, marginTop: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+              <h3 style={{ margin: 0, fontSize: 14 }}>تریاژ ایجنت — مرخصی {b.leaveTypeName} {b.employeeName}</h3>
+              <span style={{ fontSize: 12, fontWeight: 800, borderRadius: 999, padding: '3px 12px', background: chip.bg, color: chip.color }}>{chip.text}</span>
+            </div>
+            <ul style={{ margin: '10px 0', paddingInlineStart: 18, fontSize: 13, lineHeight: 2 }}>
+              {b.reasons.map((r, i) => <li key={i}>{r}</li>)}
+            </ul>
+            {b.coverage && b.coverage.some(c => c.short) && (
+              <ul style={{ margin: '0 0 10px', fontSize: 13 }}>
+                {b.coverage.filter(c => c.short).map((c, i) => (
+                  <li key={i}>{c.dateISO}: شیفت {c.shift === 'night' ? 'شب' : c.shift === 'evening' ? 'عصر' : 'صبح'} — {c.staffAfter.toLocaleString('fa-IR')} نفر در برابر نیاز {c.required.toLocaleString('fa-IR')}</li>
+                ))}
+              </ul>
+            )}
+            <p style={{ fontSize: 12, color: '#64748b', margin: '0 0 10px' }}>
+              این پیشنهاد فقط از روی سهمیه و پوشش ساخته شده و روی پیش‌نویس ایجنت ثبت است؛ تصمیم نهایی با شماست و اقدام از همان مسیر تأیید/رد زنجیره انجام می‌شود.
+            </p>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {canAct && b.suggestion !== 'review' && (
+                <button onClick={followSuggestion} style={{ padding: '7px 16px', borderRadius: 10, border: 'none', background: '#2563eb', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>
+                  اقدام طبق پیشنهاد ({b.suggestion === 'approve' ? 'تأیید مرخصی' : 'رد مرخصی'})
+                </button>
+              )}
+              <button onClick={dismiss} style={{ padding: '7px 16px', borderRadius: 10, border: '1px solid #cbd5e1', background: '#fff', color: '#334155', fontWeight: 700, cursor: 'pointer' }}>
+                نادیده گرفتن پیشنهاد
+              </button>
+            </div>
+          </section>
+        );
+      })()}
 
       {sim && (
         <section style={{ background: sim.ok ? '#f0fdf4' : '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: 12, padding: 16, marginTop: 16 }}>

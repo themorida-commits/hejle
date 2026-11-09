@@ -21,7 +21,7 @@ import {
 import type {
   Patient, Admission, PatientAssignment, NursingReport, Handover,
 } from '../features/patients/patientService';
-import type { AgentRunRecord, HospitalSnapshot, HospitalSettingsRecord, KaranehProfileRecord } from '../services/data/types';
+import type { AgentDraftRecord, AgentRunRecord, HospitalSnapshot, HospitalSettingsRecord, KaranehProfileRecord } from '../services/data/types';
 import { askPolicy as runPolicyAnswer, zoneOf, type PolicyAnswer } from '../features/agents/agentCore';
 import { POLICY_CORPUS } from '../features/agents/policyCorpus';
 import type { GlobalDutySettings } from '../core/types';
@@ -184,6 +184,10 @@ interface AppState {
   agentRuns: AgentRunRecord[];
   recordAgentRun: (agentKey: string, input: Record<string, unknown>, output: Record<string, unknown> | null, citations: AgentRunRecord['citations']) => void;
   askPolicy: (question: string) => PolicyAnswer;
+  /** فاز ۲ (دور ۱۸) — پیش‌نویس‌های Zone C؛ تصمیم (تأیید/رد) فقط با اکشن انسان. */
+  agentDrafts: AgentDraftRecord[];
+  createAgentDraft: (kind: string, payload: Record<string, unknown>) => AgentDraftRecord;
+  decideAgentDraft: (id: string, decision: 'approved' | 'rejected') => void;
   addPersonnelBulk: (list: Personnel[]) => void;
   importEntries: (list: ScheduleEntry[]) => void;
   karanehProfiles: KaranehProfileRecord[];
@@ -267,8 +271,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     // ردّ اجراهای ایجنت سطح بیمارستان است؛ اگر مایگریشن ۰۰۱۴ هنوز اعمال نشده
     // باشد خواندنش خطا می‌دهد و بی‌سروصدا خالی می‌ماند.
     try {
-      const runs = await createRepositories('supabase').agents.listRuns(hospitalId);
-      set({ agentRuns: runs });
+      const agents = createRepositories('supabase').agents;
+      const [runs, drafts] = await Promise.all([agents.listRuns(hospitalId), agents.listDrafts(hospitalId)]);
+      set({ agentRuns: runs, agentDrafts: drafts });
     } catch (err) { console.error('agent runs load failed', err); }
   },
   loadWard: async (wardId) => {
@@ -323,6 +328,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   patientReports: demoState.patientReports,
   handovers: demoState.handovers,
   agentRuns: [],
+  agentDrafts: [],
   attendanceEvents: seedAttendance(demoState.entries),
   credentials: seedDemoCredentials(
     demoState.personnel.filter(p => p.departmentId === 'dep1').map(p => p.id),
@@ -602,6 +608,38 @@ export const useAppStore = create<AppState>((set, get) => ({
     })
       .then(saved => set((s) => ({ agentRuns: s.agentRuns.map(r => (r.id === optimistic.id ? saved : r)) })))
       .catch(err => console.error('agent run persist failed', err));
+  },
+  createAgentDraft: (kind, payload) => {
+    const st = get();
+    const hospitalId = st.dataSource === 'supabase'
+      ? useSessionStore.getState().hospitalId
+      : DEMO_HOSPITAL_ID;
+    const now = new Date().toISOString();
+    const optimistic: AgentDraftRecord = {
+      id: `draft-${Date.now()}`, hospitalId: hospitalId ?? '', runId: null, kind,
+      payload, status: 'draft', decidedBy: null, decidedAt: null,
+      createdAt: now, updatedAt: now,
+    };
+    if (!hospitalId) return optimistic;
+    set((s) => ({ agentDrafts: [optimistic, ...s.agentDrafts].slice(0, 100) }));
+    void createRepositories(st.dataSource).agents.createDraft({
+      hospitalId, runId: null, kind, payload, status: 'draft', decidedBy: null, decidedAt: null,
+    })
+      .then(saved => set((s) => ({ agentDrafts: s.agentDrafts.map(d => (d.id === optimistic.id ? saved : d)) })))
+      .catch(err => console.error('agent draft persist failed', err));
+    return optimistic;
+  },
+  decideAgentDraft: (id, decision) => {
+    const st = get();
+    const atISO = new Date().toISOString();
+    set((s) => ({
+      agentDrafts: s.agentDrafts.map(d =>
+        d.id === id ? { ...d, status: decision, decidedBy: st.currentEmployeeId, decidedAt: atISO, updatedAt: atISO } : d),
+    }));
+    // decided_by در دیتابیس به auth.users وصل است؛ در حالت supabase مثل createdBy ردّ اجراها null می‌رود.
+    void createRepositories(st.dataSource).agents.decideDraft(
+      id, decision, st.dataSource === 'supabase' ? null : st.currentEmployeeId, atISO,
+    ).catch(err => console.error('agent draft decide persist failed', err));
   },
   askPolicy: (question) => {
     const ans = runPolicyAnswer(POLICY_CORPUS, question);

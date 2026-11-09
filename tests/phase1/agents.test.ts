@@ -54,13 +54,13 @@ test('AG-2 سؤال ناشناخته: null و پاسخ «بدون سند» — �
   assert.equal(ans.kind, 'none');
 });
 
-test('AG-3 قفل Zone D: اکشن‌های «هرگز» ابزار نیستند؛ فاز ۱ فقط Zone A', () => {
+test('AG-3 قفل Zone D: اکشن‌های «هرگز» ابزار نیستند؛ ابزارهای فاز ۱ Zone A', () => {
   const toolKeys = new Set(AGENT_TOOLS.map(t => t.key));
   for (const d of ZONE_D_ACTIONS) assert.ok(!toolKeys.has(d), `Zone D نباید ابزار باشد: ${d}`);
-  for (const t of AGENT_TOOLS) {
-    assert.ok(['A', 'B', 'C'].includes(t.zone));
-    assert.equal(t.zone, 'A', `ابزار فاز ۱ باید Zone A باشد: ${t.key}`);
-    assert.equal(zoneOf(t.key), 'A');
+  for (const t of AGENT_TOOLS) assert.ok(['A', 'B', 'C'].includes(t.zone));
+  // چهار ابزار فاز ۱ خواندنی‌اند و Zone A می‌مانند (ابزارهای فاز ۲ در تست P2-6 پوشش داده می‌شوند).
+  for (const key of ['policy_lookup', 'credential_radar', 'anomaly_scan', 'explain_output']) {
+    assert.equal(zoneOf(key), 'A', `ابزار فاز ۱ باید Zone A باشد: ${key}`);
   }
   assert.equal(zoneOf('karaneh_amount_finalize'), null);
 });

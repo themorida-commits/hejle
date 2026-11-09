@@ -6,6 +6,8 @@ import {
   NO_GROUNDED_ANSWER_FA, credentialRadar, anomalyScan, explainAnomaly,
   type PolicyAnswer, type RadarBucket,
 } from '../features/agents/agentCore';
+import { checkMonthPack, type PackFindingKind } from '../features/agents/packCheck';
+import { forecastCensus } from '../features/agents/censusBaseline';
 
 // مرکز ایجنت‌ها — فاز ۱ لایهٔ ایجنت (NUR-DR-2026-003، دور ۱۷).
 // هر سه ابزار Zone A هستند: فقط می‌خوانند و توضیح می‌دهند. پاسخ copilot از
@@ -28,6 +30,19 @@ const AGENT_LABELS: Record<string, string> = {
   credential_radar: 'رادار مدارک',
   anomaly_scan: 'اسکن ناهنجاری کارکرد',
   explain_output: 'توضیح خروجی',
+  leave_triage: 'تریاژ مرخصی',
+  roster_explain: 'توضیح برنامه',
+  report_draft: 'پیش‌نویس گزارش',
+  pack_check: 'چک بستهٔ ماه',
+  census_baseline: 'خط مبنای census',
+};
+
+const PACK_KIND_FA: Record<PackFindingKind, string> = {
+  service_without_tariff: 'خدمت بدون بستهٔ تعرفه/K',
+  unsigned_report: 'گزارش امضانشده',
+  unaccepted_handover: 'تحویل پذیرفته‌نشده',
+  admission_no_attending: 'پذیرش بدون پزشک معالج',
+  admission_day_no_responsible: 'روز بدون پرستار مسئول',
 };
 
 export default function AgentsPage() {
@@ -84,14 +99,42 @@ export default function AgentsPage() {
     setScanSaved(true);
   };
 
+  // ── چک بستهٔ ماه تعرفه/کارانه (Zone C — دور ۱۸) ───────────────────────────
+  const packFindings = useMemo(() => checkMonthPack({
+    nursingRecords: st.nursingRecords.filter(r => r.wardId === st.departmentId),
+    nursingPackages: st.nursingPackages,
+    patientReports: st.patientReports, handovers: st.handovers,
+    admissions: st.admissions, assignments: st.patientAssignments,
+    patients: st.patients,
+    employeeName: (id) => st.personnel.find(p => p.id === id)?.name ?? id,
+    jYear: J_YEAR, jMonth: J_MONTH,
+  }), [st.nursingRecords, st.nursingPackages, st.patientReports, st.handovers,
+    st.admissions, st.patientAssignments, st.patients, st.personnel, st.departmentId]);
+  const [packSaved, setPackSaved] = useState(false);
+  const savePackReport = () => {
+    st.recordAgentRun('pack_check', { jYear: J_YEAR, jMonth: J_MONTH, wardId: st.departmentId },
+      { findings: packFindings.length, high: packFindings.filter(f => f.severity === 'high').length }, []);
+    st.createAgentDraft('pack_check', { jYear: J_YEAR, jMonth: J_MONTH, findings: packFindings });
+    setPackSaved(true);
+  };
+
+  // ── پیش‌بینی خط مبنای census (مدل کلاسیک — دور ۱۸) ────────────────────────
+  const census = useMemo(
+    () => forecastCensus(
+      st.admissions.map(a => ({ admittedAtISO: a.admittedAtISO, dischargedAtISO: a.dischargedAtISO })),
+      7, todayISO,
+    ),
+    [st.admissions, todayISO],
+  );
+
   const monthName = MONTHS.find(m => m.value === J_MONTH)?.name ?? '';
 
   return (
     <div>
       <h1 style={{ fontSize: 20, fontWeight: 800, color: '#0f172a', margin: '4px 0 4px' }}>مرکز ایجنت‌ها</h1>
       <p style={{ fontSize: 13, color: '#64748b', margin: '0 0 16px' }}>
-        فاز ۱ لایهٔ ایجنت (تصمیم NUR-DR-2026-003): این ابزارها فقط می‌خوانند و توضیح می‌دهند؛
-        تصمیم نهایی همیشه با موتور قوانین و انسان است. هر اجرا در ردّ اجراها ثبت می‌شود.
+        لایهٔ ایجنت (تصمیم NUR-DR-2026-003): ابزارهای فاز ۱ فقط می‌خوانند و توضیح می‌دهند؛ ابزارهای فاز ۲ (Zone C)
+        پیش‌نویس و پیشنهاد می‌سازند و تصمیم نهایی همیشه با موتور قوانین و انسان است. هر اجرا در ردّ اجراها ثبت می‌شود.
       </p>
 
       {/* ── الف) copilot آیین‌نامه ─────────────────────────────────────────── */}
@@ -240,6 +283,75 @@ export default function AgentsPage() {
               </li>
             ))}
           </ul>
+        )}
+      </section>
+
+      {/* ── د) چک بستهٔ ماه (تعرفه/کارانه) ──────────────────────────────────── */}
+      <section style={card}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+          <h2 style={{ fontSize: 15, fontWeight: 800, margin: 0 }}>چک بستهٔ ماه (تعرفه/کارانه) — {monthName} {faNum(J_YEAR)}</h2>
+          <button onClick={savePackReport} disabled={packSaved}
+            style={{ padding: '6px 14px', borderRadius: 10, border: '1px solid #cbd5e1', background: packSaved ? '#f1f5f9' : '#fff', color: '#334155', fontSize: 12, fontWeight: 700, cursor: packSaved ? 'default' : 'pointer' }}>
+            {packSaved ? 'گزارش ثبت شد' : 'ثبت گزارش'}
+          </button>
+        </div>
+        <p style={{ fontSize: 12, color: '#64748b', margin: '10px 0 0' }}>
+          پیش از بستن ماه: خدمتی که بستهٔ تعرفه/K ندارد وارد توزیع نمی‌شود و روزی از اپیزود که پرستار مسئول ندارد، خلأ پاسخگویی است. یافته‌ها قطعی‌اند و «ثبت گزارش» آن‌ها را پیش‌نویس ایجنت می‌کند؛ بستن ماه و مبلغ‌ها با انسان است.
+        </p>
+        {packFindings.length === 0 ? (
+          <p style={{ fontSize: 13, color: '#047857', margin: '12px 0 0', fontWeight: 700 }}>
+            بستهٔ این ماه کامل است: خدمت بدون تعرفه، گزارش امضانشده، تحویل باز و خلأ پاسخگویی دیده نشد.
+          </p>
+        ) : (
+          (Object.keys(PACK_KIND_FA) as PackFindingKind[]).map(kind => {
+            const group = packFindings.filter(f => f.kind === kind);
+            if (group.length === 0) return null;
+            return (
+              <div key={kind} style={{ marginTop: 12 }}>
+                <div style={{ fontSize: 12, fontWeight: 800, color: '#475569' }}>{PACK_KIND_FA[kind]} — {faNum(group.length)} مورد</div>
+                <ul style={{ margin: '6px 0 0', padding: 0, listStyle: 'none' }}>
+                  {group.map((f, i) => (
+                    <li key={`${kind}-${f.refId ?? i}`} style={{ borderTop: '1px solid #e2e8f0', padding: '8px 0', display: 'flex', gap: 8, alignItems: 'baseline' }}>
+                      <span style={{
+                        fontSize: 11, fontWeight: 800, borderRadius: 999, padding: '2px 10px', flexShrink: 0,
+                        background: f.severity === 'high' ? '#fff1f2' : '#fefce8',
+                        color: f.severity === 'high' ? '#be123c' : '#a16207',
+                      }}>{f.severity === 'high' ? 'مهم' : 'متوسط'}</span>
+                      <span style={{ fontSize: 13 }}>{f.message}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            );
+          })
+        )}
+      </section>
+
+      {/* ── ه) پیش‌بینی خط مبنای census بخش ─────────────────────────────────── */}
+      <section style={card}>
+        <h2 style={{ fontSize: 15, fontWeight: 800, margin: '0 0 6px' }}>پیش‌بینی خط مبنای census بخش</h2>
+        <p style={{ fontSize: 12, color: '#64748b', margin: '0 0 10px' }}>
+          مدل خط مبنا — میانگین متحرک (با ۱۴ روز سابقه: میانگین همان روز هفته)؛ این عدد خروجی LLM نیست و فقط ورودی برنامه‌ریزی است — نیاز روزانهٔ نهایی را سرپرستار در جدول برنامه می‌گذارد. بازه‌ها «تقریبی»اند.
+        </p>
+        {census.insufficient ? (
+          <p style={{ fontSize: 13, color: '#64748b', margin: 0 }}>
+            دادهٔ کافی برای خط مبنا نیست: فقط {faNum(census.sampleDays)} روز سابقهٔ census کامل داریم (حداقل ۷ روز لازم است). با ثبت پذیرش/ترخیص‌های بیشتر، این بخش خودکار فعال می‌شود.
+          </p>
+        ) : (
+          <div>
+            <div style={{ fontSize: 12, color: '#64748b', marginBottom: 8 }}>
+              بر پایهٔ {faNum(census.sampleDays)} روز سابقهٔ کامل — میانگین فعلی سری: {census.series.length ? (census.series.reduce((a, p) => a + p.count, 0) / census.series.length).toLocaleString('fa-IR', { maximumFractionDigits: 1 }) : '—'} بیمار
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {census.forecast.slice(0, 3).map(d => (
+                <div key={d.dateISO} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 12, padding: '10px 14px', minWidth: 170 }}>
+                  <div style={{ fontSize: 12, color: '#64748b' }}>{new Intl.DateTimeFormat('fa-IR', { dateStyle: 'medium' }).format(new Date(d.dateISO))}</div>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: '#0f172a' }}>{d.mean.toLocaleString('fa-IR', { maximumFractionDigits: 1 })} بیمار</div>
+                  <div style={{ fontSize: 12, color: '#64748b' }}>بازهٔ تقریبی: {d.low.toLocaleString('fa-IR', { maximumFractionDigits: 1 })} تا {d.high.toLocaleString('fa-IR', { maximumFractionDigits: 1 })}</div>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
       </section>
     </div>

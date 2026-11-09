@@ -13,6 +13,7 @@ import { buildEmployeeFacts, evaluateRules, DEFAULT_RULE_CONFIGS } from '../core
 import { scheduleSolver } from '../services/scheduleSolverClient';
 import { credentialGate } from '../features/credentials/credentialService';
 import { buildSymbolResolver, parseRosterGridCsv, rosterGridTemplateCsv, type RosterImportResult } from '../features/import/rosterImport';
+import { explainRoster, type RosterBrief } from '../features/agents/rosterExplain';
 
 function RosterImportCard() {
   const st = useAppStore();
@@ -75,6 +76,80 @@ function RosterImportCard() {
       )}
       {applied > 0 && <div style={{ marginTop: 6, fontSize: 13, color: '#16a34a' }}>{fa(applied)} شیفت از فایل روی برنامه نشست.</div>}
     </details>
+  );
+}
+
+/**
+ * پنل «توضیح ایجنت» — فاز ۲ لایهٔ ایجنت (Zone C، دور ۱۸): خوانش ساخت‌یافتهٔ
+ * برنامهٔ بارگذاری‌شده (توازن شب‌ها، خانه‌های خالی نیاز روزانه، قفل‌های دستی،
+ * قانون سرپرستار). فقط خواندنی است؛ «ثبت» آن را پیش‌نویس + ردّ اجرا می‌کند و
+ * تصمیم انتشار برنامه همان مسیر همیشگی خودش را دارد.
+ */
+function RosterExplainPanel() {
+  const st = useAppStore();
+  const [brief, setBrief] = useState<RosterBrief | null>(null);
+  const [saved, setSaved] = useState(false);
+  const deptPeople = st.personnel.filter(p => p.departmentId === st.departmentId);
+  const deptIds = new Set(deptPeople.map(p => p.id));
+  const deptEntries = st.entries.filter(e => deptIds.has(e.personnelId));
+  const fa = (n: number) => n.toLocaleString('fa-IR', { maximumFractionDigits: 1 });
+  const run = () => {
+    setBrief(explainRoster({
+      scheduleId: st.scheduleId, personnel: deptPeople, entries: deptEntries,
+      shiftTypes: st.shiftTypes, dailyReqs: st.dailyReqs, jYear: J_YEAR, jMonth: J_MONTH,
+    }));
+    setSaved(false);
+  };
+  const save = () => {
+    if (!brief) return;
+    st.recordAgentRun('roster_explain', { scheduleId: st.scheduleId },
+      { unfilled: brief.unfilled.length, manualLocks: brief.manualLocks, headNurseViolations: brief.headNurseViolations }, []);
+    st.createAgentDraft('roster_explain', {
+      scheduleId: st.scheduleId, lines: brief.lines, nightsSpread: brief.nightsSpread,
+      unfilled: brief.unfilled, manualLocks: brief.manualLocks,
+      headNurseViolations: brief.headNurseViolations, perEmployee: brief.perEmployee,
+    });
+    setSaved(true);
+  };
+  return (
+    <section style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: '12px 16px', marginBottom: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
+        <strong style={{ fontSize: 13 }}>توضیح ایجنت — خوانش برنامهٔ ماه (Zone C)</strong>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={run} style={{ padding: '6px 14px', borderRadius: 10, border: '1px solid #2563eb', background: '#fff', color: '#2563eb', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>توضیح ایجنت</button>
+          {brief && (
+            <button onClick={save} disabled={saved}
+              style={{ padding: '6px 14px', borderRadius: 10, border: '1px solid #cbd5e1', background: saved ? '#f1f5f9' : '#fff', color: '#334155', fontSize: 12, fontWeight: 700, cursor: saved ? 'default' : 'pointer' }}>
+              {saved ? 'پیش‌نویس ثبت شد' : 'ثبت به‌عنوان پیش‌نویس'}
+            </button>
+          )}
+        </div>
+      </div>
+      {!brief && <p style={{ fontSize: 12, color: '#64748b', margin: '8px 0 0' }}>توضیح از روی همین مدخل‌های بارگذاری‌شده ساخته می‌شود: توازن شیفت شب، خانه‌های نیاز روزانهٔ پرنشده، سلول‌های دستی و قانون ثابت سرپرستار.</p>}
+      {brief && (
+        <div style={{ marginTop: 10 }}>
+          <ul style={{ margin: 0, paddingInlineStart: 18, fontSize: 13, lineHeight: 2 }}>
+            {brief.lines.map((l, i) => <li key={i}>{l}</li>)}
+          </ul>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, marginTop: 10 }}>
+            <thead>
+              <tr style={{ background: '#f1f5f9', textAlign: 'right' }}>
+                <th style={{ padding: '6px 8px' }}>نام</th><th>مجموع</th><th>صبح</th><th>عصر</th><th>شب</th><th>جمعه</th><th>دستی</th>
+              </tr>
+            </thead>
+            <tbody>
+              {brief.perEmployee.map(s => (
+                <tr key={s.employeeId} style={{ borderTop: '1px solid #e2e8f0' }}>
+                  <td style={{ padding: '6px 8px', fontWeight: 700 }}>{s.name}</td>
+                  <td>{fa(s.total)}</td><td>{fa(s.mornings)}</td><td>{fa(s.evenings)}</td>
+                  <td>{fa(s.nights)}</td><td>{fa(s.weekends)}</td><td>{fa(s.manual)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </section>
   );
 }
 
@@ -247,6 +322,7 @@ export default function SchedulerPage() {
       <p style={{ fontSize: 12, color: '#64748b' }}>روی هر باکس شیفت کلیک کنید تا گزینه‌های شیفت باز شود و انتخاب کنید؛ خانهٔ انتخاب‌شده «دستی» می‌شود و در تولید خودکار قفل می‌ماند. برای سرپرستار، طبق قانون ثابت جدول، فقط صبح و آف قابل انتخاب است. سه ردیف «نیاز بخش» بالای جدول ورودی مستقیم شماست: عدد هر روز را همان‌جا وارد کنید یا با خانهٔ «همهٔ روزها» یک عدد برای کل ماه بگذارید؛ «تولید خودکار برنامه» دقیقاً با همین نیازها می‌چیند. در وضعیت منتشرشده ویرایش قفل است.</p>
       <GenerationSettingsPanel />
       <RosterImportCard />
+      <RosterExplainPanel />
       {(gate.blocked.length > 0 || gate.warnings.length > 0) && (
         <div style={{ background: '#f8fafc', border: '1px solid #fde68a', borderRadius: 12, padding: '10px 14px', marginBottom: 12, fontSize: 13 }}>
           {gate.blocked.length > 0 && (

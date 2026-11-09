@@ -7,6 +7,7 @@ import {
   buildEpisodeTimeline, rosterCandidatesByShift, reportCompleteness, emptyReportBody,
   type Admission, type CareShift, type Handover, type NursingReport, type PatientAssignment,
 } from '../features/patients/patientService';
+import { composeReportDraft } from '../features/agents/reportDraft';
 
 // پروندهٔ بیمار — یک صفحه، چهار جواب دقیق: چرا پذیرش شد، دکترش کیست، هر شیفت
 // پرستارش کی بوده و گزارش امضاشده‌اش چیست، و تحویل‌ها به چه کسی انجام شده.
@@ -53,6 +54,9 @@ export default function PatientFilePage() {
   const [repAuthor, setRepAuthor] = useState('');
   const [repBody, setRepBody] = useState(emptyReportBody());
   const [repError, setRepError] = useState('');
+  // پیش‌نویس روایی ایجنت (Zone C — دور ۱۸): null یعنی با دکمهٔ ساخت ساخته نشده؛
+  // فقط وقتی پرستار از همین مسیر ساخته باشد، هنگام ثبت گزارش draft ایجنت هم ثبت می‌شود.
+  const [repNarrative, setRepNarrative] = useState<string | null>(null);
   // فرم تحویل
   const [hovForm, setHovForm] = useState({ fromAssignmentId: '', receiverId: '', dateISO: todayISO, shift: 'evening' as CareShift, situation: '', background: '', assessment: '', recommendation: '', stateSummary: '' });
   // ترخیص
@@ -82,6 +86,15 @@ export default function PatientFilePage() {
       ...(asg ? { assignmentId: asg.id } : {}),
     };
     st.addPatientReport(report);
+    if (repNarrative !== null) {
+      st.recordAgentRun('report_draft', { admissionId: admission.id, reportId: report.id },
+        { chars: repNarrative.length }, []);
+      st.createAgentDraft('report_draft', {
+        admissionId: admission.id, reportId: report.id,
+        dateISO: repDate, shift: repShift, text: repNarrative,
+      });
+      setRepNarrative(null);
+    }
     setRepBody(emptyReportBody());
     setRepError('');
   };
@@ -252,6 +265,19 @@ export default function PatientFilePage() {
                 </label>
               ))}
             </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10, alignItems: 'center' }}>
+              <button onClick={() => { const t = composeReportDraft(repBody); if (t) setRepNarrative(t); }}
+                style={{ padding: '8px 16px', borderRadius: 10, border: '1px solid #2563eb', background: '#fff', color: '#2563eb', fontWeight: 700, cursor: 'pointer' }}>
+                ساخت پیش‌نویس روایی از بخش‌ها (ایجنت)
+              </button>
+              <span style={{ fontSize: 12, color: '#64748b' }}>متن روایی فقط از همین بخش‌های پرشده ساخته می‌شود؛ ویرایش و امضایش با خودتان است.</span>
+            </div>
+            {repNarrative !== null && (
+              <label style={{ fontSize: 12, display: 'block', marginTop: 10 }}>متن روایی پیش‌نویس — آزادانه ویرایش کنید
+                <textarea value={repNarrative} onChange={e => setRepNarrative(e.target.value)} rows={6}
+                  style={{ ...inputStyle, width: '100%', resize: 'vertical', lineHeight: 2 }} />
+              </label>
+            )}
             <button onClick={addReport} style={{ marginTop: 10, padding: '8px 16px', borderRadius: 10, border: 'none', background: '#2563eb', color: '#fff', fontWeight: 700, cursor: 'pointer' }}>ثبت پیش‌نویس گزارش</button>
           </div>
         )}
