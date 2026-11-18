@@ -114,7 +114,7 @@ export default function CommandPalette({ open, onClose }: { open: boolean; onClo
                 color: '#0A2735', borderRadius: 10, padding: '9px 12px', fontSize: 13.5, cursor: 'pointer',
               }}
             >
-              <span style={{ fontSize: 10.5, fontWeight: 700, color: '#004E72', background: '#f1f5f9', border: '1px solid #e2e8f0', borderRadius: 999, padding: '1px 8px', flexShrink: 0 }}>{e.group}</span>
+              <span className="chip" style={{ fontSize: 10.5, color: '#004E72', background: '#f1f5f9', border: '1px solid #e2e8f0', flexShrink: 0 }}>{e.group}</span>
               <span style={{ fontWeight: 600 }}>{e.title}</span>
               {e.hint && <span style={{ color: '#64748b', fontSize: 12 }}>{e.hint}</span>}
             </button>

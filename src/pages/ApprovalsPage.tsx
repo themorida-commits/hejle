@@ -219,10 +219,11 @@ export default function ApprovalsPage() {
             return (
               <section
                 key={item.id}
+                className="card"
                 onClick={() => setSelIdx(idx)}
                 style={{
-                  background: '#fff', border: `1px solid ${isSel ? '#004E72' : '#e2e8f0'}`,
-                  borderRadius: 14, padding: '12px 16px', cursor: 'pointer',
+                  border: `1px solid ${isSel ? '#004E72' : '#e2e8f0'}`,
+                  padding: '12px 16px', cursor: 'pointer',
                   boxShadow: isSel ? '0 0 0 3px #DCE9F0' : 'none',
                 }}
               >
@@ -236,7 +237,7 @@ export default function ApprovalsPage() {
                       title="این مرخصی کم‌ریسک است (گام نهایی، پوشش کافی) و می‌تواند گروهی تأیید شود"
                     />
                   )}
-                  <span style={{ fontSize: 11, fontWeight: 700, background: badge.bg, color: badge.fg, borderRadius: 999, padding: '2px 9px' }}>{badge.label}</span>
+                  <span className="chip" style={{ background: badge.bg, color: badge.fg }}>{badge.label}</span>
                   <strong style={{ fontSize: 14.5 }}>{item.title}</strong>
                   {item.bulkEligible && <span style={{ fontSize: 11.5, color: '#15803d', fontWeight: 700 }}>کم‌ریسک · قابل تأیید گروهی</span>}
                   <span style={{ marginInlineStart: 'auto', display: 'flex', gap: 8 }}>

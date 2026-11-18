@@ -80,6 +80,11 @@ input:focus, select:focus { border-color: var(--primary); outline: none; backgro
 .stat-card { box-shadow: var(--shadow-sm); transition: box-shadow 0.15s ease; }
 .stat-card:hover { box-shadow: var(--shadow-md); }
 
+/* لایهٔ توکنِ مشترک (دور ۲۵ — مهاجرت تدریجی از استایل‌های inline):
+   کارت و چیپ وضعیت؛ رنگ‌های اختصاصی هر کاربرد inline می‌مانند، اسکلت مشترک این‌جاست. */
+.card { background: var(--surface, #fff); border: 1px solid var(--border, #e2e8f0); border-radius: 16px; padding: 16px; }
+.chip { display: inline-flex; align-items: center; font-size: 11px; font-weight: 700; border-radius: 999px; padding: 2px 9px; }
+
 h1 { font-size: 22px; font-weight: 800; letter-spacing: -0.01em; }
 h2 { font-size: 17px; font-weight: 700; }
 table th { font-weight: 700; }

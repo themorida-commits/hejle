@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore, J_YEAR, J_MONTH } from '../store/appStore';
 import { buildMonthGrid, applyManualEdit, shiftSymbol, hasAnyDailyReq, contrastTextColor } from '../features/roster/rosterModel';
@@ -13,6 +13,7 @@ import { buildEmployeeFacts, evaluateRules, DEFAULT_RULE_CONFIGS, categorizeShif
 import { scheduleSolver } from '../services/scheduleSolverClient';
 import { credentialGate, credentialStatus, STATUS_FA, KIND_FA } from '../features/credentials/credentialService';
 import { LEAVE_TYPES } from '../features/leave/leaveService';
+import { neighborCell, planCellDrag, type PlannedEdit } from '../features/roster/dragPlan';
 
 const faDayMonth = (iso: string) => new Intl.DateTimeFormat('fa-IR', { day: 'numeric', month: 'long' }).format(new Date(iso));
 import { buildSymbolResolver, parseRosterGridCsv, rosterGridTemplateCsv, type RosterImportResult } from '../features/import/rosterImport';
@@ -223,6 +224,17 @@ export default function SchedulerPage() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [panelPersonId]);
+  // کنترل‌های گرید (دور ۲۵ — موج ۲): تراکم، overlayها، فیلتر و نما.
+  // view و density از URL هم خوانده می‌شوند تا لینکِ همان نما قابل‌فرستادن باشد.
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>(() => (new URLSearchParams(window.location.search).get('view') === 'list' ? 'list' : 'grid'));
+  const [density, setDensity] = useState<'comfortable' | 'compact'>(() => (new URLSearchParams(window.location.search).get('density') === 'compact' ? 'compact' : 'comfortable'));
+  const [showLeave, setShowLeave] = useState(true);
+  const [showHolidays, setShowHolidays] = useState(true);
+  const [showConflicts, setShowConflicts] = useState(true);
+  const [nameFilter, setNameFilter] = useState('');
+  const [roleFilter, setRoleFilter] = useState('');
+  const [dragOverKey, setDragOverKey] = useState<string | null>(null);
+  const gridWrapRef = useRef<HTMLDivElement>(null);
   const deptPeople = st.personnel.filter(p => p.departmentId === st.departmentId);
   const deptIds = useMemo(() => new Set(deptPeople.map(p => p.id)), [deptPeople]);
   const deptEntries = st.entries.filter(e => deptIds.has(e.personnelId));
@@ -257,6 +269,18 @@ export default function SchedulerPage() {
   );
   const blockedIds = useMemo(() => new Set(gate.blocked.map(b => b.employeeId)), [gate]);
   const nameOf = (id: string) => deptPeople.find(p => p.id === id)?.name ?? id;
+  // فیلتر نمایشی ردیف‌ها (دور ۲۵): فقط ارائه است — شمارش پوشش و تعارض‌ها همیشه کل بخش‌اند.
+  const visiblePeople = useMemo(
+    () => deptPeople.filter(p => (!nameFilter || p.name.includes(nameFilter)) && (!roleFilter || p.role === roleFilter)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [deptPeople, nameFilter, roleFilter],
+  );
+  const deptRoles = useMemo(() => [...new Set(deptPeople.map(p => p.role))], [deptPeople]);
+  // خانه‌های درگیر نقض سخت قواعد، برای overlay تعارض روی خود گرید.
+  const conflictKeys = useMemo(
+    () => new Set(violations.filter(v => v.severity === 'hard' && v.employeeId && v.jDay).map(v => `${v.employeeId}|${v.jDay}`)),
+    [violations],
+  );
 
   const openPicker = (personnelId: string, dateISO: string) => {
     if (st.scheduleStatus === 'published') return;
@@ -268,6 +292,68 @@ export default function SchedulerPage() {
     const others = st.entries.filter(e => !deptIds.has(e.personnelId));
     st.setEntries([...others, ...applyManualEdit(deptEntries, personnelId, dateISO, shiftTypeId)]);
     setPicker(null);
+  };
+
+  // اعمال چند ویرایش با هم (درگ‌ودراپ — دور ۲۵): همان مسیر applyManualEdit پیکر،
+  // با undo روی کل مدخل‌های پیشین.
+  const applyEdits = (edits: PlannedEdit[], doneMsg: string) => {
+    const prevAll = st.entries;
+    const others = st.entries.filter(e => !deptIds.has(e.personnelId));
+    let next = deptEntries;
+    for (const e of edits) next = applyManualEdit(next, e.personnelId, e.dateISO, e.shiftTypeId);
+    st.setEntries([...others, ...next]);
+    toast.success(doneMsg, { actionLabel: 'بازگردانی', onAction: () => st.setEntries(prevAll) });
+  };
+
+  const onCellDrop = (targetPid: string, targetISO: string, e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOverKey(null);
+    if (st.scheduleStatus === 'published') return;
+    const raw = e.dataTransfer.getData('text/plain');
+    const [srcPid, srcISO] = raw.split('|');
+    if (!srcPid || !srcISO) return;
+    if (blockedIds.has(srcPid) || blockedIds.has(targetPid)) {
+      toast.error('یکی از طرف‌های جابه‌جایی قفل صلاحیت دارد و قابل ویرایش نیست.');
+      return;
+    }
+    const plan = planCellDrag({
+      source: { personnelId: srcPid, dateISO: srcISO },
+      target: { personnelId: targetPid, dateISO: targetISO },
+      entries: deptEntries, shiftTypes: st.shiftTypes,
+      isHeadNurse: id => (deptPeople.find(p => p.id === id)?.role ?? '').includes('سرپرستار'),
+    });
+    if (!plan.ok) { toast.error(plan.reason); return; }
+    applyEdits(plan.edits, srcPid === targetPid ? 'شیفت به روز مقصد منتقل شد.' : 'جابه‌جایی دو خانه اعمال شد.');
+  };
+
+  // ناوبری و ویرایش صفحه‌کلیدی روی گرید (دور ۲۵): جهت‌نما بین خانه‌ها (RTL-aware)،
+  // ارقام ۱ تا ۹ چیدن مستقیم شیفت از همان فهرست پیکر — جایگزین کاملِ بدون درگ.
+  const onGridKeyDown = (e: React.KeyboardEvent) => {
+    const btn = (e.target as HTMLElement).closest<HTMLButtonElement>('button[data-cell]');
+    if (!btn) return;
+    const pIdx = Number(btn.dataset.pidx);
+    const jDay = Number(btn.dataset.jday);
+    const pid = btn.dataset.pid!;
+    const dateISO = btn.dataset.dateiso!;
+    if (e.key.startsWith('Arrow')) {
+      const nb = neighborCell(pIdx, jDay - 1, e.key, visiblePeople.length, dayCount);
+      if (!nb) return;
+      e.preventDefault();
+      gridWrapRef.current?.querySelector<HTMLButtonElement>(`button[data-pidx="${nb.personIdx}"][data-jday="${nb.dayIdx + 1}"]`)?.focus();
+      return;
+    }
+    if (/^[1-9]$/.test(e.key) && st.scheduleStatus === 'draft' && !picker) {
+      const shift = st.shiftTypes[Number(e.key) - 1];
+      if (!shift) return;
+      if (blockedIds.has(pid)) { toast.error('این همکار قفل صلاحیت دارد و قابل ویرایش نیست.'); return; }
+      const person = deptPeople.find(p => p.id === pid);
+      if (person?.role.includes('سرپرستار') && shift.id !== 's-m' && shift.id !== 's-off') {
+        toast.error('قانون ثابت: سرپرستار فقط شیفت صبح دارد.');
+        return;
+      }
+      e.preventDefault();
+      pickShift(pid, dateISO, shift.id);
+    }
   };
 
   const regenerate = async () => {
@@ -394,7 +480,59 @@ export default function SchedulerPage() {
         })}
         <span style={{ fontSize: 11.5, color: '#64748b' }}>با کلیک روی شمارهٔ روز در سربرگ جدول هم روز متمرکز عوض می‌شود.</span>
       </div>
-      <div className="scroll-slim" style={{ overflow: 'auto', maxHeight: 'calc(100vh - 215px)', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 16, boxShadow: '0 1px 2px rgb(15 23 42 / 0.05), 0 1px 3px rgb(15 23 42 / 0.06)' }}>
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: '8px 14px', marginBottom: 12 }}>
+        <span style={{ display: 'flex', gap: 4 }} role="group" aria-label="نمای جدول">
+          <button onClick={() => setViewMode('grid')} className={viewMode === 'grid' ? '' : 'btn-secondary'} style={{ padding: '4px 12px', fontSize: 12 }}>گرید</button>
+          <button onClick={() => setViewMode('list')} className={viewMode === 'list' ? '' : 'btn-secondary'} style={{ padding: '4px 12px', fontSize: 12 }} title="نمای فهرستی روزبه‌روز برای مرور سریع؛ ویرایش در گرید است">فهرست</button>
+        </span>
+        <span style={{ display: 'flex', gap: 4 }} role="group" aria-label="تراکم جدول">
+          <button onClick={() => setDensity('comfortable')} className={density === 'comfortable' ? '' : 'btn-secondary'} style={{ padding: '4px 12px', fontSize: 12 }}>راحت</button>
+          <button onClick={() => setDensity('compact')} className={density === 'compact' ? '' : 'btn-secondary'} style={{ padding: '4px 12px', fontSize: 12 }} title="تراکم فشرده برای بخش‌های پرنفر">فشرده</button>
+        </span>
+        <label style={{ display: 'flex', gap: 5, alignItems: 'center', fontSize: 12.5 }}>
+          <input type="checkbox" checked={showLeave} onChange={e => setShowLeave(e.target.checked)} /> مرخصی‌ها
+        </label>
+        <label style={{ display: 'flex', gap: 5, alignItems: 'center', fontSize: 12.5 }}>
+          <input type="checkbox" checked={showHolidays} onChange={e => setShowHolidays(e.target.checked)} /> تعطیلات و جمعه‌ها
+        </label>
+        <label style={{ display: 'flex', gap: 5, alignItems: 'center', fontSize: 12.5 }}>
+          <input type="checkbox" checked={showConflicts} onChange={e => setShowConflicts(e.target.checked)} /> تعارض‌های سخت
+        </label>
+        <input value={nameFilter} onChange={e => setNameFilter(e.target.value)} placeholder="فیلتر نام…" aria-label="فیلتر بر اساس نام" style={{ width: 128, padding: '5px 9px', fontSize: 12.5 }} />
+        <select value={roleFilter} onChange={e => setRoleFilter(e.target.value)} aria-label="فیلتر بر اساس نقش" style={{ padding: '5px 8px', fontSize: 12.5 }}>
+          <option value="">همهٔ نقش‌ها</option>
+          {deptRoles.map(r => <option key={r} value={r}>{r}</option>)}
+        </select>
+        {(nameFilter || roleFilter) && <span style={{ fontSize: 12, color: '#64748b' }}>{fa(visiblePeople.length)} از {fa(deptPeople.length)} نفر</span>}
+        <span style={{ fontSize: 11.5, color: '#94a3b8' }}>صفحه‌کلید: جهت‌نما حرکت بین خانه‌ها · ارقام ۱ تا ۹ چیدن مستقیم شیفت · کشیدن خانه: جابه‌جایی یا سواپ</span>
+      </div>
+      {viewMode === 'list' ? (
+        <section aria-label="نمای فهرستی برنامه" style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 16, padding: '10px 16px' }}>
+          {Array.from({ length: dayCount }, (_, i) => {
+            const dateISO = (grid.get(deptPeople[0]?.id ?? '') ?? [])[i]?.dateISO;
+            if (!dateISO) return null;
+            const byCat: Record<'morning' | 'evening' | 'night', string[]> = { morning: [], evening: [], night: [] };
+            for (const e of deptEntries) {
+              if (e.date !== dateISO) continue;
+              const t = st.shiftTypes.find(s => s.id === e.shiftTypeId);
+              if (!t) continue;
+              const c = categorizeShift(t);
+              if (c === 'morning' || c === 'evening' || c === 'night') byCat[c].push(nameOf(e.personnelId));
+            }
+            const weekday = new Intl.DateTimeFormat('fa-IR', { weekday: 'long' }).format(new Date(dateISO));
+            return (
+              <div key={dateISO} style={{ display: 'flex', gap: 14, padding: '7px 2px', borderBottom: '1px solid #f1f5f9', fontSize: 12.5, flexWrap: 'wrap', alignItems: 'baseline' }}>
+                <strong style={{ minWidth: 118 }}>{fa(i + 1)} مهر · {weekday}</strong>
+                {(['morning', 'evening', 'night'] as const).map(c => (
+                  <span key={c}><b>{SHIFT_FA[c]}:</b> {byCat[c].length ? byCat[c].join('، ') : '—'}</span>
+                ))}
+              </div>
+            );
+          })}
+          <p style={{ fontSize: 12, color: '#64748b', marginBottom: 2 }}>نمای فهرستی فقط برای مرور است؛ ویرایش در نمای گرید انجام می‌شود.</p>
+        </section>
+      ) : (
+      <div ref={gridWrapRef} onKeyDown={onGridKeyDown} className="scroll-slim" style={{ overflow: 'auto', maxHeight: 'calc(100vh - 215px)', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 16, boxShadow: '0 1px 2px rgb(15 23 42 / 0.05), 0 1px 3px rgb(15 23 42 / 0.06)' }}>
         <table className="roster-grid" style={{ borderCollapse: 'collapse', fontSize: 12, minWidth: 1280 }}>
           <thead>
             {([['morning', 'تعداد صبح'], ['evening', 'تعداد عصر'], ['night', 'تعداد شب']] as const).map(([shift, label]) => {
@@ -454,7 +592,7 @@ export default function SchedulerPage() {
             </tr>
           </thead>
           <tbody>
-            {deptPeople.map((p, rowIdx) => {
+            {visiblePeople.map((p, rowIdx) => {
               const rec = recOf(p.id);
               const bal = st.leaveBalances[p.id];
               const remaining = bal ? bal.entitled - bal.used : null;
@@ -479,25 +617,41 @@ export default function SchedulerPage() {
                 <td style={infoTd}>{remaining !== null ? fa(remaining) : ''}</td>
                 {(grid.get(p.id) ?? []).map(cell => {
                   const leaveCode = leaveStates.get(`${p.id}|${cell.dateISO}`);
-                  const leaveCell = !cell.entry && leaveCode ? LEAVE_CELL[leaveCode] : undefined;
+                  const leaveCell = showLeave && !cell.entry && leaveCode ? LEAVE_CELL[leaveCode] : undefined;
                   const bg = (leaveCell ? SCREEN_LEAVE_BG[leaveCode!] : undefined)
-                    ?? (!cell.entry && holidays.has(cell.jDay) ? SCREEN_HOLIDAY_BG : cell.isFriday ? '#fff1f2' : undefined);
+                    ?? (!cell.entry && showHolidays && holidays.has(cell.jDay) ? SCREEN_HOLIDAY_BG : !cell.entry && showHolidays && cell.isFriday ? '#fff1f2' : undefined);
                   const shiftObj = cell.entry ? st.shiftTypes.find(s => s.id === cell.entry!.shiftTypeId) : undefined;
                   const isPickerOpen = picker !== null && picker.personnelId === p.id && picker.dateISO === cell.dateISO;
                   const isHeadNurse = p.role.includes('سرپرستار');
-                  const openUp = rowIdx >= deptPeople.length - 4;
+                  const openUp = rowIdx >= visiblePeople.length - 4;
+                  const cellKey = `${p.id}|${cell.dateISO}`;
+                  const isConflict = showConflicts && conflictKeys.has(`${p.id}|${cell.jDay}`);
+                  const compact = density === 'compact';
                   return (
                     <td
                       key={cell.jDay}
-                      style={{ padding: 3, textAlign: 'center', background: bg, position: 'relative' }}
-                      title={leaveCell ? `${leaveCell.name} — ${cell.dateISO}` : cell.dateISO}
+                      onDragOver={e => { if (st.scheduleStatus === 'draft') { e.preventDefault(); setDragOverKey(cellKey); } }}
+                      onDragLeave={() => setDragOverKey(k => (k === cellKey ? null : k))}
+                      onDrop={e => onCellDrop(p.id, cell.dateISO, e)}
+                      style={{
+                        padding: compact ? 1 : 3, textAlign: 'center', background: bg, position: 'relative',
+                        boxShadow: isConflict ? 'inset 0 0 0 2px #f43f5e' : dragOverKey === cellKey ? 'inset 0 0 0 2px #004E72' : undefined,
+                      }}
+                      title={isConflict ? `نقض سخت قواعد در این خانه — ${cell.dateISO}` : leaveCell ? `${leaveCell.name} — ${cell.dateISO}` : cell.dateISO}
                     >
                       <button
                         type="button"
+                        data-cell=""
+                        data-pidx={rowIdx}
+                        data-jday={cell.jDay}
+                        data-pid={p.id}
+                        data-dateiso={cell.dateISO}
+                        draggable={st.scheduleStatus === 'draft' && !!cell.entry}
+                        onDragStart={e => { e.dataTransfer.setData('text/plain', cellKey); e.dataTransfer.effectAllowed = 'move'; }}
                         onClick={() => openPicker(p.id, cell.dateISO)}
                         title={cell.entry?.isManualEntry ? 'دستی (قفل برای تولید خودکار)' : undefined}
                         style={{
-                          display: 'block', width: '100%', minWidth: 26, padding: '2px 0', borderRadius: 6, fontSize: 11, fontWeight: 700,
+                          display: 'block', width: '100%', minWidth: compact ? 22 : 26, padding: compact ? '1px 0' : '2px 0', borderRadius: 6, fontSize: compact ? 10.5 : 11, fontWeight: 700,
                           border: 'none', boxShadow: cell.entry?.isManualEntry ? 'inset 0 0 0 2px rgb(15 23 42 / 0.4)' : 'none',
                           background: shiftObj ? shiftObj.displayColor : 'transparent',
                           color: shiftObj ? contrastTextColor(shiftObj.displayColor) : '#94a3b8',
@@ -560,6 +714,7 @@ export default function SchedulerPage() {
           </tfoot>
         </table>
       </div>
+      )}
       {deptPeople.length > 0 && deptEntries.length === 0 && (
         <div style={{ marginTop: 12 }}>
           <EmptyState
