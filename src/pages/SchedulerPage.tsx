@@ -14,6 +14,9 @@ import { scheduleSolver } from '../services/scheduleSolverClient';
 import { credentialGate } from '../features/credentials/credentialService';
 import { buildSymbolResolver, parseRosterGridCsv, rosterGridTemplateCsv, type RosterImportResult } from '../features/import/rosterImport';
 import { explainRoster, type RosterBrief } from '../features/agents/rosterExplain';
+import { coverageForDay } from '../features/roster/coverage';
+import { toast } from '../store/toast';
+import EmptyState from '../components/EmptyState';
 
 function RosterImportCard() {
   const st = useAppStore();
@@ -208,6 +211,7 @@ export default function SchedulerPage() {
   const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
   const [picker, setPicker] = useState<{ personnelId: string; dateISO: string } | null>(null);
+  const [focusDay, setFocusDay] = useState(15);
   const deptPeople = st.personnel.filter(p => p.departmentId === st.departmentId);
   const deptIds = useMemo(() => new Set(deptPeople.map(p => p.id)), [deptPeople]);
   const deptEntries = st.entries.filter(e => deptIds.has(e.personnelId));
@@ -271,9 +275,19 @@ export default function SchedulerPage() {
       const others = st.entries.filter(e => !deptIds.has(e.personnelId));
       st.setEntries([...others, ...fresh]);
       st.setScheduleStatus('draft');
+      toast.success('برنامهٔ تازه ساخته شد و خانه‌های دستی قفل ماندند؛ برای نهایی‌شدن، برنامه را منتشر کنید.');
     } finally {
       setBusy(false);
     }
+  };
+
+  const publish = () => {
+    st.setScheduleStatus('published');
+    toast.success('برنامهٔ مهر ۱۴۰۵ منتشر شد؛ ویرایش قفل شد و برنامه برای پرسنل نهایی است.');
+  };
+  const unpublish = () => {
+    st.setScheduleStatus('draft');
+    toast.info('برنامه به پیش‌نویس برگشت و ویرایش باز شد؛ تغییرات تا انتشار دوباره نهایی نیست.');
   };
 
   const letters = useMemo(() => weekdayLetters(J_YEAR, J_MONTH), []);
@@ -305,18 +319,26 @@ export default function SchedulerPage() {
   const dayCount = grid.get(deptPeople[0]?.id ?? '')?.length ?? letters.length;
 
   const fa = (n: number) => n.toLocaleString('fa-IR');
+  const coverage = coverageForDay(st.dailyReqs, counts, Math.min(focusDay, dayCount) - 1);
+  const COVERAGE_STYLE = {
+    exact: { bg: '#f0fdf4', border: '#bbf7d0', color: '#166534', label: 'کامل' },
+    under: { bg: '#fff1f2', border: '#fecdd3', color: '#881337', label: 'کمبود' },
+    over: { bg: '#fffbeb', border: '#fde68a', color: '#78350f', label: 'مازاد' },
+    unset: { bg: '#f8fafc', border: '#e2e8f0', color: '#64748b', label: 'نیاز ثبت نشده' },
+  } as const;
+  const SHIFT_FA = { morning: 'صبح', evening: 'عصر', night: 'شب' } as const;
   return (
-    <div>
+    <div style={{ paddingBottom: st.scheduleStatus === 'draft' && deptEntries.length > 0 ? 76 : 0 }}>
       <h1>برنامهٔ شیفت — مهر ۱۴۰۵ {st.scheduleStatus === 'published' ? '(منتشرشده)' : '(پیش‌نویس)'}</h1>
       <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
         <select value={st.departmentId} onChange={e => st.setDepartment(e.target.value)}>
           {st.departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
         </select>
-        <button onClick={regenerate} disabled={busy}>{busy ? 'در حال تولید…' : 'تولید خودکار برنامه'}</button>
-        <button className="btn-secondary" onClick={() => navigate('/scheduler/print')}>چاپ فرم چینش</button>
+        <button onClick={regenerate} disabled={busy} title="برنامهٔ ماه را با موتور قطعی و نیازهای روزانه می‌سازد؛ خانه‌های دستی قفل می‌مانند">{busy ? 'در حال تولید…' : 'تولید خودکار برنامه'}</button>
+        <button className="btn-secondary" onClick={() => navigate('/scheduler/print')} title="فرم رسمی چینش ماه برای چاپ و امضا">چاپ فرم چینش</button>
         {st.scheduleStatus === 'draft'
-          ? <button onClick={() => st.setScheduleStatus('published')}>انتشار برنامه</button>
-          : <button className="btn-secondary" onClick={() => st.setScheduleStatus('draft')}>برگرداندن به پیش‌نویس</button>}
+          ? <button onClick={publish} title="برنامه نهایی می‌شود و ویرایش قفل می‌شود">انتشار برنامه</button>
+          : <button className="btn-secondary" onClick={unpublish} title="برنامه از حالت نهایی خارج و ویرایش باز می‌شود">برگرداندن به پیش‌نویس</button>}
         <span>تعارض‌ها: <strong>{fa(conflicts)}</strong> · نقض سخت قواعد: <strong>{fa(violations.filter(v => v.severity === 'hard').length)}</strong></span>
       </div>
       <p style={{ fontSize: 12, color: '#64748b' }}>روی هر باکس شیفت کلیک کنید تا گزینه‌های شیفت باز شود و انتخاب کنید؛ خانهٔ انتخاب‌شده «دستی» می‌شود و در تولید خودکار قفل می‌ماند. برای سرپرستار، طبق قانون ثابت جدول، فقط صبح و آف قابل انتخاب است. سه ردیف «نیاز بخش» بالای جدول ورودی مستقیم شماست: عدد هر روز را همان‌جا وارد کنید یا با خانهٔ «همهٔ روزها» یک عدد برای کل ماه بگذارید؛ «تولید خودکار برنامه» دقیقاً با همین نیازها می‌چیند. در وضعیت منتشرشده ویرایش قفل است.</p>
@@ -338,6 +360,29 @@ export default function SchedulerPage() {
           )}
         </div>
       )}
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: '8px 14px', marginBottom: 12 }}>
+        <strong style={{ fontSize: 13 }}>پوشش روز {fa(Math.min(focusDay, dayCount))} مهر:</strong>
+        <span style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <button className="btn-secondary" style={{ padding: '4px 10px', fontSize: 12 }} disabled={focusDay <= 1} onClick={() => setFocusDay(d => Math.max(1, d - 1))}>روز قبل</button>
+          <select value={Math.min(focusDay, dayCount)} onChange={e => setFocusDay(Number(e.target.value))} style={{ padding: '4px 8px', fontSize: 12.5 }} aria-label="روز متمرکز نوار پوشش">
+            {Array.from({ length: dayCount }, (_, i) => <option key={i} value={i + 1}>روز {fa(i + 1)}</option>)}
+          </select>
+          <button className="btn-secondary" style={{ padding: '4px 10px', fontSize: 12 }} disabled={focusDay >= dayCount} onClick={() => setFocusDay(d => Math.min(dayCount, d + 1))}>روز بعد</button>
+        </span>
+        {coverage.map(c => {
+          const cs = COVERAGE_STYLE[c.status];
+          return (
+            <span key={c.shift} style={{ background: cs.bg, border: `1px solid ${cs.border}`, color: cs.color, borderRadius: 999, padding: '3px 12px', fontSize: 12.5, fontWeight: 600 }}>
+              {SHIFT_FA[c.shift]}: نیاز {fa(c.required)} · تخصیص {fa(c.actual)}
+              {c.status === 'under' && <> · {fa(-c.delta)} نفر کم</>}
+              {c.status === 'over' && <> · {fa(c.delta)} نفر اضافه</>}
+              {c.status === 'exact' && <> · کامل</>}
+              {c.status === 'unset' && <> · نیاز ثبت نشده</>}
+            </span>
+          );
+        })}
+        <span style={{ fontSize: 11.5, color: '#64748b' }}>با کلیک روی شمارهٔ روز در سربرگ جدول هم روز متمرکز عوض می‌شود.</span>
+      </div>
       <div className="scroll-slim" style={{ overflow: 'auto', maxHeight: 'calc(100vh - 215px)', background: '#fff', border: '1px solid #e2e8f0', borderRadius: 16, boxShadow: '0 1px 2px rgb(15 23 42 / 0.05), 0 1px 3px rgb(15 23 42 / 0.06)' }}>
         <table className="roster-grid" style={{ borderCollapse: 'collapse', fontSize: 12, minWidth: 1280 }}>
           <thead>
@@ -391,7 +436,7 @@ export default function SchedulerPage() {
               <th style={{ background: '#f1f5f9', padding: 4, whiteSpace: 'nowrap' }}>موظفی ماه</th>
               <th style={{ background: '#f1f5f9', padding: 4, whiteSpace: 'nowrap' }}>طلب/بدهی</th>
               {Array.from({ length: dayCount }, (_, i) => (
-                <th key={i} style={{ padding: 4, background: grid.get(deptPeople[0]?.id ?? '')?.[i]?.isFriday ? '#fff1f2' : '#f1f5f9' }}>{fa(i + 1)}</th>
+                <th key={i} onClick={() => setFocusDay(i + 1)} title="تمرکز نوار پوشش روی این روز" style={{ padding: 4, cursor: 'pointer', background: i + 1 === Math.min(focusDay, dayCount) ? '#DCE9F0' : grid.get(deptPeople[0]?.id ?? '')?.[i]?.isFriday ? '#fff1f2' : '#f1f5f9' }}>{fa(i + 1)}</th>
               ))}
               <th style={{ background: '#f1f5f9', padding: 4, whiteSpace: 'nowrap' }}>مجموع ساعت</th>
               <th style={{ background: '#f1f5f9', padding: 4, whiteSpace: 'nowrap' }}>کسر/اضافه</th>
@@ -500,7 +545,17 @@ export default function SchedulerPage() {
           </tfoot>
         </table>
       </div>
-      {deptPeople.length > 0 && deptEntries.length === 0 && <p>برای این بخش هنوز برنامه‌ای نیست؛ «تولید خودکار برنامه» را بزنید.</p>}
+      {deptPeople.length > 0 && deptEntries.length === 0 && (
+        <div style={{ marginTop: 12 }}>
+          <EmptyState
+            variant="not-created"
+            title="برای این بخش هنوز برنامه‌ای ساخته نشده است"
+            hint="با تولید خودکار، برنامهٔ ماه بر اساس نیازهای روزانه و قوانین ساخته می‌شود؛ یا از کارت «ورود برنامهٔ موجود» در بالای صفحه، برنامهٔ فعلی را از فایل وارد کنید."
+            actionLabel="تولید خودکار برنامه"
+            onAction={() => void regenerate()}
+          />
+        </div>
+      )}
 
       {st.viewRole === 'ward_manager' && st.swaps.some(s => s.status === 'accepted' && deptIds.has(s.fromEmployeeId)) && (
         <section style={{ marginTop: 20, background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 16 }}>
@@ -511,14 +566,33 @@ export default function SchedulerPage() {
               <button onClick={() => {
                 import('../features/swaps/swapService').then(({ approveSwap }) => {
                   const res = approveSwap(s, st.entries, st.currentEmployeeId, { personnel: st.personnel, shiftTypes: st.shiftTypes });
-                  if (!res.ok) { alert(res.error); return; }
+                  if (!res.ok) { toast.error(res.error); return; }
+                  const prevSwap = s;
+                  const prevEntries = st.entries;
                   st.updateSwap(res.swap);
                   st.setEntries(res.entries);
+                  toast.success('جابه‌جایی تأیید و در برنامه اعمال شد.', {
+                    actionLabel: 'بازگردانی',
+                    onAction: () => { st.updateSwap(prevSwap); st.setEntries(prevEntries); },
+                  });
                 });
               }}>تأیید و اعمال</button>
             </div>
           ))}
         </section>
+      )}
+      {st.scheduleStatus === 'draft' && deptEntries.length > 0 && (
+        <div style={{
+          position: 'fixed', bottom: 0, insetInlineStart: 0, insetInlineEnd: 0, zIndex: 55,
+          background: '#fffbeb', borderTop: '1px solid #fde68a', padding: '10px 20px',
+          display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'center', flexWrap: 'wrap',
+          boxShadow: '0 -4px 14px rgb(15 23 42 / 0.06)',
+        }}>
+          <span style={{ fontSize: 13.5, color: '#78350f' }}>
+            <strong>برنامهٔ این ماه هنوز منتشر نشده است.</strong> تا انتشار، برنامه برای پرسنل نهایی نیست.
+          </span>
+          <button onClick={publish}>انتشار برنامه</button>
+        </div>
       )}
     </div>
   );

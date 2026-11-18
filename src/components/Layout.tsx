@@ -4,6 +4,7 @@ import { useAppStore, type ViewRole } from '../store/appStore';
 import { useSessionStore } from '../store/session';
 import { signOut } from '../services/auth';
 import { navForRole } from '../features/oversight/roleNav';
+import Toasts from './Toasts';
 
 export default function Layout() {
   const { viewRole, setViewRole, currentEmployeeId, setCurrentEmployee, personnel, departmentId, hydrated, hydrateFromSupabase, dataSource } = useAppStore();
@@ -21,7 +22,23 @@ export default function Layout() {
   };
   useEffect(() => { void hydrateFromSupabase(); }, [hydrateFromSupabase]);
   if (!hydrated) {
-    return <div dir="rtl" style={{ fontFamily: 'Vazirmatn, system-ui', padding: 40 }}>در حال بارگذاری داده‌ها…</div>;
+    // اسکلت پوسته (دور ۲۳): چیدمان معلومِ هدر و محتوا تا داده برسد — نه متنِ تنها.
+    return (
+      <div dir="rtl" style={{ fontFamily: 'Vazirmatn, system-ui', minHeight: '100vh', background: '#F9F9F9' }} aria-busy="true" aria-label="در حال بارگذاری داده‌ها">
+        <div style={{ background: '#0A2735', padding: '10px 20px', display: 'flex', gap: 14, alignItems: 'center' }}>
+          <div className="skel" style={{ width: 34, height: 34, borderRadius: 10, background: '#1e3a4a' }} />
+          <div className="skel" style={{ width: 180, height: 14, background: '#1e3a4a' }} />
+          <div className="skel" style={{ width: 320, height: 14, background: '#1e3a4a' }} />
+        </div>
+        <main style={{ padding: 20, maxWidth: 1400, margin: '0 auto' }}>
+          <div className="skel" style={{ width: 240, height: 26, marginBottom: 16 }} />
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>
+            {[0, 1, 2, 3].map(i => <div key={i} className="skel" style={{ width: 200, height: 106, borderRadius: 16 }} />)}
+          </div>
+          <div className="skel" style={{ width: '100%', height: 180, borderRadius: 16 }} />
+        </main>
+      </div>
+    );
   }
   const deptPeople = personnel.filter(p => p.departmentId === departmentId);
   // هر نقش فقط میز کار خودش را می‌بیند (مترون و اداری هم میز جدا دارند)
@@ -80,6 +97,7 @@ export default function Layout() {
       <main style={{ padding: 20, maxWidth: 1400, margin: '0 auto' }}>
         <Outlet />
       </main>
+      <Toasts />
     </div>
   );
 }

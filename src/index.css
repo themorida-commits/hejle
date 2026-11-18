@@ -82,6 +82,18 @@ table th { font-weight: 700; }
 .scroll-slim::-webkit-scrollbar { width: 8px; height: 8px; }
 .scroll-slim::-webkit-scrollbar-thumb { background: var(--border-strong); border-radius: 4px; }
 
+/* اسکلت بارگذاری (دور ۲۳): فقط برای چیدمان معلوم و کوتاه؛ حرکت با reduced-motion خاموش می‌شود. */
+.skel { background: #e2e8f0; border-radius: 8px; animation: skel-pulse 1.4s ease-in-out infinite; }
+@keyframes skel-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+
+/* ورود اعلان گذرا (دور ۲۳): بازخورد کوتاه و بی‌ادعا، ۱۸۰ms. */
+.toast-in { animation: toast-in 0.18s ease-out; }
+@keyframes toast-in { from { transform: translateY(8px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .skel, .toast-in { animation: none; }
+}
+
 /* چاپ فرم چینش (دور ۷): فقط ناحیهٔ چاپ دیده شود؛ A3 افقی. */
 @media print {
   body * { visibility: hidden; }

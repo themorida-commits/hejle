@@ -1,8 +1,16 @@
 import { useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { useAppStore, J_YEAR, J_MONTH } from '../store/appStore';
 import { useSessionStore } from '../store/session';
 import { buildEmployeeFacts, buildWardFacts, evaluateRules, DEFAULT_RULE_CONFIGS } from '../core/rules/engine';
 import HospitalQueueSection from '../features/oversight/HospitalQueueSection';
+import { buildActionQueue, type QueueSeverity } from '../features/oversight/actionQueue';
+
+const QUEUE_STYLE: Record<QueueSeverity, { bg: string; border: string; color: string; badge: string }> = {
+  critical: { bg: '#fff1f2', border: '#fecdd3', color: '#881337', badge: '#e11d48' },
+  warning: { bg: '#fffbeb', border: '#fde68a', color: '#78350f', badge: '#b45309' },
+  info: { bg: '#f8fafc', border: '#DCE9F0', color: '#0A2735', badge: '#004E72' },
+};
 
 function Card({ title, value, hint, alert, dense }: { title: string; value: string; hint?: string; alert?: boolean; dense?: boolean }) {
   const isZero = value === '۰';
@@ -19,7 +27,7 @@ function Card({ title, value, hint, alert, dense }: { title: string; value: stri
 }
 
 export default function DashboardPage() {
-  const { personnel, entries, shiftTypes, leaves, swaps, departmentId, scheduleStatus, dutyByEmployee } = useAppStore();
+  const { personnel, entries, shiftTypes, leaves, swaps, departmentId, scheduleStatus, dutyByEmployee, credentials } = useAppStore();
   const dataSource = useAppStore(s => s.dataSource);
   const viewRole = useAppStore(s => s.viewRole);
   const sessionRole = useSessionStore(s => s.role);
@@ -45,10 +53,54 @@ export default function DashboardPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entries, departmentId]);
 
+  const queue = useMemo(() => buildActionQueue({
+    hardViolations: stats.hard,
+    warnViolations: stats.warn,
+    pendingLeaves: leaves.filter(l => l.status === 'pending' && deptIds.has(l.employeeId)),
+    pendingFinalSwaps: swaps.filter(s => s.status === 'accepted' && deptIds.has(s.fromEmployeeId)).length,
+    scheduleStatus,
+    entriesCount: deptEntries.length,
+    credentials: credentials.filter(c => deptIds.has(c.employeeId)),
+    nameOf: (id) => personnel.find(p => p.id === id)?.name ?? id,
+    todayISO: new Date().toISOString().slice(0, 10),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [stats, leaves, swaps, scheduleStatus, credentials, departmentId]);
+
   const fa = (n: number) => n.toLocaleString('fa-IR');
   return (
     <div>
       <h1>داشبورد — مهر ۱۴۰۵</h1>
+      <section aria-label="اقدام‌های امروز" style={{ marginBottom: 20 }}>
+        <h2 style={{ marginTop: 0, marginBottom: 10 }}>اقدام‌های امروز</h2>
+        {queue.length === 0 && (
+          <p style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#166534', borderRadius: 10, padding: '10px 14px', fontSize: 13, margin: 0 }}>
+            موردی نیازمند اقدام نیست؛ برنامه منتشر شده و صف‌ها خالی‌اند.
+          </p>
+        )}
+        <div style={{ display: 'grid', gap: 8 }}>
+          {queue.map(item => {
+            const q = QUEUE_STYLE[item.severity];
+            return (
+              <div key={item.id} style={{
+                display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap',
+                background: q.bg, border: `1px solid ${q.border}`, color: q.color,
+                borderRadius: 10, padding: '10px 14px', fontSize: 13.5,
+              }}>
+                <span className="num" style={{
+                  background: q.badge, color: '#fff', borderRadius: 999, minWidth: 26, height: 26,
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  fontWeight: 800, fontSize: 13, padding: '0 8px',
+                }}>{fa(item.count)}</span>
+                <span style={{ fontWeight: 700 }}>{item.title}</span>
+                <span style={{ flex: 1, minWidth: 200 }}>{item.context}</span>
+                <Link to={item.href} style={{ color: '#004E72', fontWeight: 700, textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                  {item.cta} ←
+                </Link>
+              </div>
+            );
+          })}
+        </div>
+      </section>
       <HospitalQueueSection actorRole={actorRole} variant="panel" />
       <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
         <Card title="پرسنل بخش" value={fa(deptPeople.length)} />

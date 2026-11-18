@@ -3,6 +3,7 @@ import { useAppStore, J_YEAR, J_MONTH } from '../store/appStore';
 import { buildMonthGrid, shiftSymbol } from '../features/roster/rosterModel';
 import { createSwap, acceptSwap } from '../features/swaps/swapService';
 import { isoFromJalali } from '../features/leave/leaveService';
+import { toast } from '../store/toast';
 
 // سلف‌سرویس پرستار (P1-04) — موبایل‌اول: برنامهٔ خودم، ماندهٔ مرخصی، جابه‌جایی.
 // ورود OTP در اتصال واقعی Supabase Auth انجام می‌شود؛ اینجا هویت از هدر دمو می‌آید.
@@ -31,8 +32,9 @@ export default function SelfServicePage() {
       dateISO: isoFromJalali(J_YEAR, J_MONTH, swapDay), entries: st.entries,
       personnel: st.personnel, shiftTypes: st.shiftTypes,
     });
-    if (!res.ok) { alert(res.error); return; }
+    if (!res.ok) { toast.error(res.error); return; }
     st.addSwap(res.swap);
+    toast.success('درخواست جابه‌جایی ثبت شد؛ منتظر پذیرش همکار و بعد تأیید نهایی سرپرستار است.');
   };
 
   return (
@@ -74,7 +76,9 @@ export default function SelfServicePage() {
               {s.status === 'pending' && s.toEmployeeId === st.currentEmployeeId && (
                 <button style={{ marginInlineStart: 8 }} onClick={() => {
                   const r = acceptSwap(s, st.currentEmployeeId);
-                  if ('error' in r) alert(r.error); else st.updateSwap(r);
+                  if ('error' in r) { toast.error(r.error); return; }
+                  st.updateSwap(r);
+                  toast.success('جابه‌جایی پذیرفته شد؛ اعمال نهایی در برنامه با تأیید سرپرستار است.');
                 }}>پذیرفتن</button>
               )}
             </li>

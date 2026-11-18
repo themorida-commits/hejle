@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import EmptyState from '../components/EmptyState';
 import { useAppStore, J_YEAR, J_MONTH } from '../store/appStore';
 import { isoFromJalali } from '../features/leave/leaveService';
 import {
@@ -164,7 +165,13 @@ export default function PatientsPage() {
               );
             })}
             {active.length === 0 && (
-              <tr><td colSpan={7} style={{ padding: 18, color: '#64748b' }}>بیمار بستری‌ای در این بخش ثبت نشده است.</td></tr>
+              <tr><td colSpan={7} style={{ padding: 12 }}>
+                <EmptyState
+                  variant="not-created"
+                  title="بیمار بستری‌ای در این بخش ثبت نشده است"
+                  hint="با پذیرش اولین بیمار، پروندهٔ اپیزود و مسئول هر شیفت همین‌جا ساخته می‌شود؛ فرم پذیرش در بالای همین صفحه است."
+                />
+              </td></tr>
             )}
           </tbody>
         </table>

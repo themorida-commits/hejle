@@ -8,6 +8,8 @@ import {
 } from '../features/leave/leaveService';
 import HospitalQueueSection from '../features/oversight/HospitalQueueSection';
 import { buildLeaveTriage, type LeaveTriageBrief } from '../features/agents/leaveTriage';
+import { toast } from '../store/toast';
+import EmptyState from '../components/EmptyState';
 
 const MINIMUMS = { morning: 3, evening: 2, night: 1 };
 const STATUS_FA: Record<LeaveRequest['status'], string> = {
@@ -50,7 +52,7 @@ export default function LeavePage() {
 
   const submit = async () => {
     if (mode === 'hourly' && !(hourlyHours > 0 && hourlyHours <= 16)) {
-      alert('بازهٔ ساعتی معتبر نیست: ساعت پایان باید بعد از شروع و مجموع حداکثر ۱۶ ساعت باشد.');
+      toast.error('بازهٔ ساعتی معتبر نیست: ساعت پایان باید بعد از شروع باشد و مجموع از ۱۶ ساعت بیشتر نشود.');
       return;
     }
     // پیوست مدرک (استعلاجی): در حالت سوپابیس آپلود واقعی؛ در دمو فقط نام فایل نگه داشته می‌شود
@@ -66,7 +68,7 @@ export default function LeavePage() {
           attachmentPath = `demo:${attachFile.name}`;
         }
       } catch {
-        alert('آپلود مدرک ناموفق بود؛ درخواست بدون پیوست ثبت می‌شود.');
+        toast.error('آپلود مدرک ناموفق بود؛ درخواست بدون پیوست ثبت می‌شود. اگر مدرک لازم است، بعداً از پرونده پیگیری کنید.');
       }
     }
     const req: LeaveRequest = {
@@ -86,18 +88,19 @@ export default function LeavePage() {
     st.addLeave(req);
     setReason('');
     setAttachFile(null);
+    toast.success('درخواست مرخصی ثبت شد و در صف تأیید زنجیره قرار گرفت.');
   };
 
   const viewAttachment = async (l: LeaveRequest) => {
     if (!l.attachmentPath || l.attachmentPath.startsWith('demo:')) {
-      alert(`پیوست (حالت دمو — فایل واقعی ذخیره نشده): ${l.attachmentPath?.slice(5) ?? ''}`);
+      toast.info(`پیوست در حالت دمو فقط با نام نگه داشته شده است: ${l.attachmentPath?.slice(5) ?? ''}`);
       return;
     }
     try {
       const { getLeaveAttachmentUrl } = await import('../services/attachments');
       window.open(await getLeaveAttachmentUrl(l.attachmentPath), '_blank');
     } catch {
-      alert('باز کردن مدرک ناموفق بود.');
+      toast.error('باز کردن مدرک ناموفق بود؛ اتصال را بررسی و دوباره تلاش کنید.');
     }
   };
 
@@ -127,26 +130,47 @@ export default function LeavePage() {
 
   const approve = (req: LeaveRequest) => {
     const verdict = canActOnLeave(st.approvalChain, req, actor);
-    if (!verdict.ok) { alert(verdict.reason); return; }
+    if (!verdict.ok) { toast.error(verdict.reason ?? 'اقدام روی این درخواست در این گام ممکن نیست.'); return; }
     const today = new Date().toISOString().slice(0, 10);
     const step = applyChainApproval(st.approvalChain, req, actor, today);
     if (!step.finalApproved) {
       // گام میانی زنجیره: فقط پیشرفت گام ثبت می‌شود؛ روس‌تر و مانده در گام نهایی دست می‌خورند
+      const prev = req;
       st.updateLeave(step.request);
+      toast.success('تأیید این گام ثبت شد و درخواست به گام بعدی زنجیره رفت.', {
+        actionLabel: 'بازگردانی',
+        onAction: () => st.updateLeave(prev),
+      });
       return;
     }
     const res = approveLeave({ request: req, approverEmployeeId: st.currentEmployeeId, entries: st.entries, shiftTypes: st.shiftTypes });
-    if (!res.ok) { alert(res.error); return; }
+    if (!res.ok) { toast.error(res.error); return; }
+    const prevLeave = req;
+    const prevEntries = st.entries;
+    const days = leaveDurationDays(req);
     st.updateLeave({ ...res.request, approvals: step.request.approvals, approvalStep: step.request.approvalStep });
     st.setEntries(res.entryPatch);
-    st.adjustBalance(req.employeeId, leaveDurationDays(req));
+    st.adjustBalance(req.employeeId, days);
+    toast.success('مرخصی تأیید نهایی شد و در برنامه و ماندهٔ سهمیه اعمال شد.', {
+      actionLabel: 'بازگردانی',
+      onAction: () => {
+        st.updateLeave(prevLeave);
+        st.setEntries(prevEntries);
+        st.adjustBalance(req.employeeId, -days);
+      },
+    });
   };
 
   const reject = (req: LeaveRequest) => {
     const verdict = canActOnLeave(st.approvalChain, req, actor);
-    if (!verdict.ok) { alert(verdict.reason); return; }
+    if (!verdict.ok) { toast.error(verdict.reason ?? 'اقدام روی این درخواست در این گام ممکن نیست.'); return; }
     const today = new Date().toISOString().slice(0, 10);
+    const prev = req;
     st.updateLeave(applyChainRejection(st.approvalChain, req, actor, today).request);
+    toast.success('درخواست مرخصی رد شد؛ متقاضی می‌تواند دلیل زنجیره را در سوابق تأیید ببیند.', {
+      actionLabel: 'بازگردانی',
+      onAction: () => st.updateLeave(prev),
+    });
   };
 
   return (
@@ -225,7 +249,15 @@ export default function LeavePage() {
               </td>
             </tr>
           ))}
-          {myLeaves.length === 0 && <tr><td colSpan={5} style={{ padding: 12 }}>هنوز درخواستی ثبت نشده است.</td></tr>}
+          {myLeaves.length === 0 && (
+            <tr><td colSpan={5} style={{ padding: 12 }}>
+              <EmptyState
+                variant="not-created"
+                title="هنوز درخواستی در این بخش ثبت نشده است"
+                hint="اولین درخواست را از فرم بالای همین صفحه ثبت کنید؛ درخواست بلافاصله وارد زنجیرهٔ تأیید می‌شود."
+              />
+            </td></tr>
+          )}
         </tbody>
       </table>
 
