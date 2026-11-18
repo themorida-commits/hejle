@@ -13,6 +13,8 @@ export interface LeaveApprovalEntry {
   by: string;
   decision: 'approved' | 'rejected';
   at: string;
+  /** دلیل ردِ انتخابی از چیپ‌های صفحهٔ تأییدها (دور ۲۴) — اختیاری و نمایشی. */
+  note?: string;
 }
 
 /** تنظیمات سطح بیمارستان از hospitals.settings (نرمال‌شده در settings.ts). */

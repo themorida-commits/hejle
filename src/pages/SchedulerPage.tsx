@@ -1,4 +1,4 @@
-import { useMemo, useState, type CSSProperties } from 'react';
+import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAppStore, J_YEAR, J_MONTH } from '../store/appStore';
 import { buildMonthGrid, applyManualEdit, shiftSymbol, hasAnyDailyReq, contrastTextColor } from '../features/roster/rosterModel';
@@ -9,9 +9,12 @@ import {
 import { computeWorkRecords } from '../features/workRecords/workRecordService';
 import { detectConflicts } from '../core/scheduling/conflictDetector';
 import { DEFAULT_RULES } from '../core/defaults';
-import { buildEmployeeFacts, evaluateRules, DEFAULT_RULE_CONFIGS } from '../core/rules/engine';
+import { buildEmployeeFacts, evaluateRules, DEFAULT_RULE_CONFIGS, categorizeShift } from '../core/rules/engine';
 import { scheduleSolver } from '../services/scheduleSolverClient';
-import { credentialGate } from '../features/credentials/credentialService';
+import { credentialGate, credentialStatus, STATUS_FA, KIND_FA } from '../features/credentials/credentialService';
+import { LEAVE_TYPES } from '../features/leave/leaveService';
+
+const faDayMonth = (iso: string) => new Intl.DateTimeFormat('fa-IR', { day: 'numeric', month: 'long' }).format(new Date(iso));
 import { buildSymbolResolver, parseRosterGridCsv, rosterGridTemplateCsv, type RosterImportResult } from '../features/import/rosterImport';
 import { explainRoster, type RosterBrief } from '../features/agents/rosterExplain';
 import { coverageForDay } from '../features/roster/coverage';
@@ -212,6 +215,14 @@ export default function SchedulerPage() {
   const [busy, setBusy] = useState(false);
   const [picker, setPicker] = useState<{ personnelId: string; dateISO: string } | null>(null);
   const [focusDay, setFocusDay] = useState(15);
+  // پنل کناری فرد (دور ۲۴ — موج ۲): کلیک روی نام در گرید، بدون ترک صفحه.
+  const [panelPersonId, setPanelPersonId] = useState<string | null>(null);
+  useEffect(() => {
+    if (!panelPersonId) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setPanelPersonId(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [panelPersonId]);
   const deptPeople = st.personnel.filter(p => p.departmentId === st.departmentId);
   const deptIds = useMemo(() => new Set(deptPeople.map(p => p.id)), [deptPeople]);
   const deptEntries = st.entries.filter(e => deptIds.has(e.personnelId));
@@ -451,7 +462,11 @@ export default function SchedulerPage() {
               const infoTd = { padding: 6, whiteSpace: 'nowrap', color: '#334155', textAlign: 'center' } as const;
               return (
               <tr key={p.id}>
-                <td style={{ position: 'sticky', right: 0, background: '#fff', padding: 6, whiteSpace: 'nowrap', fontWeight: 600 }}>
+                <td
+                  onClick={() => setPanelPersonId(p.id)}
+                  title="دیدن خلاصهٔ این همکار (مدارک، موظفی، ماندهٔ مرخصی)"
+                  style={{ position: 'sticky', right: 0, background: '#fff', padding: 6, whiteSpace: 'nowrap', fontWeight: 600, cursor: 'pointer' }}
+                >
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
                     <span aria-hidden style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 26, height: 26, borderRadius: '50%', background: '#e2e8f0', color: '#334155', fontSize: 12, fontWeight: 700, flexShrink: 0 }}>{p.name.trim().charAt(0)}</span>
                     {p.name}
@@ -581,6 +596,83 @@ export default function SchedulerPage() {
           ))}
         </section>
       )}
+      {panelPersonId && (() => {
+        const person = deptPeople.find(p => p.id === panelPersonId);
+        if (!person) return null;
+        const pEntries = deptEntries.filter(e => e.personnelId === person.id);
+        const cat = { morning: 0, evening: 0, night: 0 };
+        for (const e of pEntries) {
+          const t = st.shiftTypes.find(s => s.id === e.shiftTypeId);
+          if (!t) continue;
+          const c = categorizeShift(t);
+          if (c === 'morning' || c === 'evening' || c === 'night') cat[c]++;
+        }
+        const rec = recOf(person.id);
+        const bal = st.leaveBalances[person.id];
+        const creds = st.credentials.filter(c => c.employeeId === person.id);
+        const todayISO = new Date().toISOString().slice(0, 10);
+        const pLeaves = st.leaves.filter(l => l.employeeId === person.id && l.status !== 'rejected').slice(0, 4);
+        const credColor = (s: string) => (s === 'expired' ? '#be123c' : s === 'expiring' ? '#b45309' : '#15803d');
+        return (
+          <>
+            <div onClick={() => setPanelPersonId(null)} style={{ position: 'fixed', inset: 0, zIndex: 90, background: 'rgb(10 39 53 / 0.35)' }} />
+            <aside aria-label={`خلاصهٔ ${person.name}`} style={{ position: 'fixed', top: 0, bottom: 0, insetInlineEnd: 0, width: 'min(340px, 92vw)', background: '#fff', zIndex: 95, boxShadow: '0 0 32px rgb(15 23 42 / 0.25)', padding: 18, overflowY: 'auto' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
+                <span aria-hidden style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: 38, height: 38, borderRadius: '50%', background: '#DCE9F0', color: '#004E72', fontSize: 16, fontWeight: 800 }}>{person.name.trim().charAt(0)}</span>
+                <span style={{ lineHeight: 1.3 }}>
+                  <strong style={{ fontSize: 16, display: 'block' }}>{person.name}</strong>
+                  <span style={{ fontSize: 12, color: '#64748b' }}>{person.role} · {employmentShort(person.employmentStatus)} · کد پرسنلی {person.personnelCode}</span>
+                </span>
+                <button onClick={() => setPanelPersonId(null)} aria-label="بستن پنل" style={{ marginInlineStart: 'auto', background: 'transparent', border: 'none', boxShadow: 'none', fontSize: 18, color: '#64748b', cursor: 'pointer' }}>×</button>
+              </div>
+              {blockedIds.has(person.id) && (
+                <div style={{ background: '#fff1f2', border: '1px solid #fecdd3', color: '#9f1239', borderRadius: 10, padding: '8px 10px', fontSize: 12.5, margin: '10px 0' }}>
+                  قفل صلاحیت فعال است — مدرک منقضی دارد و تا رفع آن در برنامه نمی‌نشیند.
+                </div>
+              )}
+              <h3 style={{ fontSize: 13.5, margin: '14px 0 6px' }}>این ماه در برنامه</h3>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', fontSize: 12.5 }}>
+                <span className="stat-card" style={{ padding: '8px 12px' }}>صبح <b>{fa(cat.morning)}</b></span>
+                <span className="stat-card" style={{ padding: '8px 12px' }}>عصر <b>{fa(cat.evening)}</b></span>
+                <span className="stat-card" style={{ padding: '8px 12px' }}>شب <b>{fa(cat.night)}</b></span>
+                {rec && <span className="stat-card" style={{ padding: '8px 12px' }}>کارکرد <b>{fa(rec.workedHours)}</b> از موظفی <b>{fa(rec.dutyHours)}</b></span>}
+                {bal && <span className="stat-card" style={{ padding: '8px 12px' }}>ماندهٔ مرخصی <b>{fa(Math.max(0, bal.entitled - bal.used))}</b> روز</span>}
+              </div>
+              <h3 style={{ fontSize: 13.5, margin: '16px 0 6px' }}>مدارک و اعتبارنامه‌ها</h3>
+              {creds.length === 0 ? (
+                <p style={{ fontSize: 12.5, color: '#64748b', margin: 0 }}>مدرکی ثبت نشده است.</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {creds.map(c => {
+                    const s = credentialStatus(c, todayISO);
+                    return (
+                      <div key={c.id} style={{ display: 'flex', gap: 8, alignItems: 'center', fontSize: 12.5, border: '1px solid #e2e8f0', borderRadius: 10, padding: '7px 10px' }}>
+                        <span style={{ fontWeight: 600 }}>{c.title}</span>
+                        <span style={{ color: '#64748b' }}>{KIND_FA[c.kind]}</span>
+                        <span style={{ marginInlineStart: 'auto', color: credColor(s), fontWeight: 700 }}>{STATUS_FA[s]}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              <h3 style={{ fontSize: 13.5, margin: '16px 0 6px' }}>مرخصی‌های اخیر</h3>
+              {pLeaves.length === 0 ? (
+                <p style={{ fontSize: 12.5, color: '#64748b', margin: 0 }}>مرخصی ثبت‌شده‌ای ندارد.</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {pLeaves.map(l => (
+                    <div key={l.id} style={{ fontSize: 12.5, border: '1px solid #e2e8f0', borderRadius: 10, padding: '7px 10px', display: 'flex', gap: 8 }}>
+                      <span style={{ fontWeight: 600 }}>{LEAVE_TYPES.find(t => t.code === l.leaveTypeCode)?.name ?? l.leaveTypeCode}</span>
+                      <span style={{ color: '#64748b' }}>{l.startISO === l.endISO ? faDayMonth(l.startISO) : `${faDayMonth(l.startISO)} تا ${faDayMonth(l.endISO)}`}</span>
+                      <span style={{ marginInlineStart: 'auto', fontWeight: 700, color: l.status === 'approved' ? '#15803d' : '#b45309' }}>{l.status === 'approved' ? 'تأییدشده' : 'در انتظار'}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </aside>
+          </>
+        );
+      })()}
       {st.scheduleStatus === 'draft' && deptEntries.length > 0 && (
         <div style={{
           position: 'fixed', bottom: 0, insetInlineStart: 0, insetInlineEnd: 0, zIndex: 55,

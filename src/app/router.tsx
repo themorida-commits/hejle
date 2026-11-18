@@ -5,6 +5,7 @@ import DashboardPage from '../pages/DashboardPage';
 import SchedulerPage from '../pages/SchedulerPage';
 import PrintRosterPage from '../pages/PrintRosterPage';
 import LeavePage from '../pages/LeavePage';
+import ApprovalsPage from '../pages/ApprovalsPage';
 import WorkRecordsPage from '../pages/WorkRecordsPage';
 import SelfServicePage from '../pages/SelfServicePage';
 import AttendancePage from '../pages/AttendancePage';
@@ -34,6 +35,7 @@ export const router = createBrowserRouter([
       { path: '/scheduler', element: <SchedulerPage /> },
       { path: '/scheduler/print', element: <PrintRosterPage /> },
       { path: '/leave', element: <LeavePage /> },
+      { path: '/approvals', element: <ApprovalsPage /> },
       { path: '/work-records', element: <WorkRecordsPage /> },
       { path: '/attendance', element: <AttendancePage /> },
       { path: '/personnel', element: <PersonnelPage /> },

@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAppStore } from '../store/appStore';
 import {
   credentialStatus, summarizeCompliance, KIND_FA, STATUS_FA, type CredentialKind,
@@ -92,7 +93,13 @@ const TODAY = new Date().toISOString().slice(0, 10);
 
 export default function PersonnelPage() {
   const st = useAppStore();
-  const [selected, setSelected] = useState('');
+  // پرش از پالت فرمان (دور ۲۴): ‎?person=<id>‎ پروندهٔ همان همکار را باز می‌کند.
+  const [searchParams] = useSearchParams();
+  const [selected, setSelected] = useState(() => searchParams.get('person') ?? '');
+  useEffect(() => {
+    const p = searchParams.get('person');
+    if (p) setSelected(p);
+  }, [searchParams]);
   const [kind, setKind] = useState<CredentialKind>('certificate');
   const [title, setTitle] = useState('');
   const [expires, setExpires] = useState('');

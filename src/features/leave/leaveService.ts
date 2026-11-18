@@ -25,7 +25,7 @@ export interface LeaveRequest {
   attachmentPath?: string | null;
   /** گام فعلی در زنجیرهٔ تأیید (از ۰) و تاریخچهٔ اقدام‌های زنجیره. */
   approvalStep?: number;
-  approvals?: { step: number; role: string; by: string; decision: 'approved' | 'rejected'; at: string }[];
+  approvals?: { step: number; role: string; by: string; decision: 'approved' | 'rejected'; at: string; note?: string }[];
   reason?: string;
   status: LeaveStatus;
   reviewedBy?: string;

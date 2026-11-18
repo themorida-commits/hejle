@@ -31,6 +31,20 @@
 }
 
 * { box-sizing: border-box; }
+
+/* پوستهٔ سایدبار (دور ۲۴): ستون ناوبری تیره و چسبان؛ در نمایش باریک به نوار بالایی تبدیل می‌شود. */
+.app-shell { display: flex; min-height: 100vh; background: var(--bg); color: var(--ink); font-family: Vazirmatn, system-ui, 'Segoe UI', Tahoma, sans-serif; }
+.app-sidebar {
+  width: 234px; flex-shrink: 0; background: var(--header); color: #e2e8f0;
+  position: sticky; top: 0; height: 100vh; overflow-y: auto;
+  display: flex; flex-direction: column; padding: 14px 12px;
+}
+.app-main { flex: 1; min-width: 0; }
+.app-main main { padding: 20px; max-width: 1400px; margin: 0 auto; }
+@media (max-width: 920px) {
+  .app-shell { flex-direction: column; }
+  .app-sidebar { width: 100%; height: auto; position: static; }
+}
 body { margin: 0; font-family: Vazirmatn, system-ui, 'Segoe UI', Tahoma, sans-serif; background: var(--bg); color: var(--ink); }
 ::selection { background: #DCE9F0; }
 
