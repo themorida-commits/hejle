@@ -5,6 +5,9 @@ import {
 } from '../features/credentials/credentialService';
 import { parsePersonnelCsv, personnelTemplateCsv, type ImportResult } from '../features/import/personnelImport';
 
+// تاریخ انقضای مدارک مثل بقیهٔ محصول جلالی نمایش داده می‌شود، نه ISO خام.
+const faDate = (iso: string) => new Intl.DateTimeFormat('fa-IR', { dateStyle: 'medium' }).format(new Date(iso));
+
 function PersonnelImportCard() {
   const st = useAppStore();
   const [preview, setPreview] = useState<ImportResult | null>(null);
@@ -44,7 +47,7 @@ function PersonnelImportCard() {
   const fa = (n: number) => n.toLocaleString('fa-IR');
 
   return (
-    <section style={{ background: '#fff', border: '1px solid #dbeafe', borderRadius: 12, padding: 14, marginBottom: 16 }}>
+    <section style={{ background: '#fff', border: '1px solid #DCE9F0', borderRadius: 12, padding: 14, marginBottom: 16 }}>
       <strong style={{ fontSize: 14 }}>ورود لیست پرسنل بخش {deptName} از فایل</strong>
       <p style={{ fontSize: 12, color: '#64748b', margin: '6px 0 10px' }}>
         فایل اکسل یا CSV لیست پرسنل را انتخاب کنید؛ پیش‌نمایش و خطاها قبل از اعمال نشان داده می‌شود و هیچ ردیفی بی‌صدا حذف نمی‌شود.
@@ -129,9 +132,9 @@ export default function PersonnelPage() {
           ['در آستانهٔ انقضا (۶۰ روز)', compliance.expiring],
           ['منقضی', compliance.expired],
         ].map(([label, v]) => (
-          <div key={label as string} style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 12, padding: '10px 16px', minWidth: 130 }}>
-            <div style={{ fontSize: 12, color: '#64748b' }}>{label}</div>
-            <div style={{ fontSize: 22, fontWeight: 800 }}>{fa(v as number)}</div>
+          <div key={label as string} className="stat-card" style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: 16, padding: '14px 18px', minWidth: 150 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>{label}</div>
+            <div className="num" style={{ fontSize: 28, fontWeight: 800, marginTop: 6, color: (v as number) === 0 ? '#94a3b8' : '#0A2735' }}>{fa(v as number)}</div>
           </div>
         ))}
       </div>
@@ -141,7 +144,7 @@ export default function PersonnelPage() {
           <strong>نیازمند پیگیری:</strong>
           <ul style={{ margin: '8px 0 0' }}>
             {compliance.attention.map(a => (
-              <li key={a.credential.id}>{a.employeeName} — {a.credential.title} ({STATUS_FA[a.status]}، انقضا: {a.credential.expiresOnISO})</li>
+              <li key={a.credential.id}>{a.employeeName} — {a.credential.title} ({STATUS_FA[a.status]}، انقضا: {a.credential.expiresOnISO ? faDate(a.credential.expiresOnISO) : '—'})</li>
             ))}
           </ul>
         </section>
@@ -162,7 +165,7 @@ export default function PersonnelPage() {
           {personCreds.map(c => (
             <tr key={c.id} style={{ borderTop: '1px solid #eee' }}>
               <td style={{ padding: 8 }}>{c.title}</td><td>{KIND_FA[c.kind]}</td><td>{c.issuer ?? '—'}</td>
-              <td>{c.expiresOnISO ?? '—'}</td><td>{badge(c)}</td>
+              <td>{c.expiresOnISO ? faDate(c.expiresOnISO) : '—'}</td><td>{badge(c)}</td>
             </tr>
           ))}
           {personCreds.length === 0 && <tr><td colSpan={5} style={{ padding: 12 }}>مدرکی ثبت نشده است.</td></tr>}

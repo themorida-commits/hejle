@@ -55,9 +55,9 @@ export default function NursingServicesPage() {
   };
 
   const card = (title: string, value: string, hint: string, danger = false) => (
-    <div style={{ background: '#fff', border: `1px solid ${danger ? '#fda4af' : '#e2e8f0'}`, borderRadius: 12, padding: 14, minWidth: 170 }}>
-      <div style={{ fontSize: 12, color: '#64748b' }}>{title}</div>
-      <div style={{ fontSize: 22, fontWeight: 800, color: danger ? '#e11d48' : '#1e293b', margin: '4px 0' }}>{value}</div>
+    <div className="stat-card" style={{ background: '#fff', border: `1px solid ${danger ? '#fda4af' : '#e2e8f0'}`, borderRadius: 16, padding: 18, minWidth: 180 }}>
+      <div style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>{title}</div>
+      <div className="num" style={{ fontSize: 28, fontWeight: 800, color: danger ? '#e11d48' : value === '۰' ? '#94a3b8' : '#0A2735', margin: '6px 0 4px' }}>{value}</div>
       <div style={{ fontSize: 12, color: '#64748b' }}>{hint}</div>
     </div>
   );

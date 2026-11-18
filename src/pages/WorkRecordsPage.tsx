@@ -84,7 +84,7 @@ export default function WorkRecordsPage() {
         <button onClick={downloadCsv} disabled={records.length === 0}>خروجی CSV برای واحد حقوق</button>
       </div>
       {records.length > 0 && (
-        <section style={{ background: '#fff', border: '1px solid #dbeafe', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+        <section style={{ background: '#fff', border: '1px solid #DCE9F0', borderRadius: 12, padding: 16, marginBottom: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8 }}>
             <h2 style={{ margin: 0, fontSize: 16 }}>گزارش تجمیعی بخش {wardName}</h2>
             <button onClick={downloadSummaryCsv}>خروجی CSV تجمیعی</button>

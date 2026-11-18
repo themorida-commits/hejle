@@ -4,14 +4,15 @@ import { useSessionStore } from '../store/session';
 import { buildEmployeeFacts, buildWardFacts, evaluateRules, DEFAULT_RULE_CONFIGS } from '../core/rules/engine';
 import HospitalQueueSection from '../features/oversight/HospitalQueueSection';
 
-function Card({ title, value, hint, alert }: { title: string; value: string; hint?: string; alert?: boolean }) {
+function Card({ title, value, hint, alert, dense }: { title: string; value: string; hint?: string; alert?: boolean; dense?: boolean }) {
+  const isZero = value === '۰';
   return (
     <div className="stat-card" style={{
-      background: '#fff', border: '1px solid #e2e8f0', borderRadius: 16, padding: 18, minWidth: 180,
+      background: '#fff', border: '1px solid #e2e8f0', borderRadius: 16, padding: 18, minWidth: 180, minHeight: 106,
       borderTop: alert ? '3px solid #e11d48' : undefined,
     }}>
       <div style={{ fontSize: 12, fontWeight: 600, color: '#64748b' }}>{title}</div>
-      <div className="num" style={{ fontSize: 28, fontWeight: 800, marginTop: 6, color: alert ? '#e11d48' : '#0A2735' }}>{value}</div>
+      <div className="num" style={{ fontSize: dense ? 17 : 28, fontWeight: 800, marginTop: 6, lineHeight: dense ? 1.7 : undefined, color: alert ? '#e11d48' : isZero ? '#94a3b8' : '#0A2735' }}>{value}</div>
       {hint && <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>{hint}</div>}
     </div>
   );
@@ -55,7 +56,7 @@ export default function DashboardPage() {
         <Card title="مرخصی در انتظار" value={fa(leaves.filter(l => l.status === 'pending').length)} />
         <Card title="جابه‌جایی در انتظار" value={fa(swaps.filter(s => s.status === 'pending' || s.status === 'accepted').length)} />
         <Card title="نقض سخت قواعد" value={fa(stats.hard)} hint={`هشدار: ${fa(stats.warn)}`} alert={stats.hard > 0} />
-        <Card title="نیروی روز ۱۵ ماه" value={stats.midCounts ? `${fa(stats.midCounts.morning)} صبح · ${fa(stats.midCounts.evening)} عصر · ${fa(stats.midCounts.night)} شب` : '—'} />
+        <Card title="نیروی روز ۱۵ ماه" dense value={stats.midCounts ? `${fa(stats.midCounts.morning)} صبح · ${fa(stats.midCounts.evening)} عصر · ${fa(stats.midCounts.night)} شب` : '—'} />
       </div>
       <h2 style={{ marginTop: 28 }}>مهم‌ترین هشدارهای قواعد</h2>
       {stats.violations.length === 0 && (
